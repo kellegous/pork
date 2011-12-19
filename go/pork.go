@@ -11,6 +11,8 @@ import (
   "strings"
 )
 
+// todo: implement Content.Productionize
+// todo: implement multi-mount.
 type OptimizationLevel int
 const (
   None OptimizationLevel = iota
@@ -27,13 +29,6 @@ var PathToCpp = "/usr/bin/cpp"
 var PathToJava = "/usr/bin/java"
 
 var rootDir string
-
-func concat(a []string, b ...string) []string {
-  for _, i := range b {
-    a = append(a, i)
-  }
-  return a
-}
 
 func pathToJsc() string {
   return filepath.Join(rootDir, "compiler.jar")
@@ -84,8 +79,7 @@ func jsc(r *os.File, w *os.File, jscPath string, level OptimizationLevel) (*os.P
 }
 
 type content struct {
-  root http.Dir
-  server http.Handler
+  root []http.Dir
   level OptimizationLevel
 }
 
@@ -97,45 +91,59 @@ func Init(root string) {
   rootDir = r
 }
 
-func Content(d http.Dir, level OptimizationLevel) http.Handler {
-  return &content{d, http.FileServer(d), level}
+func Content(level OptimizationLevel, d ...http.Dir) http.Handler {
+  return &content{d, level}
 }
 
 func expandPath(fs http.Dir, name string) string {
   return filepath.Join(string(fs), filepath.FromSlash(path.Clean("/" + name)))
 }
 
-func (h *content) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-  target := expandPath(h.root, r.URL.Path)
+func findFile(d []http.Dir, name string) (string, bool) {
+  for i, n := 0, len(d); i < n; i++ {
+    target := filepath.Join(string(d[i]), filepath.FromSlash(path.Clean("/" + name)))
+    if _, err := os.Stat(target); err == nil {
+      return target, true
+    }
+  }
+  return "", false
+}
+
+func ServeContent(w http.ResponseWriter, r *http.Request, level OptimizationLevel, d ...http.Dir) {
+  path := r.URL.Path
 
   // if the file exists, just serve it.
-  if _, err := os.Stat(target); err == nil {
-    h.server.ServeHTTP(w, r)
+  if target, found := findFile(d, path); found {
+    http.ServeFile(w, r, target)
     return
   }
 
   // if the missing file isn't a special one, 404.
-  // todo: custom not found handlers?
-  if !strings.HasSuffix(r.URL.Path, javaScriptFileExtension) {
-    http.NotFound(w, r)
+  if !strings.HasSuffix(path, javaScriptFileExtension) {
+    ServeNotFound(w, r)
     return
   }
 
-  source := target[0 : len(target) - len(javaScriptFileExtension)] +  porkScriptFileExtension
-
-  // make sure the source exists.
-  // todo: custom not found handlers?
-  if _, err := os.Stat(source); err != nil {
-    http.NotFound(w, r)
+  source, found := findFile(d, path[0 : len(path) - len(javaScriptFileExtension)] + porkScriptFileExtension)
+  if !found {
+    ServeNotFound(w, r)
     return
   }
 
   w.Header().Set("Content-Type", "text/javascript")
-  err := Compile(source, w, h.level)
+  err := Compile(source, w, level)
   if err != nil {
-    // todo: custom 500 handlers?
+    // todo: send to ServeSiteError()
     panic(err)
   }
+}
+
+func (h *content) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+  ServeContent(w, r, h.level, h.root...)
+}
+
+func ServeNotFound(w http.ResponseWriter, r *http.Request) {
+  http.NotFound(w, r)
 }
 
 func Compile(filename string, w io.Writer, level OptimizationLevel) error {
