@@ -8,24 +8,41 @@ def GetProjectRoot():
     os.path.dirname(__file__),
     os.path.pardir))
 
+def _UpdateGitDep(deps, *urls):
+  for url in urls:
+    name = url[url.rindex('/') + 1:]
+    if name.endswith('.git'):
+      name = name[:-4]
+    if not _UpdateGitClient(os.path.join(GetProjectRoot(), deps, name), url):
+      return False
+  return True
+
+def _UpdateGitClient(path, url):
+  if not os.path.exists(path):
+    return subprocess.call(['git', 'clone', url, path]) == 0
+  else:
+    return subprocess.call(['git', 'pull'], cwd = path) == 0
+
 def _DownloadTar(url, dst):
-	a = subprocess.Popen(['curl', '--silent', url], stdout = subprocess.PIPE)
-	b = subprocess.Popen(['tar', 'zxvf', '-'], stdin = a.stdout, cwd = dst)
-	a.stdout.close()
-	return b.wait() == 0
+  a = subprocess.Popen(['curl', '--silent', url], stdout = subprocess.PIPE)
+  b = subprocess.Popen(['tar', 'zxvf', '-'], stdin = a.stdout, cwd = dst)
+  a.stdout.close()
+  return b.wait() == 0
 
 def Main():
-	deps = os.path.join(GetProjectRoot(), 'deps')
-	if not os.path.exists(deps):
-		os.makedirs(deps)
-	
-	jsc = os.path.join(deps, 'closure')
-	if not os.path.exists(jsc):
-		os.makedirs(jsc)
+  deps = os.path.join(GetProjectRoot(), 'deps')
+  if not os.path.exists(deps):
+    os.makedirs(deps)
+  
+  jsc = os.path.join(deps, 'closure')
+  if not os.path.exists(jsc):
+    os.makedirs(jsc)
 
-	if not _DownloadTar('http://closure-compiler.googlecode.com/files/compiler-latest.zip', jsc):
-		return False
-	#todo: checkout sass
+  if not _DownloadTar('http://closure-compiler.googlecode.com/files/compiler-latest.zip', jsc):
+    return False
+
+  if not _UpdateGitDep(deps, 'git://github.com/nex3/sass.git'):
+    return False
 
 if __name__ == '__main__':
-	Main()
+  Main()
