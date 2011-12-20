@@ -102,6 +102,20 @@ func expandPath(fs http.Dir, name string) string {
 func findFile(d []http.Dir, name string) (string, bool) {
   for i, n := 0, len(d); i < n; i++ {
     target := filepath.Join(string(d[i]), filepath.FromSlash(path.Clean("/" + name)))
+
+    // if the file doesn't exist, move along
+    s, err := os.Stat(target)
+    if err != nil {
+      continue
+    }
+
+    // if it's a file, return that
+    if !s.IsDir() {
+      return target, true
+    }
+
+    // if it's a dir, check for an index
+    target = filepath.Join(target, "index.html")
     if _, err := os.Stat(target); err == nil {
       return target, true
     }
