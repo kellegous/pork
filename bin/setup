@@ -1,0 +1,31 @@
+#!/usr/bin/env python2.6
+
+import os
+import subprocess
+
+def GetProjectRoot():
+  return os.path.abspath(os.path.join(
+    os.path.dirname(__file__),
+    os.path.pardir))
+
+def _DownloadTar(url, dst):
+	a = subprocess.Popen(['curl', '--silent', url], stdout = subprocess.PIPE)
+	b = subprocess.Popen(['tar', 'zxvf', '-'], stdin = a.stdout, cwd = dst)
+	a.stdout.close()
+	return b.wait() == 0
+
+def Main():
+	deps = os.path.join(GetProjectRoot(), 'deps')
+	if not os.path.exists(deps):
+		os.makedirs(deps)
+	
+	jsc = os.path.join(deps, 'closure')
+	if not os.path.exists(jsc):
+		os.makedirs(jsc)
+
+	if not _DownloadTar('http://closure-compiler.googlecode.com/files/compiler-latest.zip', jsc):
+		return False
+	#todo: checkout sass
+
+if __name__ == '__main__':
+	Main()

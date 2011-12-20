@@ -31,7 +31,7 @@ var PathToJava = "/usr/bin/java"
 var rootDir string
 
 func pathToJsc() string {
-  return filepath.Join(rootDir, "compiler.jar")
+  return filepath.Join(rootDir, "deps/closure/compiler.jar")
 }
 
 func waitFor(p *os.Process) error {
