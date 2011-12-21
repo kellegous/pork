@@ -13,25 +13,39 @@ import (
 
 // todo: implement Content.Productionize
 // todo: implement multi-mount.
-type OptimizationLevel int
+type Optimization int
 const (
-  None OptimizationLevel = iota
+  None Optimization = iota
   Basic
   Advanced
+)
+
+type fileType int
+const (
+  javascript fileType = iota
+  css
+  unknown
 )
 
 const (
   porkScriptFileExtension = ".pork.js"
   javaScriptFileExtension = ".js"
+  cssFileExtension = ".css"
+  sassFileExtension = ".scss"
 )
 
 var PathToCpp = "/usr/bin/cpp"
 var PathToJava = "/usr/bin/java"
+var PathToRuby = "/usr/bin/ruby"
 
 var rootDir string
 
 func pathToJsc() string {
   return filepath.Join(rootDir, "deps/closure/compiler.jar")
+}
+
+func pathToSass() string {
+  return filepath.Join(rootDir, "deps/sass/bin/sass")
 }
 
 func waitFor(p *os.Process) error {
@@ -49,21 +63,21 @@ func waitFor(p *os.Process) error {
 
 func cpp(filename string, w *os.File) (*os.Process, error) {
   cppArgs := []string{
-      PathToCpp,
-      "-P",
-      "-CC",
-      fmt.Sprintf("-I%s", filepath.Join(rootDir, "js")),
-      filename}
+    PathToCpp,
+    "-P",
+    "-CC",
+    fmt.Sprintf("-I%s", filepath.Join(rootDir, "js")),
+    filename}
   return os.StartProcess(cppArgs[0],
-      cppArgs,
-      &os.ProcAttr{
-          "",
-          os.Environ(),
-          []*os.File{nil, w, os.Stderr},
+    cppArgs,
+    &os.ProcAttr{
+      "",
+      os.Environ(),
+      []*os.File{nil, w, os.Stderr},
       nil})
 }
 
-func jsc(r *os.File, w *os.File, jscPath string, level OptimizationLevel) (*os.Process, error) {
+func jsc(r *os.File, w *os.File, jscPath string, level Optimization) (*os.Process, error) {
   jvmArgs := []string{PathToJava, "-jar", jscPath}
   if level == Advanced {
     jvmArgs = append(jvmArgs, "--compilation_level", "ADVANCED_OPTIMIZATIONS")
@@ -78,9 +92,20 @@ func jsc(r *os.File, w *os.File, jscPath string, level OptimizationLevel) (*os.P
       nil})
 }
 
+func sass(filename string, w *os.File, sassPath string) (*os.Process, error) {
+  sassArgs := []string{PathToRuby, sassPath, filename}
+  return os.StartProcess(sassArgs[0],
+    sassArgs,
+    &os.ProcAttr{
+      "",
+      os.Environ(),
+      []*os.File{nil, w, os.Stderr},
+      nil})
+}
+
 type content struct {
   root []http.Dir
-  level OptimizationLevel
+  level Optimization
 }
 
 func Init(root string) {
@@ -91,7 +116,7 @@ func Init(root string) {
   rootDir = r
 }
 
-func Content(level OptimizationLevel, d ...http.Dir) http.Handler {
+func Content(level Optimization, d ...http.Dir) http.Handler {
   return &content{d, level}
 }
 
@@ -123,7 +148,17 @@ func findFile(d []http.Dir, name string) (string, bool) {
   return "", false
 }
 
-func ServeContent(w http.ResponseWriter, r *http.Request, level OptimizationLevel, d ...http.Dir) {
+func typeOfFile(filename string) fileType {
+  if strings.HasSuffix(filename, javaScriptFileExtension) {
+    return javascript
+  }
+  if strings.HasSuffix(filename, cssFileExtension) {
+    return css
+  }
+  return unknown
+}
+
+func ServeContent(w http.ResponseWriter, r *http.Request, level Optimization, d ...http.Dir) {
   path := r.URL.Path
 
   // if the file exists, just serve it.
@@ -132,23 +167,33 @@ func ServeContent(w http.ResponseWriter, r *http.Request, level OptimizationLeve
     return
   }
 
-  // if the missing file isn't a special one, 404.
-  if !strings.HasSuffix(path, javaScriptFileExtension) {
-    ServeNotFound(w, r)
-    return
-  }
-
-  source, found := findFile(d, path[0 : len(path) - len(javaScriptFileExtension)] + porkScriptFileExtension)
-  if !found {
-    ServeNotFound(w, r)
-    return
-  }
-
-  w.Header().Set("Content-Type", "text/javascript")
-  err := Compile(source, w, level)
-  if err != nil {
-    // todo: send to ServeSiteError()
-    panic(err)
+  switch typeOfFile(path) {
+  case javascript:
+    source, found := findFile(d, path[0 : len(path) - len(javaScriptFileExtension)] + porkScriptFileExtension)
+    if !found {
+      ServeNotFound(w, r)
+      return
+    }
+    w.Header().Set("Content-Type", "text/javascript")
+    err := CompileJs(source, w, level)
+    if err != nil {
+      // todo: send to ServeSiteError
+      panic(err)
+    }
+  case css:
+    source, found := findFile(d, path[0 : len(path) - len(cssFileExtension)] + sassFileExtension)
+    if !found {
+      ServeNotFound(w, r)
+      return
+    }
+    w.Header().Set("Content-Type", "text/css")
+    err := CompileCss(source, w)
+    if err != nil {
+      // todo: send to ServeSiteError
+      panic(err)
+    }
+  default:
+    ServeNotFound(w, r)  
   }
 }
 
@@ -160,7 +205,34 @@ func ServeNotFound(w http.ResponseWriter, r *http.Request) {
   http.NotFound(w, r)
 }
 
-func Compile(filename string, w io.Writer, level OptimizationLevel) error {
+func CompileCss(filename string, w io.Writer) error {
+  rp, wp, err := os.Pipe()
+  if err != nil {
+    return err
+  }
+  defer rp.Close()
+  defer wp.Close()
+
+  p, err := sass(filename, wp, pathToSass())
+  if err != nil {
+    return err
+  }
+  wp.Close()
+
+  err = waitFor(p)
+  if err != nil {
+    return err
+  }
+
+  _, err = io.Copy(w, rp)
+  if err != nil {
+    return err
+  }
+
+  return nil
+}
+
+func CompileJs(filename string, w io.Writer, level Optimization) error {
   // output pipe
   orp, owp, err := os.Pipe()
   if err != nil {
