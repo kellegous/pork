@@ -93,7 +93,11 @@ func jsc(r *os.File, w *os.File, jscPath string, level Optimization) (*os.Proces
 }
 
 func sass(filename string, w *os.File, sassPath string) (*os.Process, error) {
-  sassArgs := []string{PathToRuby, sassPath, filename}
+  sassArgs := []string{
+      PathToRuby,
+      sassPath,
+      "--no-cache",
+      filename}
   return os.StartProcess(sassArgs[0],
     sassArgs,
     &os.ProcAttr{
