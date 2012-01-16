@@ -1,6 +1,6 @@
 var pork = {};
 
-#include "pork-grid.js"
+#include "pork/grid.js"
 
 /**
  @param c {function()}
