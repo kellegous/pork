@@ -75,7 +75,7 @@ func cpp(filename string, w *os.File) (*os.Process, error) {
     PathToCpp,
     "-P",
     "-CC",
-    fmt.Sprintf("-I%s", filepath.Join(rootDir, "js")),
+    fmt.Sprintf("-I%s", filepath.Join(rootDir, "src")),
     filename}
   return os.StartProcess(cppArgs[0],
     cppArgs,
