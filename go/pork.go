@@ -23,7 +23,9 @@ const (
 type fileType int
 const (
   javascript fileType = iota
+  porkscript
   css
+  scss
   unknown
 )
 
@@ -39,6 +41,7 @@ var PathToJava = "/usr/bin/java"
 var PathToRuby = "/usr/bin/ruby"
 
 var rootDir string
+var hookFunc func(w http.ResponseWriter, r *http.Request)
 
 func pathToJsc() string {
   return filepath.Join(rootDir, "deps/closure/compiler.jar")
@@ -48,14 +51,20 @@ func pathToSass() string {
   return filepath.Join(rootDir, "deps/sass/bin/sass")
 }
 
-func waitFor(p *os.Process) error {
-  s, err := p.Wait(0)
-  if err != nil {
-    return err
-  }
+func waitFor(procs ...*os.Process) error {
+  for _, proc := range procs {
+    if proc == nil {
+      continue
+    }
 
-  if sc := s.WaitStatus.ExitStatus(); sc != 0 {
-    return errors.New(fmt.Sprintf("exit code: %d", sc))
+    s, err := proc.Wait(0)
+    if err != nil {
+      return err
+    }
+
+    if sc := s.WaitStatus.ExitStatus(); sc != 0 {
+      return errors.New(fmt.Sprintf("exit code: %d", sc))      
+    }
   }
 
   return nil
@@ -107,20 +116,27 @@ func sass(filename string, w *os.File, sassPath string) (*os.Process, error) {
       nil})
 }
 
+type Handler interface {
+  ServeHTTP(w http.ResponseWriter, r *http.Request)
+  Productionize(d http.Dir) error
+}
+
 type content struct {
   root []http.Dir
   level Optimization
 }
 
-func Init(root string) {
+func Init(root string, hook func(w http.ResponseWriter, r *http.Request)) {
   r, err := filepath.Abs(root)
   if err != nil {
     panic(err)
   }
   rootDir = r
+
+  hookFunc = hook
 }
 
-func Content(level Optimization, d ...http.Dir) http.Handler {
+func Content(level Optimization, d ...http.Dir) Handler {
   return &content{d, level}
 }
 
@@ -152,12 +168,23 @@ func findFile(d []http.Dir, name string) (string, bool) {
   return "", false
 }
 
+func changeTypeOfFile(path, from, to string) string {
+  // assert path ends with from
+  return path[0 : len(path) - len(from)] + to
+}
+
 func typeOfFile(filename string) fileType {
+  if strings.HasSuffix(filename, porkScriptFileExtension) {
+    return porkscript
+  }
   if strings.HasSuffix(filename, javaScriptFileExtension) {
     return javascript
   }
   if strings.HasSuffix(filename, cssFileExtension) {
     return css
+  }
+  if strings.HasSuffix(filename, sassFileExtension) {
+    return scss
   }
   return unknown
 }
@@ -173,7 +200,7 @@ func ServeContent(w http.ResponseWriter, r *http.Request, level Optimization, d 
 
   switch typeOfFile(path) {
   case javascript:
-    source, found := findFile(d, path[0 : len(path) - len(javaScriptFileExtension)] + porkScriptFileExtension)
+    source, found := findFile(d, changeTypeOfFile(path, javaScriptFileExtension, porkScriptFileExtension))
     if !found {
       ServeNotFound(w, r)
       return
@@ -185,7 +212,7 @@ func ServeContent(w http.ResponseWriter, r *http.Request, level Optimization, d 
       panic(err)
     }
   case css:
-    source, found := findFile(d, path[0 : len(path) - len(cssFileExtension)] + sassFileExtension)
+    source, found := findFile(d, changeTypeOfFile(path, cssFileExtension, sassFileExtension))
     if !found {
       ServeNotFound(w, r)
       return
@@ -202,7 +229,83 @@ func ServeContent(w http.ResponseWriter, r *http.Request, level Optimization, d 
 }
 
 func (h *content) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+  if hookFunc != nil {
+    hookFunc(w, r)
+  }
   ServeContent(w, r, h.level, h.root...)
+}
+
+func rebasePath(src, dst, filename string) (string, error) {
+  target, err := filepath.Rel(src, filename)
+  if err != nil {
+    return "", err
+  }
+  return filepath.Join(dst, target), nil
+}
+
+func createFile(path string) (*os.File, error) {
+  dir, _ := filepath.Split(path)
+  if _, err := os.Stat(dir); err != nil {
+    if err := os.MkdirAll(dir, 0777); err != nil {
+      return nil, err
+    }
+  }
+  return os.Create(path)
+}
+
+func (h *content) Productionize(d http.Dir) error {
+  dst := string(d)
+  if _, err := os.Stat(dst); err != nil {
+    if err := os.MkdirAll(dst, 0777); err != nil {
+      return err
+    }
+  }
+
+  for _, root := range h.root {
+    src := string(root)
+    filepath.Walk(src, func(path string, info os.FileInfo, err error) error {
+      switch typeOfFile(path) {
+      case porkscript:
+        target, err := rebasePath(src, dst,
+          changeTypeOfFile(path, porkScriptFileExtension, javaScriptFileExtension))
+        if err != nil {
+          return err
+        }
+
+        file, err := createFile(target)
+        if err != nil {
+          return err
+        }
+        defer file.Close()
+
+        if err := CompileJs(path, file, h.level); err != nil {
+          return err
+        }
+      case scss:
+        // todo: there is an issue here in that I will compile things
+        // that are only intended to be included.
+        target, err := rebasePath(src, dst,
+          changeTypeOfFile(path, sassFileExtension, cssFileExtension))
+        if err != nil {
+          return err
+        }
+
+        file, err := createFile(target)
+        if err != nil {
+          return err
+        }
+        defer file.Close()
+
+        if err := CompileCss(path, file); err != nil {
+          return err
+        }
+      }
+      return nil
+    })
+  }
+
+  h.root = append(h.root, d)
+  return nil
 }
 
 func ServeNotFound(w http.ResponseWriter, r *http.Request) {
@@ -245,7 +348,7 @@ func CompileJs(filename string, w io.Writer, level Optimization) error {
   defer orp.Close()
   defer owp.Close()
 
-  var cp *os.Process
+  var cp, jp *os.Process
   switch level {
   case None:
     cp, err = cpp(filename, owp)
@@ -268,26 +371,21 @@ func CompileJs(filename string, w io.Writer, level Optimization) error {
 
     iwp.Close()
 
-    jp, err := jsc(irp, owp, pathToJsc(), level)
+    jp, err = jsc(irp, owp, pathToJsc(), level)
     if err != nil {
       return err
     }
 
     irp.Close()
     owp.Close()
-
-    err = waitFor(jp)
-    if err != nil {
-      return err
-    }
   }
 
-  err = waitFor(cp)
+  _, err = io.Copy(w, orp)
   if err != nil {
     return err
   }
 
-  _, err = io.Copy(w, orp)
+  err = waitFor(cp, jp)
   if err != nil {
     return err
   }

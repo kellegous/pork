@@ -86,8 +86,9 @@ var Grid = function(x, y, doc) {
       layout(body.appendChild(grid));
       css(grid, {
         'opacity': '1',
-        'width': view.offsetWidth + 'px',
-        'height': view.offsetHeight + 'px'
+        'z-index': '10000',
+        'width': Math.max(view.offsetWidth, window.innerWidth) + 'px',
+        'height': Math.max(view.offsetHeight, window.innerHeight) + 'px'
       });
       grid.style.opacity = '1';
     }
