@@ -41,7 +41,7 @@ var PathToJava = "/usr/bin/java"
 var PathToRuby = "/usr/bin/ruby"
 
 var rootDir string
-var hookFunc func(w http.ResponseWriter, r *http.Request)
+var shouldServeFunc func(w http.ResponseWriter, r *http.Request) bool
 
 func pathToJsc() string {
   return filepath.Join(rootDir, "deps/closure/compiler.jar")
@@ -126,14 +126,14 @@ type content struct {
   level Optimization
 }
 
-func Init(root string, hook func(w http.ResponseWriter, r *http.Request)) {
+func Init(root string, shouldServe func(w http.ResponseWriter, r *http.Request) bool) {
   r, err := filepath.Abs(root)
   if err != nil {
     panic(err)
   }
   rootDir = r
 
-  hookFunc = hook
+  shouldServeFunc = shouldServe
 }
 
 func Content(level Optimization, d ...http.Dir) Handler {
@@ -229,8 +229,8 @@ func ServeContent(w http.ResponseWriter, r *http.Request, level Optimization, d 
 }
 
 func (h *content) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-  if hookFunc != nil {
-    hookFunc(w, r)
+  if shouldServeFunc != nil && !shouldServeFunc(w, r) {
+    return
   }
   ServeContent(w, r, h.level, h.root...)
 }
