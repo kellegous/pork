@@ -1,6 +1,7 @@
 package pork
 
 import (
+  "compress/gzip"
   "errors"
   "fmt"
   "net/http"
@@ -41,7 +42,6 @@ var PathToJava = "/usr/bin/java"
 var PathToRuby = "/usr/bin/ruby"
 
 var rootDir string
-var shouldServeFunc func(w http.ResponseWriter, r *http.Request) bool
 
 func pathToJsc() string {
   return filepath.Join(rootDir, "deps/closure/compiler.jar")
@@ -116,6 +116,41 @@ func sass(filename string, w *os.File, sassPath string) (*os.Process, error) {
       nil})
 }
 
+type responseWriter struct {
+  io.Writer
+  http.ResponseWriter
+}
+
+func (w responseWriter) Write(b []byte) (int, error) {
+  return w.Writer.Write(b)
+}
+
+// todo: replace shoulServe hook.
+type Dispatch struct {
+  shouldServe func(w http.ResponseWriter, r *http.Request) bool
+  *http.ServeMux
+}
+
+func NewDispatch(shouldServe func(w http.ResponseWriter, r *http.Request) bool) *Dispatch {
+  return &Dispatch{shouldServe, http.NewServeMux()}
+}
+
+func (d *Dispatch) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+  if d.shouldServe != nil && !d.shouldServe(w, r) {
+    return
+  }
+
+  // attempt to wrap ResponseWriter with gzip.
+  if strings.Contains(r.Header.Get("Accept-Encoding"), "gzip") {
+    g := gzip.NewWriter(w)
+    defer g.Close()
+    w.Header().Set("Content-Encoding", "gzip")
+    w = responseWriter{g, w}
+  }
+
+  d.ServeMux.ServeHTTP(w, r)
+}
+
 type Handler interface {
   ServeHTTP(w http.ResponseWriter, r *http.Request)
   Productionize(d http.Dir) error
@@ -126,14 +161,12 @@ type content struct {
   level Optimization
 }
 
-func Init(root string, shouldServe func(w http.ResponseWriter, r *http.Request) bool) {
+func Init(root string) {
   r, err := filepath.Abs(root)
   if err != nil {
     panic(err)
   }
   rootDir = r
-
-  shouldServeFunc = shouldServe
 }
 
 func Content(level Optimization, d ...http.Dir) Handler {
@@ -229,9 +262,6 @@ func ServeContent(w http.ResponseWriter, r *http.Request, level Optimization, d 
 }
 
 func (h *content) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-  if shouldServeFunc != nil && !shouldServeFunc(w, r) {
-    return
-  }
   ServeContent(w, r, h.level, h.root...)
 }
 
