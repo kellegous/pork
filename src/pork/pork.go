@@ -198,6 +198,31 @@ func Init(root string) {
   rootDir = r
 }
 
+func ErrorFileHandler(path string, code int) http.Handler {
+  if _, err := os.Stat(path); err != nil {
+    panic(err)
+  }
+  return &errorFileHandler{path, code}
+}
+type errorFileHandler struct {
+  path string
+  code int
+}
+func (h *errorFileHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+  w.Header().Set("Content-Type", "text/html; charset=utf-8")
+  w.WriteHeader(h.code)
+  f, err := os.Open(h.path)
+  if err != nil {
+    panic(err)
+  }
+  defer f.Close()
+
+  _, err = io.Copy(w, f)
+  if err != nil {
+    panic(err)
+  }
+}
+
 func FileHandler(path string) http.Handler {
   if _, err := os.Stat(path); err != nil {
     panic(err)

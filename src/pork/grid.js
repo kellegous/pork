@@ -1,7 +1,7 @@
 (function(){
 
 var layout = function(element) {
-  element.offsetLeft;  
+  return element.offsetLeft;  
 };
 
 var css = function(element, attrs) {
