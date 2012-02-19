@@ -12,8 +12,6 @@ import (
   "strings"
 )
 
-// todo: implement Content.Productionize
-// todo: implement multi-mount.
 type Optimization int
 const (
   None Optimization = iota
@@ -116,27 +114,52 @@ func sass(filename string, w *os.File, sassPath string) (*os.Process, error) {
       nil})
 }
 
+type Router interface {
+  Handle(string, http.Handler)
+  HandleFunc(string, func(http.ResponseWriter, *http.Request))
+  ServeHTTP(http.ResponseWriter, *http.Request)
+}
+
+type Context interface {
+  ServeNotFound(http.ResponseWriter, *http.Request)
+}
+
+func ContextFor(w http.ResponseWriter, r *http.Request) Context {
+  return w.(responseWriter).r
+}
+
+func NewRouter(shouldServe func(http.ResponseWriter, *http.Request) bool, notFound http.Handler) Router {
+  if notFound == nil {
+    notFound = http.NotFoundHandler()
+  }
+
+  if shouldServe == nil {
+    shouldServe = func(w http.ResponseWriter, r *http.Request) bool {
+      return true
+    }
+  }
+
+  return &router{shouldServe, notFound, http.NewServeMux()}
+}
+
 type responseWriter struct {
   io.Writer
   http.ResponseWriter
+  r *router
 }
 
 func (w responseWriter) Write(b []byte) (int, error) {
   return w.Writer.Write(b)
 }
 
-// todo: replace shoulServe hook.
-type Dispatch struct {
+type router struct {
   shouldServe func(w http.ResponseWriter, r *http.Request) bool
+  notFound http.Handler
   *http.ServeMux
 }
 
-func NewDispatch(shouldServe func(w http.ResponseWriter, r *http.Request) bool) *Dispatch {
-  return &Dispatch{shouldServe, http.NewServeMux()}
-}
-
-func (d *Dispatch) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-  if d.shouldServe != nil && !d.shouldServe(w, r) {
+func (d *router) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+  if !d.shouldServe(w, r) {
     return
   }
 
@@ -145,10 +168,16 @@ func (d *Dispatch) ServeHTTP(w http.ResponseWriter, r *http.Request) {
     g := gzip.NewWriter(w)
     defer g.Close()
     w.Header().Set("Content-Encoding", "gzip")
-    w = responseWriter{g, w}
+    w = responseWriter{g, w, d}
+  } else if r.Header.Get("Connection") != "Upgrade" {
+    w = responseWriter{w, w, d}
   }
 
   d.ServeMux.ServeHTTP(w, r)
+}
+
+func (d *router) ServeNotFound(w http.ResponseWriter, r *http.Request) {
+  d.notFound.ServeHTTP(w, r)
 }
 
 type Handler interface {
@@ -167,6 +196,17 @@ func Init(root string) {
     panic(err)
   }
   rootDir = r
+}
+
+func FileHandler(path string) http.Handler {
+  if _, err := os.Stat(path); err != nil {
+    panic(err)
+  }
+  return fileHandler(path)
+}
+type fileHandler string
+func (h fileHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+  http.ServeFile(w, r, string(h))
 }
 
 func Content(level Optimization, d ...http.Dir) Handler {
@@ -222,7 +262,7 @@ func typeOfFile(filename string) fileType {
   return unknown
 }
 
-func ServeContent(w http.ResponseWriter, r *http.Request, level Optimization, d ...http.Dir) {
+func ServeContent(c Context, w http.ResponseWriter, r *http.Request, level Optimization, d ...http.Dir) {
   path := r.URL.Path
 
   // if the file exists, just serve it.
@@ -235,7 +275,7 @@ func ServeContent(w http.ResponseWriter, r *http.Request, level Optimization, d 
   case javascript:
     source, found := findFile(d, changeTypeOfFile(path, javaScriptFileExtension, porkScriptFileExtension))
     if !found {
-      ServeNotFound(w, r)
+      c.ServeNotFound(w, r)
       return
     }
     w.Header().Set("Content-Type", "text/javascript")
@@ -247,7 +287,7 @@ func ServeContent(w http.ResponseWriter, r *http.Request, level Optimization, d 
   case css:
     source, found := findFile(d, changeTypeOfFile(path, cssFileExtension, sassFileExtension))
     if !found {
-      ServeNotFound(w, r)
+      c.ServeNotFound(w, r)
       return
     }
     w.Header().Set("Content-Type", "text/css")
@@ -257,12 +297,12 @@ func ServeContent(w http.ResponseWriter, r *http.Request, level Optimization, d 
       panic(err)
     }
   default:
-    ServeNotFound(w, r)  
+    c.ServeNotFound(w, r)
   }
 }
 
 func (h *content) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-  ServeContent(w, r, h.level, h.root...)
+  ServeContent(ContextFor(w, r), w, r, h.level, h.root...)
 }
 
 func rebasePath(src, dst, filename string) (string, error) {
@@ -336,10 +376,6 @@ func (h *content) Productionize(d http.Dir) error {
 
   h.root = append(h.root, d)
   return nil
-}
-
-func ServeNotFound(w http.ResponseWriter, r *http.Request) {
-  http.NotFound(w, r)
 }
 
 func CompileCss(filename string, w io.Writer) error {
