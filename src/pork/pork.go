@@ -9,6 +9,7 @@ import (
   "os"
   "path"
   "path/filepath"
+  "runtime"
   "strings"
 )
 
@@ -190,12 +191,13 @@ type content struct {
   level Optimization
 }
 
-func Init(root string) {
-  r, err := filepath.Abs(root)
-  if err != nil {
-    panic(err)
-  }
-  rootDir = r
+func pathToThisFile() string {
+  _, file, _, _ := runtime.Caller(0)
+  return file
+}
+
+func init() {
+  rootDir = filepath.Dir(filepath.Dir(filepath.Dir(pathToThisFile())))
 }
 
 func ErrorFileHandler(path string, code int) http.Handler {
