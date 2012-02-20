@@ -1,9 +1,11 @@
 package pork
 
 import (
+  "bufio"
   "compress/gzip"
   "errors"
   "fmt"
+  "net"
   "net/http"
   "io"
   "os"
@@ -11,6 +13,7 @@ import (
   "path/filepath"
   "runtime"
   "strings"
+  "time"
 )
 
 type Optimization int
@@ -125,56 +128,89 @@ type Context interface {
   ServeNotFound(http.ResponseWriter, *http.Request)
 }
 
-func ContextFor(w http.ResponseWriter, r *http.Request) Context {
-  return w.(responseWriter).r
+type emptyContext struct{}
+
+func (c *emptyContext) ServeNotFound(w http.ResponseWriter, r *http.Request) {
+  http.NotFound(w, r)
 }
 
-func NewRouter(shouldServe func(http.ResponseWriter, *http.Request) bool, notFound http.Handler) Router {
+func ContextFor(w http.ResponseWriter, r *http.Request) Context {
+  switch t := w.(type) {
+  case *response:
+    return t.router
+  }
+  return &emptyContext{}
+}
+
+func NewRouter(logger func(int, *http.Request), notFound http.Handler, headers map[string]string) Router {
   if notFound == nil {
     notFound = http.NotFoundHandler()
   }
 
-  if shouldServe == nil {
-    shouldServe = func(w http.ResponseWriter, r *http.Request) bool {
-      return true
+  if logger == nil {
+    logger = func(status int, r *http.Request) {
     }
   }
 
-  return &router{shouldServe, notFound, http.NewServeMux()}
+  return &router{logger, notFound, headers, http.NewServeMux()}
 }
 
-type responseWriter struct {
-  io.Writer
-  http.ResponseWriter
-  r *router
+// a response wrapper that provides a couple of additional features:
+// (1) a wrapping writer can be interposed (for gzip)
+// (2) the status code can be capture for logging
+type response struct {
+  writer io.Writer
+  res http.ResponseWriter
+  router *router
+  status int
 }
 
-func (w responseWriter) Write(b []byte) (int, error) {
-  return w.Writer.Write(b)
+func (r *response) WriteHeader(code int) {
+  r.status = code
+  r.res.WriteHeader(code)
 }
 
+func (r *response) Header() http.Header {
+  return r.res.Header()
+}
+
+func (r *response) Write(b []byte) (int, error) {
+  return r.writer.Write(b)
+}
+
+func (r *response) Hijack() (net.Conn, *bufio.ReadWriter, error) {
+  return r.res.(http.Hijacker).Hijack()
+}
+
+// todo: remove embedded ServerMux and use my trie dispatcher
 type router struct {
-  shouldServe func(w http.ResponseWriter, r *http.Request) bool
+  logger func(status int, r *http.Request)
   notFound http.Handler
+  headers map[string]string
   *http.ServeMux
 }
 
 func (d *router) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-  if !d.shouldServe(w, r) {
-    return
+  // add any global headers
+  h := w.Header()
+  for k, v := range d.headers {
+    h.Set(k, v)
   }
 
-  // attempt to wrap ResponseWriter with gzip.
+  res := &response{writer: w, res: w, router: d, status: 200}
+  // attempt to interpose a gzip io.Writer
   if strings.Contains(r.Header.Get("Accept-Encoding"), "gzip") {
     g := gzip.NewWriter(w)
     defer g.Close()
     w.Header().Set("Content-Encoding", "gzip")
-    w = responseWriter{g, w, d}
-  } else if r.Header.Get("Connection") != "Upgrade" {
-    w = responseWriter{w, w, d}
+    res.writer = g
   }
 
-  d.ServeMux.ServeHTTP(w, r)
+  // dispatch to serving infrastructure
+  d.ServeMux.ServeHTTP(res, r)
+
+  // log the request
+  d.logger(res.status, r)
 }
 
 func (d *router) ServeNotFound(w http.ResponseWriter, r *http.Request) {
@@ -200,6 +236,13 @@ func init() {
   rootDir = filepath.Dir(filepath.Dir(filepath.Dir(pathToThisFile())))
 }
 
+type HostRedirectHandler string
+func (h HostRedirectHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+  http.Redirect(w, r,
+    fmt.Sprintf("http://%s%s", string(h), r.RequestURI),
+    http.StatusMovedPermanently)
+}
+
 func ErrorFileHandler(path string, code int) http.Handler {
   if _, err := os.Stat(path); err != nil {
     panic(err)
@@ -223,6 +266,22 @@ func (h *errorFileHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
   if err != nil {
     panic(err)
   }
+}
+
+// returns true if content should be delivered
+func ServeContentModificationTime(w http.ResponseWriter, r *http.Request, t time.Time) bool {
+  if t.IsZero() {
+    return true
+  }
+
+   // The Date-Modified header truncates sub-second precision, so
+   // use mtime < t+1s instead of mtime <= t to check for unmodified.
+   if ht, err := time.Parse(http.TimeFormat, r.Header.Get("If-Modified-Since")); err == nil && t.Before(ht.Add(1 * time.Second)) {
+    w.WriteHeader(http.StatusNotModified)
+    return false
+   }
+   w.Header().Set("Last-Modified", t.UTC().Format(http.TimeFormat))
+   return true
 }
 
 func FileHandler(path string) http.Handler {
