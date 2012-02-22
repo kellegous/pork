@@ -89,10 +89,14 @@ func cpp(filename string, w *os.File) (*os.Process, error) {
       nil})
 }
 
-func jsc(r *os.File, w *os.File, jscPath string, level Optimization) (*os.Process, error) {
+func jsc(r *os.File, w *os.File, externs, jscPath string, level Optimization) (*os.Process, error) {
   jvmArgs := []string{PathToJava, "-jar", jscPath}
   if level == Advanced {
     jvmArgs = append(jvmArgs, "--compilation_level", "ADVANCED_OPTIMIZATIONS")
+  }
+
+  if externs != "" {
+    jvmArgs = append(jvmArgs, "--externs", externs)
   }
 
   return os.StartProcess(jvmArgs[0],
@@ -494,7 +498,7 @@ func CompileCss(filename string, w io.Writer) error {
 
 
 type bundle struct {
-  Externs []string
+  Externs string
   Units []*unit
 }
 
@@ -543,8 +547,17 @@ func CompileBundle(filename string, w io.Writer, level Optimization) error {
     return err
   }
 
+  externs := ""
+  if bundle.Externs != "" {
+    externs = filepath.Join(dir, bundle.Externs)
+  }
+
   for _, u := range bundle.Units {
-    err := CompileJs(filepath.Join(dir, u.File), w, minLevel(u.Level(), level))
+    err := compileJs(filepath.Join(dir, u.File),
+      externs,
+      w,
+      minLevel(u.Level(),
+      level))
     if err != nil {
       return err
     }
@@ -553,7 +566,8 @@ func CompileBundle(filename string, w io.Writer, level Optimization) error {
   return nil
 }
 
-func CompileJs(filename string, w io.Writer, level Optimization) error {
+// todo: make this private.
+func compileJs(filename, externs string, w io.Writer, level Optimization) error {
   // output pipe
   orp, owp, err := os.Pipe()
   if err != nil {
@@ -585,7 +599,7 @@ func CompileJs(filename string, w io.Writer, level Optimization) error {
 
     iwp.Close()
 
-    jp, err = jsc(irp, owp, pathToJsc(), level)
+    jp, err = jsc(irp, owp, externs, pathToJsc(), level)
     if err != nil {
       return err
     }
