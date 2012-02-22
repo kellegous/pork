@@ -3,6 +3,7 @@ package pork
 import (
   "bufio"
   "compress/gzip"
+  "encoding/json"
   "errors"
   "fmt"
   "net"
@@ -26,14 +27,14 @@ const (
 type fileType int
 const (
   javascript fileType = iota
-  porkscript
+  porkBundle
   css
   scss
   unknown
 )
 
 const (
-  porkScriptFileExtension = ".pork.js"
+  porkBundleFileExtension = ".pork"
   javaScriptFileExtension = ".js"
   cssFileExtension = ".css"
   sassFileExtension = ".scss"
@@ -333,8 +334,8 @@ func changeTypeOfFile(path, from, to string) string {
 }
 
 func typeOfFile(filename string) fileType {
-  if strings.HasSuffix(filename, porkScriptFileExtension) {
-    return porkscript
+  if strings.HasSuffix(filename, porkBundleFileExtension) {
+    return porkBundle
   }
   if strings.HasSuffix(filename, javaScriptFileExtension) {
     return javascript
@@ -359,13 +360,13 @@ func ServeContent(c Context, w http.ResponseWriter, r *http.Request, level Optim
 
   switch typeOfFile(path) {
   case javascript:
-    source, found := findFile(d, changeTypeOfFile(path, javaScriptFileExtension, porkScriptFileExtension))
+    source, found := findFile(d, changeTypeOfFile(path, javaScriptFileExtension, porkBundleFileExtension))
     if !found {
       c.ServeNotFound(w, r)
       return
     }
     w.Header().Set("Content-Type", "text/javascript")
-    err := CompileJs(source, w, level)
+    err := CompileBundle(source, w, level)
     if err != nil {
       // todo: send to ServeSiteError
       panic(err)
@@ -421,9 +422,9 @@ func (h *content) Productionize(d http.Dir) error {
     src := string(root)
     filepath.Walk(src, func(path string, info os.FileInfo, err error) error {
       switch typeOfFile(path) {
-      case porkscript:
+      case porkBundle:
         target, err := rebasePath(src, dst,
-          changeTypeOfFile(path, porkScriptFileExtension, javaScriptFileExtension))
+          changeTypeOfFile(path, porkBundleFileExtension, javaScriptFileExtension))
         if err != nil {
           return err
         }
@@ -434,7 +435,7 @@ func (h *content) Productionize(d http.Dir) error {
         }
         defer file.Close()
 
-        if err := CompileJs(path, file, h.level); err != nil {
+        if err := CompileBundle(path, file, h.level); err != nil {
           return err
         }
       case scss:
@@ -486,6 +487,67 @@ func CompileCss(filename string, w io.Writer) error {
   _, err = io.Copy(w, rp)
   if err != nil {
     return err
+  }
+
+  return nil
+}
+
+
+type bundle struct {
+  Externs []string
+  Units []*unit
+}
+
+type unit struct {
+  File string
+  LevelStr string `json:"Level"`
+}
+
+func (u *unit) Level() Optimization {
+  switch u.LevelStr {
+  case "Basic":
+    return Basic
+  case "None":
+    return None
+  }
+  return Advanced
+}
+
+func loadBundle(r io.Reader) (*bundle, error) {
+  b := &bundle{}
+  err := json.NewDecoder(r).Decode(&b)
+  if err != nil {
+    return nil, err
+  }
+  return b, nil
+}
+
+func minLevel(a Optimization, b Optimization) Optimization {
+  if a < b {
+    return a
+  }
+  return b
+}
+
+func CompileBundle(filename string, w io.Writer, level Optimization) error {
+  dir, _ := filepath.Split(filename)
+
+  file, err := os.Open(filename)
+  if err != nil {
+    return err
+  }
+  defer file.Close()
+
+  bundle, err := loadBundle(file)
+  if err != nil {
+    return err
+  }
+
+  for _, u := range bundle.Units {
+    err := CompileJs(filepath.Join(dir, u.File), w, minLevel(u.Level(), level))
+    if err != nil {
+      return err
+    }
   }
 
   return nil
