@@ -1,21 +1,27 @@
-(function(){
-
-var layout = function(element) {
-  return element.offsetLeft;  
-};
-
-var css = function(element, attrs) {
-  for (var i in attrs)
-    element.style.setProperty(i, attrs[i], '');
-  return element;
-}
+goog.provide('pork.grid');
 
 /**
   @constructor
-  @param offsets {Array.<int>}
-  @param doc {Document}
+  @param {Array.<number>} x
+  @param {Array.<number>} y
+  @param {Document} doc
 */
-var Grid = function(x, y, doc) {
+pork.Grid = function(x, y, doc) {
+  var layout = function(element) {
+    return element.offsetLeft;  
+  };
+
+  /**
+  @param {Node} element
+  @param {Object.<string>} attrs
+  @returns {Node}
+  */
+  var css = function(element, attrs) {
+    for (var i in attrs)
+      element.style.setProperty(i, attrs[i], '');
+    return element;
+  }
+
   var self = this;
   var view = doc.documentElement;
   var grid = css(doc.createElement('div'), {
@@ -97,16 +103,6 @@ var Grid = function(x, y, doc) {
 
 /**
 @private
-@type {bool}
+@type {boolean}
 */
-Grid.prototype._visible = false;
-
-/**
- @param offsets {Array.<int>}
- @param doc {?Document}
-*/
-pork.grid = function(x, y, doc) {
-  return new Grid(x, y, doc || document);
-};
-
-})();
+pork.Grid.prototype._visible;

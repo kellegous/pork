@@ -1,5 +1,7 @@
-var pork = {};
+#include "pork/base.js"
+goog.global.CLOSURE_NO_DEPS = true;
 
+goog.provide("pork");
 #include "pork/grid.js"
 
 /**
@@ -7,7 +9,7 @@ var pork = {};
 @param xhrDidSucceed {?function(XMLHttpRequest)}
 @param xhrDidFail {?function(XMLHttpRequest)}
 */
-var xhrGet = function(url, xhrDidSucceed, xhrDidFail) {
+pork.xhrGet = function(url, xhrDidSucceed, xhrDidFail) {
   var xhr = new XMLHttpRequest;
   xhr.open('GET', url, true);
   xhr.onreadystatechange = function() {
