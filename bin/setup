@@ -38,8 +38,9 @@ def Main():
   if not os.path.exists(jsc):
     os.makedirs(jsc)
 
-  if not _DownloadTar('http://closure-compiler.googlecode.com/files/compiler-latest.tar.gz', jsc):
-    return False
+  # todo: remove this code, this is getting checked in directly.
+  # if not _DownloadTar('http://closure-compiler.googlecode.com/files/compiler-latest.tar.gz', jsc):
+  #   return False
 
   if not _UpdateGitDep(deps, 'git://github.com/nex3/sass.git'):
     return False
