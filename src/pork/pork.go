@@ -22,6 +22,7 @@ const (
   None Optimization = iota
   Basic
   Advanced
+  Super
 )
 
 type fileType int
@@ -91,8 +92,11 @@ func cpp(filename string, w *os.File) (*os.Process, error) {
 
 func jsc(r *os.File, w *os.File, externs, jscPath string, level Optimization) (*os.Process, error) {
   jvmArgs := []string{PathToJava, "-jar", jscPath}
-  if level == Advanced {
+  switch level {
+  case Advanced:
     jvmArgs = append(jvmArgs, "--compilation_level", "ADVANCED_OPTIMIZATIONS")
+  case Super:
+    jvmArgs = append(jvmArgs, "--compilation_level", "SUPER_OPTIMIZATIONS")
   }
 
   if externs != "" {
