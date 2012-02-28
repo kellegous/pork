@@ -52,7 +52,7 @@ func pathToJsc() string {
 }
 
 func pathToSass() string {
-  return filepath.Join(rootDir, "deps/sass/bin/sass")
+  return filepath.Join(rootDir, "bin/sass")
 }
 
 func waitFor(procs ...*os.Process) error {
@@ -112,12 +112,21 @@ func jsc(r *os.File, w *os.File, externs, jscPath string, level Optimization) (*
       nil})
 }
 
-func sass(filename string, w *os.File, sassPath string) (*os.Process, error) {
+func sass(filename string, w *os.File, sassPath string, level Optimization) (*os.Process, error) {
   sassArgs := []string{
       PathToRuby,
       sassPath,
-      "--no-cache",
-      filename}
+      "--no-cache"}
+
+  switch level {
+  case Basic:
+    sassArgs = append(sassArgs, "-style", "compact")
+  case Advanced:
+    sassArgs = append(sassArgs, "-style", "compressed")
+  }
+
+  sassArgs = append(sassArgs, filename)
+
   return os.StartProcess(sassArgs[0],
     sassArgs,
     &os.ProcAttr{
@@ -386,7 +395,7 @@ func ServeContent(c Context, w http.ResponseWriter, r *http.Request, level Optim
       return
     }
     w.Header().Set("Content-Type", "text/css")
-    err := CompileCss(source, w)
+    err := CompileCss(source, w, level)
     if err != nil {
       // todo: send to ServeSiteError
       panic(err)
@@ -461,7 +470,7 @@ func (h *content) Productionize(d http.Dir) error {
         }
         defer file.Close()
 
-        if err := CompileCss(path, file); err != nil {
+        if err := CompileCss(path, file, h.level); err != nil {
           return err
         }
       }
@@ -473,7 +482,7 @@ func (h *content) Productionize(d http.Dir) error {
   return nil
 }
 
-func CompileCss(filename string, w io.Writer) error {
+func CompileCss(filename string, w io.Writer, level Optimization) error {
   rp, wp, err := os.Pipe()
   if err != nil {
     return err
@@ -481,7 +490,7 @@ func CompileCss(filename string, w io.Writer) error {
   defer rp.Close()
   defer wp.Close()
 
-  p, err := sass(filename, wp, pathToSass())
+  p, err := sass(filename, wp, pathToSass(), level)
   if err != nil {
     return err
   }

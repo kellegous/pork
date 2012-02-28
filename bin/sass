@@ -1,0 +1,74 @@
+#!/usr/bin/env ruby
+# The command line Sass parser.
+
+require File.dirname(__FILE__) + '/../deps/sass/lib/sass'
+require 'sass/exec'
+require 'base64'
+
+class Scope
+  @stack = []
+  def self.push(filename)
+    @stack.push(filename)
+  end
+  def self.pop
+    @stack.pop
+  end
+  def self.peek
+    @stack.last
+  end
+
+  def self.find(name)
+    File.expand_path(File.join(
+      File.dirname(@stack.first),
+      @stack.length == 1 ? "." : File.dirname(@stack.last),
+      name))
+  end
+end
+
+class Sass::Tree::Visitors::Perform
+  alias_method :_visit_import, :visit_import
+  def visit_import(node)
+    Scope.push(node.imported_filename)
+    begin
+      return _visit_import(node)
+    ensure
+      Scope.pop
+    end
+  end
+end
+
+class Sass::Engine
+  alias_method :_orig_render, :render
+  def render
+    Scope.push(@options[:filename])
+    begin
+      return _orig_render
+    ensure
+      Scope.pop
+    end
+  end
+end
+
+module Sass::Script::Functions
+  def datauri(string)
+    assert_type string, :String
+    name = string.value.downcase
+    mime = "application/octet-stream"
+    mime = "image/png" if name.end_with?(".png")
+    mime = "image/gif" if name.end_with?(".gif")
+    mime = "image/jpg" if name.end_with?(".jpg") || name.end_with?(".jpeg")
+    file = File.open(Scope.find(string.value), 'rb')
+    begin
+      Sass::Script::String.new(
+        "data:#{mime};base64,#{Base64.encode64(file.read).strip}",
+        :string)
+    ensure
+      file.close
+    end
+  end
+  declare :datauri, [:string]
+end
+
+# todo: this is a giant steaming pile of crap.
+opts = Sass::Exec::Sass.new(ARGV)
+opts.parse!
