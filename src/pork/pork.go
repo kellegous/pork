@@ -116,13 +116,14 @@ func sass(filename string, w *os.File, sassPath string, level Optimization) (*os
   sassArgs := []string{
       PathToRuby,
       sassPath,
-      "--no-cache"}
+      "--no-cache",
+      "--trace"}
 
   switch level {
   case Basic:
-    sassArgs = append(sassArgs, "-style", "compact")
+    sassArgs = append(sassArgs, "--style", "compact")
   case Advanced:
-    sassArgs = append(sassArgs, "-style", "compressed")
+    sassArgs = append(sassArgs, "--style", "compressed")
   }
 
   sassArgs = append(sassArgs, filename)
