@@ -25,6 +25,16 @@ class Scope
   end
 end
 
+class Url <Sass::Script::Literal
+  def initialize(url)
+    super(url)
+  end
+
+  def to_s(opts = {})
+    "url(\"#{@value}\")"
+  end
+end
+
 class Sass::Tree::Visitors::Perform
   alias_method :_visit_import, :visit_import
   def visit_import(node)
@@ -59,9 +69,12 @@ module Sass::Script::Functions
     mime = "image/jpg" if name.end_with?(".jpg") || name.end_with?(".jpeg")
     file = File.open(Scope.find(string.value), 'rb')
     begin
-      Sass::Script::String.new(
-        "data:#{mime};base64,#{Base64.encode64(file.read).strip}",
-        :string)
+      # love that gsub at the end? ruby's Base64 adds \n's every
+      # 60 characters. Why? I have no ideas. RFC 2045 doesn't
+      # say anything about that. It's just the usual ruby community
+      # gift!
+      data = Base64.encode64(file.read).strip.gsub("\n", "")
+      Url.new("data:#{mime};base64,#{data}")
     ensure
       file.close
     end
