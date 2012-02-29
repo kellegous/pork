@@ -41,7 +41,7 @@ const (
   sassFileExtension = ".scss"
 )
 
-var PathToCpp = "/usr/bin/cpp"
+var PathToCpp = "/usr/bin/gcc"
 var PathToJava = "/usr/bin/java"
 var PathToRuby = "/usr/bin/ruby"
 
@@ -77,8 +77,10 @@ func waitFor(procs ...*os.Process) error {
 func cpp(filename string, w *os.File) (*os.Process, error) {
   cppArgs := []string{
     PathToCpp,
+    "-E",
     "-P",
     "-CC",
+    "-xc",
     fmt.Sprintf("-I%s", filepath.Join(rootDir, "src")),
     filename}
   return os.StartProcess(cppArgs[0],

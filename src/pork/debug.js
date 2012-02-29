@@ -2,7 +2,7 @@
 #define DEBUG
 
 #if defined(DEBUG)
-#define ASSERT(c, s) console.assert(c, s);
+#define ASSERT(COND) window.console.assert(COND, #COND)
 #else
-#define ASSERT(c, s)
+#define ASSERT(cond)
 #endif
