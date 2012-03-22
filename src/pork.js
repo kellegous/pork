@@ -2,46 +2,34 @@
 #include "pork/debug.js"
 
 goog.provide("pork");
+#include "pork/cookies.js"
 #include "pork/grid.js"
+
+// todo: move sniffer to it's own file.
 
 /**
 @type {boolean}
 */
 pork.isWebKit;
 
+
 /**
 @type {boolean}
 */
 pork.isGecko;
+
 
 /**
 @type {boolean}
 */
 pork.isPresto;
 
+
 /**
 @type {boolean}
 */
 pork.isMs;
 
-/**
-@param {string=} cookie
-@return {Object.<string, string>}
-*/
-pork.parseCookie = function(cookie) {
-  var v = cookie || document.cookie;
-  var p = v.split(';');
-  var r = {};
-  for (var i = 0, n = p.length; i < n; ++i) {
-    if (p[i].length == 0)
-      continue;
-    var q = p[i].split('=');
-    if (q.length != 2)
-      continue;
-    r[q[0]] = q[1];
-  }
-  return r;
-};
 
 /**
 */

@@ -1,3 +1,6 @@
+#ifndef PORK_BASE_JS
+#define PORK_BASE_JS
+
 /**
  * Base namespace for the Closure library.  Checks to see goog is
  * already defined in the current scope before assigning to prevent
@@ -79,3 +82,5 @@ goog.exportPath_ = function(name, opt_object, opt_objectToExportTo) {
 goog.isDef = function(val) {
   return val !== undefined;
 };
+
+#endif // PORK_BASE_JS
