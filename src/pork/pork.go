@@ -499,12 +499,12 @@ func CompileCss(filename string, w io.Writer, level Optimization) error {
   }
   wp.Close()
 
-  err = waitFor(p)
+  _, err = io.Copy(w, rp)
   if err != nil {
     return err
   }
 
-  _, err = io.Copy(w, rp)
+  err = waitFor(p)
   if err != nil {
     return err
   }
