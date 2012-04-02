@@ -92,7 +92,7 @@ func cpp(filename string, w *os.File) (*os.Process, error) {
       nil})
 }
 
-func jsc(r *os.File, w *os.File, externs, jscPath string, level Optimization) (*os.Process, error) {
+func jsc(r *os.File, w *os.File, externs []string, jscPath string, level Optimization) (*os.Process, error) {
   jvmArgs := []string{PathToJava, "-jar", jscPath}
   switch level {
   case Advanced:
@@ -101,8 +101,8 @@ func jsc(r *os.File, w *os.File, externs, jscPath string, level Optimization) (*
     jvmArgs = append(jvmArgs, "--compilation_level", "SUPER_OPTIMIZATIONS")
   }
 
-  if externs != "" {
-    jvmArgs = append(jvmArgs, "--externs", externs)
+  for _, e := range externs {
+    jvmArgs = append(jvmArgs, "--externs", e)
   }
 
   return os.StartProcess(jvmArgs[0],
@@ -514,7 +514,7 @@ func CompileCss(filename string, w io.Writer, level Optimization) error {
 
 
 type bundle struct {
-  Externs string
+  Externs []string
   Units []*unit
 }
 
@@ -563,9 +563,11 @@ func CompileBundle(filename string, w io.Writer, level Optimization) error {
     return err
   }
 
-  externs := ""
-  if bundle.Externs != "" {
-    externs = filepath.Join(dir, bundle.Externs)
+  externs := []string{}
+  if bundle.Externs != nil {
+    for _, e := range bundle.Externs {
+      externs = append(externs, filepath.Join(dir, e))
+    }
   }
 
   for _, u := range bundle.Units {
@@ -583,7 +585,7 @@ func CompileBundle(filename string, w io.Writer, level Optimization) error {
 }
 
 // todo: make this private.
-func compileJs(filename, externs string, w io.Writer, level Optimization) error {
+func compileJs(filename string, externs []string, w io.Writer, level Optimization) error {
   // output pipe
   orp, owp, err := os.Pipe()
   if err != nil {
