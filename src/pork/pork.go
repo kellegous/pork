@@ -6,6 +6,7 @@ import (
   "encoding/json"
   "errors"
   "fmt"
+  "log"
   "net"
   "net/http"
   "io"
@@ -61,13 +62,13 @@ func waitFor(procs ...*os.Process) error {
       continue
     }
 
-    s, err := proc.Wait(0)
+    s, err := proc.Wait()
     if err != nil {
       return err
     }
 
-    if sc := s.WaitStatus.ExitStatus(); sc != 0 {
-      return errors.New(fmt.Sprintf("exit code: %d", sc))      
+    if !s.Success() {
+      return errors.New(fmt.Sprintf("exit code: %s", s.Sys()))      
     }
   }
 
@@ -274,6 +275,7 @@ type errorFileHandler struct {
   path string
   code int
 }
+
 func (h *errorFileHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
   w.Header().Set("Content-Type", "text/html; charset=utf-8")
   w.WriteHeader(h.code)
