@@ -61,13 +61,13 @@ func waitFor(procs ...*os.Process) error {
       continue
     }
 
-    s, err := proc.Wait(0)
+    s, err := proc.Wait()
     if err != nil {
       return err
     }
 
-    if sc := s.WaitStatus.ExitStatus(); sc != 0 {
-      return errors.New(fmt.Sprintf("exit code: %d", sc))      
+    if !s.Success() {
+      return errors.New(fmt.Sprintf("exit code: %s", s.Sys()))      
     }
   }
 
