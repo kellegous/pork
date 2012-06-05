@@ -1,0 +1,25 @@
+#!/usr/bin/env python2.7
+
+import os
+import shutil
+import subprocess
+
+def Main():
+  root = os.path.abspath(
+    os.path.join(
+      os.path.dirname(__file__),
+      os.path.pardir))
+  deps = os.path.join(root, 'deps')
+  sass = os.path.join(deps, 'sass')
+
+  if os.path.exists(sass):
+    shutil.rmtree(sass)
+
+  subprocess.call(
+    ['git', 'clone', 'https://github.com/nex3/sass.git'],
+    cwd = deps)
+
+  shutil.rmtree(os.path.join(sass, '.git'))
+
+if __name__ == '__main__':
+  Main()
