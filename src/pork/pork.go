@@ -6,9 +6,10 @@ import (
   "encoding/json"
   "errors"
   "fmt"
+  "io"
+  "log"
   "net"
   "net/http"
-  "io"
   "os"
   "path"
   "path/filepath"
@@ -18,6 +19,7 @@ import (
 )
 
 type Optimization int
+
 const (
   None Optimization = iota
   Basic
@@ -26,6 +28,7 @@ const (
 )
 
 type fileType int
+
 const (
   javascript fileType = iota
   porkBundle
@@ -37,8 +40,8 @@ const (
 const (
   porkBundleFileExtension = ".pork"
   javaScriptFileExtension = ".js"
-  cssFileExtension = ".css"
-  sassFileExtension = ".scss"
+  cssFileExtension        = ".css"
+  sassFileExtension       = ".scss"
 )
 
 var PathToCpp = "/usr/bin/gcc"
@@ -67,22 +70,30 @@ func waitFor(procs ...*os.Process) error {
     }
 
     if !s.Success() {
-      return errors.New(fmt.Sprintf("exit code: %s", s.Sys()))      
+      return errors.New(fmt.Sprintf("exit code: %s", s.Sys()))
     }
   }
 
   return nil
 }
 
-func cpp(filename string, w *os.File) (*os.Process, error) {
+func cpp(filename string, includes []string, w *os.File) (*os.Process, error) {
   cppArgs := []string{
     PathToCpp,
     "-E",
     "-P",
     "-CC",
     "-xc",
-    fmt.Sprintf("-I%s", filepath.Join(rootDir, "src")),
-    filename}
+    fmt.Sprintf("-I%s", filepath.Join(rootDir, "src"))}
+
+  for _, i := range includes {
+    cppArgs = append(cppArgs, fmt.Sprintf("-I%s", i))
+  }
+
+  cppArgs = append(cppArgs, filename)
+
+  log.Printf("%v\n", cppArgs)
+
   return os.StartProcess(cppArgs[0],
     cppArgs,
     &os.ProcAttr{
@@ -116,10 +127,10 @@ func jsc(r *os.File, w *os.File, externs []string, jscPath string, level Optimiz
 
 func sass(filename string, w *os.File, sassPath string, level Optimization) (*os.Process, error) {
   sassArgs := []string{
-      PathToRuby,
-      sassPath,
-      "--no-cache",
-      "--trace"}
+    PathToRuby,
+    sassPath,
+    "--no-cache",
+    "--trace"}
 
   switch level {
   case Basic:
@@ -181,7 +192,7 @@ func NewRouter(logger func(int, *http.Request), notFound http.Handler, headers m
 // (2) the status code can be capture for logging
 type response struct {
   writer io.Writer
-  res http.ResponseWriter
+  res    http.ResponseWriter
   router *router
   status int
 }
@@ -205,9 +216,9 @@ func (r *response) Hijack() (net.Conn, *bufio.ReadWriter, error) {
 
 // todo: remove embedded ServerMux and use my trie dispatcher
 type router struct {
-  logger func(status int, r *http.Request)
+  logger   func(status int, r *http.Request)
   notFound http.Handler
-  headers map[string]string
+  headers  map[string]string
   *http.ServeMux
 }
 
@@ -244,7 +255,7 @@ type Handler interface {
 }
 
 type content struct {
-  root []http.Dir
+  root  []http.Dir
   level Optimization
 }
 
@@ -258,6 +269,7 @@ func init() {
 }
 
 type HostRedirectHandler string
+
 func (h HostRedirectHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
   http.Redirect(w, r,
     fmt.Sprintf("http://%s%s", string(h), r.RequestURI),
@@ -270,6 +282,7 @@ func ErrorFileHandler(path string, code int) http.Handler {
   }
   return &errorFileHandler{path, code}
 }
+
 type errorFileHandler struct {
   path string
   code int
@@ -296,14 +309,14 @@ func ServeContentModificationTime(w http.ResponseWriter, r *http.Request, t time
     return true
   }
 
-   // The Date-Modified header truncates sub-second precision, so
-   // use mtime < t+1s instead of mtime <= t to check for unmodified.
-   if ht, err := time.Parse(http.TimeFormat, r.Header.Get("If-Modified-Since")); err == nil && t.Before(ht.Add(1 * time.Second)) {
+  // The Date-Modified header truncates sub-second precision, so
+  // use mtime < t+1s instead of mtime <= t to check for unmodified.
+  if ht, err := time.Parse(http.TimeFormat, r.Header.Get("If-Modified-Since")); err == nil && t.Before(ht.Add(1*time.Second)) {
     w.WriteHeader(http.StatusNotModified)
     return false
-   }
-   w.Header().Set("Last-Modified", t.UTC().Format(http.TimeFormat))
-   return true
+  }
+  w.Header().Set("Last-Modified", t.UTC().Format(http.TimeFormat))
+  return true
 }
 
 func FileHandler(path string) http.Handler {
@@ -312,7 +325,9 @@ func FileHandler(path string) http.Handler {
   }
   return fileHandler(path)
 }
+
 type fileHandler string
+
 func (h fileHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
   http.ServeFile(w, r, string(h))
 }
@@ -322,12 +337,12 @@ func Content(level Optimization, d ...http.Dir) Handler {
 }
 
 func expandPath(fs http.Dir, name string) string {
-  return filepath.Join(string(fs), filepath.FromSlash(path.Clean("/" + name)))
+  return filepath.Join(string(fs), filepath.FromSlash(path.Clean("/"+name)))
 }
 
 func findFile(d []http.Dir, name string) (string, bool) {
   for i, n := 0, len(d); i < n; i++ {
-    target := filepath.Join(string(d[i]), filepath.FromSlash(path.Clean("/" + name)))
+    target := filepath.Join(string(d[i]), filepath.FromSlash(path.Clean("/"+name)))
 
     // if the file doesn't exist, move along
     s, err := os.Stat(target)
@@ -351,7 +366,7 @@ func findFile(d []http.Dir, name string) (string, bool) {
 
 func changeTypeOfFile(path, from, to string) string {
   // assert path ends with from
-  return path[0 : len(path) - len(from)] + to
+  return path[0:len(path)-len(from)] + to
 }
 
 func typeOfFile(filename string) fileType {
@@ -513,14 +528,14 @@ func CompileCss(filename string, w io.Writer, level Optimization) error {
   return nil
 }
 
-
 type bundle struct {
-  Externs []string
-  Units []*unit
+  Externs  []string
+  Includes []string
+  Units    []*unit
 }
 
 type unit struct {
-  File string
+  File     string
   LevelStr string `json:"Level"`
 }
 
@@ -571,12 +586,20 @@ func CompileBundle(filename string, w io.Writer, level Optimization) error {
     }
   }
 
+  includes := []string{}
+  if bundle.Includes != nil {
+    for _, i := range bundle.Includes {
+      includes = append(includes, filepath.Join(dir, i))
+    }
+  }
+
   for _, u := range bundle.Units {
     err := compileJs(filepath.Join(dir, u.File),
       externs,
+      includes,
       w,
       minLevel(u.Level(),
-      level))
+        level))
     if err != nil {
       return err
     }
@@ -586,7 +609,7 @@ func CompileBundle(filename string, w io.Writer, level Optimization) error {
 }
 
 // todo: make this private.
-func compileJs(filename string, externs []string, w io.Writer, level Optimization) error {
+func compileJs(filename string, externs []string, includes []string, w io.Writer, level Optimization) error {
   // output pipe
   orp, owp, err := os.Pipe()
   if err != nil {
@@ -598,7 +621,7 @@ func compileJs(filename string, externs []string, w io.Writer, level Optimizatio
   var cp, jp *os.Process
   switch level {
   case None:
-    cp, err = cpp(filename, owp)
+    cp, err = cpp(filename, includes, owp)
     if err != nil {
       return err
     }
@@ -611,7 +634,7 @@ func compileJs(filename string, externs []string, w io.Writer, level Optimizatio
     defer irp.Close()
     defer iwp.Close()
 
-    cp, err = cpp(filename, iwp)
+    cp, err = cpp(filename, includes, iwp)
     if err != nil {
       return err
     }
