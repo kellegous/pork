@@ -9,34 +9,20 @@ module Sass::Tree
   #
   # @see Sass::Tree
   class DirectiveNode < Node
-    # The text of the directive, `@` and all, with interpolation included.
-    #
-    # @return [Array<String, Sass::Script::Node>]
-    attr_accessor :value
-
-    # The text of the directive after any interpolated SassScript has been resolved.
-    # Only set once \{Tree::Visitors::Perform} has been run.
+    # The text of the directive, `@` and all.
     #
     # @return [String]
-    attr_accessor :resolved_value
+    attr_accessor :value
 
-    # @param value [Array<String, Sass::Script::Node>] See \{#value}
+    # @param value [String] See \{#value}
     def initialize(value)
       @value = value
       super()
     end
 
-    # @param value [String] See \{#resolved_value}
-    # @return [DirectiveNode]
-    def self.resolved(value)
-      node = new([value])
-      node.resolved_value = value
-      node
-    end
-
     # @return [String] The name of the directive, including `@`.
     def name
-      value.first.gsub(/ .*$/, '')
+      value.gsub(/ .*$/, '')
     end
   end
 end

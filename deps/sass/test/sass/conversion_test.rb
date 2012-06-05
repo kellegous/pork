@@ -1,5 +1,5 @@
 #!/usr/bin/env ruby
-require 'test_helper'
+require File.dirname(__FILE__) + '/../test_helper'
 
 class ConversionTest < Test::Unit::TestCase
   def test_basic
@@ -10,8 +10,7 @@ foo bar
 SASS
 foo bar {
   baz: bang;
-  bip: bop;
-}
+  bip: bop; }
 SCSS
     assert_renders <<SASS, <<SCSS, :old => true
 foo bar
@@ -20,8 +19,7 @@ foo bar
 SASS
 foo bar {
   baz: bang;
-  bip: bop;
-}
+  bip: bop; }
 SCSS
   end
 
@@ -49,10 +47,8 @@ SASS
 foo bar {
   baz bang {
     baz: bang;
-    bip: bop;
-  }
-  blat: boo;
-}
+    bip: bop; }
+  blat: boo; }
 SCSS
   end
 
@@ -64,9 +60,7 @@ foo bar
 SASS
 foo bar {
   &:hover {
-    baz: bang;
-  }
-}
+    baz: bang; } }
 SCSS
   end
 
@@ -76,8 +70,7 @@ foo \#{$bar + "baz"}.bip
   baz: bang
 SASS
 foo \#{$bar + "baz"}.bip {
-  baz: bang;
-}
+  baz: bang; }
 SCSS
   end
 
@@ -89,8 +82,7 @@ baz bang
 SASS
 foo bar,
 baz bang {
-  baz: bang;
-}
+  baz: bang; }
 SCSS
 
     assert_renders <<SASS, <<SCSS
@@ -102,9 +94,7 @@ SASS
 blat {
   foo bar,
   baz bang {
-    baz: bang;
-  }
-}
+    baz: bang; } }
 SCSS
   end
 
@@ -115,15 +105,13 @@ foo bar baz bang
 SASS
 foo bar
 baz bang {
-  baz: bang;
-}
+  baz: bang; }
 SCSS
 
     assert_scss_to_scss <<SCSS
 foo bar
 baz bang {
-  baz: bang;
-}
+  baz: bang; }
 SCSS
   end
 
@@ -135,9 +123,7 @@ foo bar
 SASS
 foo bar {
   :hover {
-    baz: bang;
-  }
-}
+    baz: bang; } }
 SCSS
   end
 
@@ -147,8 +133,17 @@ foo bar
   baz\#{$bang}bip\#{$bop}: 12
 SASS
 foo bar {
-  baz\#{$bang}bip\#{$bop}: 12;
-}
+  baz\#{$bang}bip\#{$bop}: 12; }
+SCSS
+  end
+
+  def test_property_name_interpolation
+    assert_renders <<SASS, <<SCSS
+foo bar
+  baz\#{$bang}bip\#{$bop}: 12
+SASS
+foo bar {
+  baz\#{$bang}bip\#{$bop}: 12; }
 SCSS
   end
 
@@ -158,8 +153,7 @@ foo bar
   baz: 12 \#{$bang} bip \#{"bop"} blat
 SASS
 foo bar {
-  baz: 12 \#{$bang} bip \#{"bop"} blat;
-}
+  baz: 12 \#{$bang} bip \#{"bop"} blat; }
 SCSS
   end
 
@@ -169,8 +163,7 @@ foo bar
   baz: 12 $bang "bip"
 SASS
 foo bar {
-  baz: 12 $bang "bip";
-}
+  baz: 12 $bang "bip"; }
 SCSS
   end
 
@@ -180,8 +173,7 @@ foo bar
   :baz 12 $bang "bip"
 SASS
 foo bar {
-  baz: 12 $bang "bip";
-}
+  baz: 12 $bang "bip"; }
 SCSS
   end
 
@@ -194,21 +186,18 @@ foo bar {
   baz:
     bip
   bam
-        boon;
-}
+        boon; }
 SCSS
 
     assert_scss_to_scss <<OUT, <<IN
 foo bar {
-  baz: bip bam boon;
-}
+  baz: bip bam boon; }
 OUT
 foo bar {
   baz:
     bip
   bam
-        boon;
-}
+        boon; }
 IN
   end
 
@@ -221,21 +210,18 @@ foo bar {
   baz:
     $bip
   "bam"
-        12px;
-}
+        12px; }
 SCSS
 
     assert_scss_to_scss <<OUT, <<IN
 foo bar {
-  baz: $bip "bam" 12px;
-}
+  baz: $bip "bam" 12px; }
 OUT
 foo bar {
   baz:
     $bip
   "bam"
-        12px;
-}
+        12px; }
 IN
   end
 
@@ -257,8 +243,7 @@ SASS
 // baz
 
 foo bar {
-  a: b;
-}
+  a: b; }
 SCSS
 
     assert_renders <<SASS, <<SCSS
@@ -276,8 +261,7 @@ SASS
 // bang
 
 foo bar {
-  a: b;
-}
+  a: b; }
 SCSS
 
     assert_sass_to_scss <<SCSS, <<SASS
@@ -287,8 +271,7 @@ SCSS
 // bang
 
 foo bar {
-  a: b;
-}
+  a: b; }
 SCSS
 // foo
 // bar
@@ -362,8 +345,7 @@ SASS
 /* baz */
 
 foo bar {
-  a: b;
-}
+  a: b; }
 SCSS
 
     assert_scss_to_sass <<SASS, <<SCSS
@@ -381,8 +363,7 @@ SASS
    bang */
 
 foo bar {
-  a: b;
-}
+  a: b; }
 SCSS
 
     assert_scss_to_scss <<SCSS
@@ -392,8 +373,7 @@ SCSS
    bang */
 
 foo bar {
-  a: b;
-}
+  a: b; }
 SCSS
 
     assert_renders <<SASS, <<SCSS
@@ -411,8 +391,7 @@ SASS
  * bang */
 
 foo bar {
-  a: b;
-}
+  a: b; }
 SCSS
   end
 
@@ -432,8 +411,7 @@ foo {
    * beep boop */
   bang: bizz;
   /* bubble bubble
-   * toil trouble */
-}
+   * toil trouble */ }
 SCSS
 
     assert_sass_to_scss <<SCSS, <<SASS
@@ -445,8 +423,7 @@ foo {
   bang: bizz;
   /* bubble bubble
    * toil trouble
-   *    gorp */
-}
+   *    gorp */ }
 SCSS
 foo
   bar: baz
@@ -472,8 +449,7 @@ foo {
   /* foo
 bar
     baz */
-  a: b;
-}
+  a: b; }
 SCSS
 
     assert_sass_to_scss <<SCSS, <<SASS
@@ -481,8 +457,7 @@ foo {
   /*      foo
    * bar
    *     baz */
-  a: b;
-}
+  a: b; }
 SCSS
 foo
   /*      foo
@@ -504,8 +479,7 @@ SASS
  * Bar
  * Baz */
 .foo#bar {
-  a: b;
-}
+  a: b; }
 SCSS
 
     assert_renders <<SASS, <<SCSS
@@ -519,8 +493,7 @@ SASS
 // Bar
 // Baz
 @mixin foo {
-  a: b;
-}
+  a: b; }
 SCSS
   end
 
@@ -532,8 +505,7 @@ foo
 SASS
 foo {
   @debug 12px;
-  bar: baz;
-}
+  bar: baz; }
 SCSS
   end
 
@@ -545,8 +517,7 @@ foo
 SASS
 foo {
   @foo #bar "baz";
-  bar: baz;
-}
+  bar: baz; }
 SCSS
   end
 
@@ -562,11 +533,9 @@ SASS
 foo {
   @foo #bar "baz" {
     a: b;
-    c: d;
-  }
+    c: d; }
 
-  bar: baz;
-}
+  bar: baz; }
 SCSS
   end
 
@@ -585,16 +554,12 @@ SASS
 foo {
   @foo #bar "baz" {
     #blat {
-      a: b;
-    }
+      a: b; }
     .bang {
       c: d;
-      e: f;
-    }
-  }
+      e: f; } }
 
-  bar: baz;
-}
+  bar: baz; }
 SCSS
   end
 
@@ -616,17 +581,13 @@ foo {
   @foo #bar "baz" {
     g: h;
     #blat {
-      a: b;
-    }
+      a: b; }
     .bang {
       c: d;
-      e: f;
-    }
-    i: j;
-  }
+      e: f; }
+    i: j; }
 
-  bar: baz;
-}
+  bar: baz; }
 SCSS
   end
 
@@ -649,13 +610,10 @@ foo
 SASS
 foo {
   @for $a from $b to $c {
-    a: b;
-  }
+    a: b; }
   @for $c from 1 to 16 {
     d: e;
-    f: g;
-  }
-}
+    f: g; } }
 SCSS
   end
 
@@ -670,13 +628,10 @@ foo
 SASS
 foo {
   @while flaz($a + $b) {
-    a: b;
-  }
+    a: b; }
   @while 1 {
     d: e;
-    f: g;
-  }
-}
+    f: g; } }
 SCSS
   end
 
@@ -694,18 +649,13 @@ foo
 SASS
 foo {
   @if $foo or $bar {
-    a: b;
-  }
+    a: b; }
   @if $baz {
-    d: e;
-  }
+    d: e; }
   @else if $bang {
-    f: g;
-  }
+    f: g; }
   @else {
-    h: i;
-  }
-}
+    h: i; } }
 SCSS
   end
 
@@ -721,15 +671,11 @@ c
 SASS
 a {
   @each $number in 1px 2px 3px 4px {
-    b: $number;
-  }
-}
+    b: $number; } }
 
 c {
   @each $str in foo, bar, baz, bang {
-    d: $str;
-  }
-}
+    d: $str; } }
 SCSS
   end
 
@@ -747,8 +693,7 @@ SASS
 @import url(bar.css);
 
 foo {
-  bar: baz;
-}
+  bar: baz; }
 SCSS
 
     assert_renders <<SASS, <<SCSS
@@ -764,8 +709,7 @@ SASS
 @import url(bar.css);
 
 foo {
-  bar: baz;
-}
+  bar: baz; }
 SCSS
   end
 
@@ -815,18 +759,6 @@ SASS
 SCSS
   end
 
-  def test_import_with_interpolation
-    assert_renders <<SASS, <<SCSS
-$family: unquote("Droid+Sans")
-
-@import url("http://fonts.googleapis.com/css?family=\#{$family}")
-SASS
-$family: unquote("Droid+Sans");
-
-@import url("http://fonts.googleapis.com/css?family=\#{$family}");
-SCSS
-  end
-
   def test_extend
     assert_renders <<SASS, <<SCSS
 .foo
@@ -835,8 +767,7 @@ SCSS
 SASS
 .foo {
   @extend .bar;
-  @extend .baz:bang;
-}
+  @extend .baz:bang; }
 SCSS
   end
 
@@ -846,8 +777,7 @@ SCSS
   @extend .foo, .bar
 SASS
 .baz {
-  @extend .foo, .bar;
-}
+  @extend .foo, .bar; }
 SCSS
   end
 
@@ -859,9 +789,7 @@ SCSS
 SASS
 @mixin foo-bar {
   baz {
-    a: b;
-  }
-}
+    a: b; } }
 SCSS
 
     assert_scss_to_sass <<SASS, <<SCSS
@@ -871,17 +799,13 @@ SCSS
 SASS
 @mixin foo-bar() {
   baz {
-    a: b;
-  }
-}
+    a: b; } }
 SCSS
 
     assert_sass_to_scss <<SCSS, <<SASS
 @mixin foo-bar {
   baz {
-    a: b;
-  }
-}
+    a: b; } }
 SCSS
 =foo-bar()
   baz
@@ -897,9 +821,7 @@ SASS
 SASS
 @mixin foo-bar($baz, $bang) {
   baz {
-    a: $baz $bang;
-  }
-}
+    a: $baz $bang; } }
 SCSS
   end
 
@@ -911,17 +833,13 @@ SCSS
 SASS
 @mixin foo-bar($baz, $bang: 12px) {
   baz {
-    a: $baz $bang;
-  }
-}
+    a: $baz $bang; } }
 SCSS
 
     assert_sass_to_scss <<SCSS, <<SASS
 @mixin foo-bar($baz, $bang: foo) {
   baz {
-    a: $baz $bang;
-  }
-}
+    a: $baz $bang; } }
 SCSS
 =foo-bar($baz, $bang: foo)
   baz
@@ -937,8 +855,7 @@ foo
 SASS
 foo {
   @include foo-bar;
-  a: blip;
-}
+  a: blip; }
 SCSS
   end
 
@@ -950,8 +867,7 @@ foo
 SASS
 foo {
   @include foo-bar(12px, "blaz");
-  a: blip;
-}
+  a: blip; }
 SCSS
   end
 
@@ -965,8 +881,7 @@ SASS
 foo {
   @include foo-bar(12px, "blaz", $blip: blap, $bloop: blop);
   @include foo-bar($blip: blap, $bloop: blop);
-  a: blip;
-}
+  a: blip; }
 SCSS
   end
 
@@ -978,8 +893,7 @@ SCSS
 SASS
 @function foo() {
   $var: 1 + 1;
-  @return $var;
-}
+  @return $var; }
 SCSS
   end
 
@@ -991,9 +905,7 @@ SCSS
 SASS
 @function foo($var1, $var2) {
   @if $var1 {
-    @return $var1 + $var2;
-  }
-}
+    @return $var1 + $var2; } }
 SCSS
   end
 
@@ -1005,9 +917,7 @@ SCSS
 SASS
 @function foo($var1, $var2: foo) {
   @if $var1 {
-    @return $var1 + $var2;
-  }
-}
+    @return $var1 + $var2; } }
 SCSS
   end
 
@@ -1023,8 +933,7 @@ $var1: 12px + 15px;
 
 foo {
   $var2: flaz(#abcdef);
-  val: $var1 $var2;
-}
+  val: $var1 $var2; }
 SCSS
   end
 
@@ -1040,8 +949,7 @@ $var1: 12px + 15px !default;
 
 foo {
   $var2: flaz(#abcdef) !default;
-  val: $var1 $var2;
-}
+  val: $var1 $var2; }
 SCSS
   end
 
@@ -1069,8 +977,7 @@ foo
   a: (1px / 2px)
 SASS
 foo {
-  a: (1px / 2px);
-}
+  a: (1px / 2px); }
 SCSS
   end
 
@@ -1084,8 +991,7 @@ SASS
 $var: 1px / 2px;
 
 foo {
-  a: $var;
-}
+  a: $var; }
 SCSS
 
     assert_renders <<SASS, <<SCSS
@@ -1097,8 +1003,7 @@ SASS
 $var: 1px;
 
 foo {
-  a: $var / 2px;
-}
+  a: $var / 2px; }
 SCSS
 
     assert_renders <<SASS, <<SCSS
@@ -1106,8 +1011,7 @@ foo
   a: 1 + 1px / 2px
 SASS
 foo {
-  a: 1 + 1px / 2px;
-}
+  a: 1 + 1px / 2px; }
 SCSS
   end
 
@@ -1117,81 +1021,7 @@ foo
   a: 1px / 2px
 SASS
 foo {
-  a: 1px / 2px;
-}
-SCSS
-  end
-
-  def test_directive_with_interpolation
-    assert_renders <<SASS, <<SCSS
-$baz: 12
-
-@foo bar\#{$baz} qux
-  a: b
-SASS
-$baz: 12;
-
-@foo bar\#{$baz} qux {
-  a: b;
-}
-SCSS
-  end
-
-  def test_media_with_interpolation
-    assert_renders <<SASS, <<SCSS
-$baz: 12
-
-@media bar\#{$baz}
-  a: b
-SASS
-$baz: 12;
-
-@media bar\#{$baz} {
-  a: b;
-}
-SCSS
-  end
-
-  def test_media_with_expressions
-    assert_renders <<SASS, <<SCSS
-$media1: screen
-$media2: print
-$var: -webkit-min-device-pixel-ratio
-$val: 20
-
-@media \#{$media1} and ($var + "-foo": $val + 5), only \#{$media2}
-  a: b
-SASS
-$media1: screen;
-$media2: print;
-$var: -webkit-min-device-pixel-ratio;
-$val: 20;
-
-@media \#{$media1} and ($var + "-foo": $val + 5), only \#{$media2} {
-  a: b;
-}
-SCSS
-  end
-
-  def test_supports_with_expressions
-    assert_renders <<SASS, <<SCSS
-$query: "(feature1: val)"
-$feature: feature2
-$val: val
-
-@supports \#{$query} and ($feature: $val) or (not ($feature + 3: $val + 4))
-  foo
-    a: b
-SASS
-$query: "(feature1: val)";
-$feature: feature2;
-$val: val;
-
-@supports \#{$query} and ($feature: $val) or (not ($feature + 3: $val + 4)) {
-  foo {
-    a: b;
-  }
-}
+  a: 1px / 2px; }
 SCSS
   end
 
@@ -1215,8 +1045,7 @@ foo {
   .name: val;
   name/**/: val;
   name/*\\**/: val;
-  name: val;
-}
+  name: val; }
 SCSS
   end
 
@@ -1234,8 +1063,7 @@ foo {
   *name: val;
   #name: val;
   .name: val;
-  name: val;
-}
+  name: val; }
 SCSS
   end
 
@@ -1246,8 +1074,7 @@ SCSS
   a: b
 SASS
 #{s} {
-  a: b;
-}
+  a: b; }
 SCSS
     end
 
@@ -1280,10 +1107,8 @@ div {
   before: before;
   background: {
     color: blue;
-    repeat: no-repeat;
-  };
-  after: after;
-}
+    repeat: no-repeat; };
+  after: after; }
 
 SCSS
   end
@@ -1291,22 +1116,17 @@ SCSS
   def test_dasherize
     assert_sass_to_scss(<<SCSS, <<SASS, :dasherize => true)
 @mixin under-scored-mixin($under-scored-arg: $under-scored-default) {
-  bar: $under-scored-arg;
-}
+  bar: $under-scored-arg; }
 
 div {
   foo: under-scored-fn($under-scored-var + "before\#{$another-under-scored-var}after");
   @include under-scored-mixin($passed-arg);
-  selector-\#{$under-scored-interp}: bold;
-}
+  selector-\#{$under-scored-interp}: bold; }
 
 @if $under-scored {
   @for $for-var from $from-var to $to-var {
     @while $while-var == true {
-      $while-var: false;
-    }
-  }
-}
+      $while-var: false; } } }
 SCSS
 =under_scored_mixin($under_scored_arg: $under_scored_default)
   bar: $under_scored_arg
@@ -1327,182 +1147,16 @@ SASS
 SASS
 /*! \#{"interpolated"} */
 SCSS
-  end
-
-  def test_content_conversion
-    assert_renders(<<SASS, <<SCSS)
-$color: blue
-
-=context($class, $color: red)
-  .\#{$class}
-    background-color: $color
-    @content
-    border-color: $color
-
-+context(parent)
-  +context(child, $color: yellow)
-    color: $color
+    silence_warnings {assert_renders(<<SASS, <<SCSS)}
+//! \#{"interpolated"}
+//!
+//! \#{"also interpolated"}
 SASS
-$color: blue;
-
-@mixin context($class, $color: red) {
-  .\#{$class} {
-    background-color: $color;
-    @content;
-    border-color: $color;
-  }
-}
-
-@include context(parent) {
-  @include context(child, $color: yellow) {
-    color: $color;
-  }
-}
-SCSS
-
-  end
-
-  def test_empty_content
-    assert_scss_to_scss(<<SCSS)
-@mixin foo {
-  @content;
-}
-
-@include foo {}
+//! \#{"interpolated"}
+//!
+//! \#{"also interpolated"}
 SCSS
   end
-
-  def test_placeholder_conversion
-    assert_renders(<<SASS, <<SCSS)
-#content a%foo.bar
-  color: blue
-SASS
-#content a%foo.bar {
-  color: blue;
-}
-SCSS
-  end
-
-  def test_placeholder_interoplation_conversion
-    assert_renders(<<SASS, <<SCSS)
-$foo: foo
-
-%\#{$foo}
-  color: blue
-
-.bar
-  @extend %foo
-SASS
-$foo: foo;
-
-%\#{$foo} {
-  color: blue;
-}
-
-.bar {
-  @extend %foo;
-}
-SCSS
-  end
-
-  def test_indent
-    assert_renders <<SASS, <<SCSS, :indent => "    "
-foo bar
-    baz bang
-        baz: bang
-        bip: bop
-    blat: boo
-SASS
-foo bar {
-    baz bang {
-        baz: bang;
-        bip: bop;
-    }
-    blat: boo;
-}
-SCSS
-
-    assert_renders <<SASS, <<SCSS, :indent => "\t"
-foo bar
-	baz bang
-		baz: bang
-		bip: bop
-	blat: boo
-SASS
-foo bar {
-	baz bang {
-		baz: bang;
-		bip: bop;
-	}
-	blat: boo;
-}
-SCSS
-
-    assert_sass_to_scss <<SCSS, <<SASS, :indent => "    "
-foo bar {
-    baz bang {
-        baz: bang;
-        bip: bop;
-    }
-    blat: boo;
-}
-SCSS
-foo bar
-  baz bang
-    baz: bang
-    bip: bop
-  blat: boo
-SASS
-
-    assert_sass_to_scss <<SCSS, <<SASS, :indent => "\t"
-foo bar {
-	baz bang {
-		baz: bang;
-		bip: bop;
-	}
-	blat: boo;
-}
-SCSS
-foo bar
-  baz bang
-    baz: bang
-    bip: bop
-  blat: boo
-SASS
-
-    assert_scss_to_sass <<SASS, <<SCSS, :indent => "    "
-foo bar
-    baz bang
-        baz: bang
-        bip: bop
-    blat: boo
-SASS
-foo bar {
-  baz bang {
-    baz: bang;
-    bip: bop;
-  }
-  blat: boo;
-}
-SCSS
-
-    assert_scss_to_sass <<SASS, <<SCSS, :indent => "\t"
-foo bar
-	baz bang
-		baz: bang
-		bip: bop
-	blat: boo
-SASS
-foo bar {
-  baz bang {
-    baz: bang;
-    bip: bop;
-  }
-  blat: boo;
-}
-SCSS
-  end
-
 
   ## Regression Tests
 
@@ -1529,36 +1183,14 @@ SCSS
 SASS
 @if $foo {
   one {
-    a: b;
-  }
-}
+    a: b; } }
 @else {
   @if $bar {
     two {
-      a: b;
-    }
-  }
+      a: b; } }
   @else {
     three {
-      a: b;
-    }
-  }
-}
-SCSS
-  end
-
-  def test_comment_indentation
-    assert_renders(<<SASS, <<SCSS, :indent => '    ')
-foo
-    // bar
-    /* baz
-    a: b
-SASS
-foo {
-    // bar
-    /* baz */
-    a: b;
-}
+      a: b; } } }
 SCSS
   end
 
@@ -1584,7 +1216,7 @@ SCSS
     options ||= {}
 
     assert_equal(scss.rstrip, to_scss(in_scss, options.merge(:syntax => :scss)).rstrip,
-      "Expected SCSS to transform to #{scss == in_scss ? 'itself' : 'SCSS'}")
+      "Expected SCSS to transform to #{scss == in_scss ? 'itself' : 'SCSS'}k")
   end
 
   def assert_sass_to_scss(scss, sass, options = {})

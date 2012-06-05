@@ -19,18 +19,26 @@ module Sass::Tree
     # @return [String]
     attr_accessor :resolved_value
 
-    # The type of the comment. `:silent` means it's never output to CSS,
-    # `:normal` means it's output in every compile mode except `:compressed`,
-    # and `:loud` means it's output even in `:compressed`.
+    # Whether the comment is loud.
     #
-    # @return [Symbol]
-    attr_accessor :type
+    # Loud comments start with ! and force the comment to be generated
+    # irrespective of compilation settings or the comment syntax used.
+    #
+    # @return [Boolean]
+    attr_accessor :loud
+
+    # Whether or not the comment is silent (that is, doesn't output to CSS).
+    #
+    # @return [Boolean]
+    attr_accessor :silent
 
     # @param value [Array<String, Sass::Script::Node>] See \{#value}
-    # @param type [Symbol] See \{#type}
-    def initialize(value, type)
+    # @param silent [Boolean] See \{#silent}
+    # @param loud [Boolean] See \{#loud}
+    def initialize(value, silent, loud)
       @value = Sass::Util.with_extracted_values(value) {|str| normalize_indentation str}
-      @type = type
+      @silent = silent
+      @loud = loud
       super()
     end
 
@@ -40,7 +48,7 @@ module Sass::Tree
     # @return [Boolean] Whether or not this node and the other object
     #   are the same
     def ==(other)
-      self.class == other.class && value == other.value && type == other.type
+      self.class == other.class && value == other.value && silent == other.silent && loud == other.loud
     end
 
     # Returns `true` if this is a silent comment
@@ -50,10 +58,10 @@ module Sass::Tree
     #
     # @return [Boolean]
     def invisible?
-      case @type
-      when :loud; false
-      when :silent; true
-      else; style == :compressed
+      if @loud
+        return false
+      else
+        @silent || (style == :compressed)
       end
     end
 

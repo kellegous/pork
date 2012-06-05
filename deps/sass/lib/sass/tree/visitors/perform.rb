@@ -11,11 +11,9 @@ class Sass::Tree::Visitors::Perform < Sass::Tree::Visitors::Base
 
   def initialize(env)
     @environment = env
-    # Stack trace information, including mixin includes and imports.
-    @stack = []
   end
 
-  # If an exception is raised, this adds proper metadata to the backtrace.
+  # If an exception is raised, this add proper metadata to the backtrace.
   def visit(node)
     super(node.dup)
   rescue Sass::SyntaxError => e
@@ -55,6 +53,8 @@ class Sass::Tree::Visitors::Perform < Sass::Tree::Visitors::Base
   # Removes this node from the tree if it's a silent comment.
   def visit_comment(node)
     return [] if node.invisible?
+    check_for_loud_silent_comment node
+    check_for_comment_interp node
     node.resolved_value = run_interp_no_strip(node.value)
     node.resolved_value.gsub!(/\\([\\#])/, '\1')
     node
@@ -87,7 +87,7 @@ class Sass::Tree::Visitors::Perform < Sass::Tree::Visitors::Base
   # Runs SassScript interpolation in the selector,
   # and then parses the result into a {Sass::Selector::CommaSequence}.
   def visit_extend(node)
-    parser = Sass::SCSS::StaticParser.new(run_interp(node.selector), node.filename, node.line)
+    parser = Sass::SCSS::CssParser.new(run_interp(node.selector), node.filename, node.line)
     node.resolved_selector = parser.parse_selector
     node
   end
@@ -114,7 +114,7 @@ class Sass::Tree::Visitors::Perform < Sass::Tree::Visitors::Base
   # Loads the function into the environment.
   def visit_function(node)
     @environment.set_function(node.name,
-      Sass::Callable.new(node.name, node.args, @environment, node.children, !:has_content))
+      Sass::Callable.new(node.name, node.args, @environment, node.children))
     []
   end
 
@@ -135,12 +135,12 @@ class Sass::Tree::Visitors::Perform < Sass::Tree::Visitors::Base
   # or parses and includes the imported Sass file.
   def visit_import(node)
     if path = node.css_import?
-      return Sass::Tree::CssImportNode.resolved("url(#{path})")
+      return Sass::Tree::DirectiveNode.new("@import url(#{path})")
     end
     file = node.imported_file
-    handle_import_loop!(node) if @stack.any? {|e| e[:filename] == file.options[:filename]}
+    handle_import_loop!(node) if @environment.files_in_use.include?(file.options[:filename])
 
-    @stack.push(:filename => node.filename, :line => node.line)
+    @environment.push_frame(:filename => node.filename, :line => node.line)
     root = file.to_tree
     Sass::Tree::Visitors::CheckNesting.visit(root)
     node.children = root.children.map {|c| visit(c)}.flatten
@@ -150,28 +150,24 @@ class Sass::Tree::Visitors::Perform < Sass::Tree::Visitors::Base
     e.add_backtrace(:filename => node.filename, :line => node.line)
     raise e
   ensure
-    @stack.pop unless path
+    @environment.pop_frame
   end
 
   # Loads a mixin into the environment.
   def visit_mixindef(node)
     @environment.set_mixin(node.name,
-      Sass::Callable.new(node.name, node.args, @environment, node.children, node.has_content))
+      Sass::Callable.new(node.name, node.args, @environment, node.children))
     []
   end
 
   # Runs a mixin.
   def visit_mixin(node)
-    include_loop = true
-    handle_include_loop!(node) if @stack.any? {|e| e[:name] == node.name}
-    include_loop = false
+    handle_include_loop!(node) if @environment.mixins_in_use.include?(node.name)
 
-    @stack.push(:filename => node.filename, :line => node.line, :name => node.name)
+    original_env = @environment
+    original_env.push_frame(:filename => node.filename, :line => node.line)
+    original_env.prepare_frame(:mixin => node.name)
     raise Sass::SyntaxError.new("Undefined mixin '#{node.name}'.") unless mixin = @environment.mixin(node.name)
-
-    if node.children.any? && !mixin.has_content
-      raise Sass::SyntaxError.new(%Q{Mixin "#{node.name}" does not accept a content block.})
-    end
 
     passed_args = node.args.dup
     passed_keywords = node.keywords.dup
@@ -198,37 +194,20 @@ END
         elsif default
           default.perform(env)
         end)
-      raise Sass::SyntaxError.new("Mixin #{node.name} is missing argument #{var.inspect}.") unless env.var(var.name)
+      raise Sass::SyntaxError.new("Mixin #{node.name} is missing parameter #{var.inspect}.") unless env.var(var.name)
       env
     end
-    environment.caller = Sass::Environment.new(@environment)
-    environment.content = node.children if node.has_children
 
-    trace_node = Sass::Tree::TraceNode.from_node(node.name, node)
-    with_environment(environment) {trace_node.children = mixin.tree.map {|c| visit(c)}.flatten}
-    trace_node
+    with_environment(environment) {node.children = mixin.tree.map {|c| visit(c)}.flatten}
+    node
   rescue Sass::SyntaxError => e
-    unless include_loop
+    if original_env # Don't add backtrace info if this is an @include loop
       e.modify_backtrace(:mixin => node.name, :line => node.line)
       e.add_backtrace(:line => node.line)
     end
     raise e
   ensure
-    @stack.pop unless include_loop
-  end
-
-  def visit_content(node)
-    raise Sass::SyntaxError.new("No @content passed.") unless content = @environment.content
-    @stack.push(:filename => node.filename, :line => node.line, :name => '@content')
-    trace_node = Sass::Tree::TraceNode.from_node('@content', node)
-    with_environment(@environment.caller) {trace_node.children = content.map {|c| visit(c.dup)}.flatten}
-    trace_node
-  rescue Sass::SyntaxError => e
-    e.modify_backtrace(:mixin => '@content', :line => node.line)
-    e.add_backtrace(:line => node.line)
-    raise e
-  ensure
-    @stack.pop if content
+    original_env.pop_frame if original_env
   end
 
   # Runs any SassScript that may be embedded in a property.
@@ -252,17 +231,16 @@ END
     parser = Sass::SCSS::StaticParser.new(run_interp(node.rule), node.filename, node.line)
     node.parsed_rules ||= parser.parse_selector
     if node.options[:trace_selectors]
-      @stack.push(:filename => node.filename, :line => node.line)
-      node.stack_trace = stack_trace
-      @stack.pop
+      @environment.push_frame(:filename => node.filename, :line => node.line)
+      node.stack_trace = @environment.stack_trace
+      @environment.pop_frame
     end
     yield
   end
 
   # Loads the new variable value into the environment.
   def visit_variable(node)
-    var = @environment.var(node.name)
-    return [] if node.guarded && var && !var.null?
+    return [] if node.guarded && !@environment.var(node.name).nil?
     val = node.expr.perform(@environment)
     @environment.set_var(node.name, val)
     []
@@ -270,17 +248,17 @@ END
 
   # Prints the expression to STDERR with a stylesheet trace.
   def visit_warn(node)
-    @stack.push(:filename => node.filename, :line => node.line)
+    @environment.push_frame(:filename => node.filename, :line => node.line)
     res = node.expr.perform(@environment)
     res = res.value if res.is_a?(Sass::Script::String)
     msg = "WARNING: #{res}\n         "
-    msg << stack_trace.join("\n         ")
+    msg << @environment.stack_trace.join("\n         ")
     # JRuby doesn't automatically add a newline for #warn
     msg << (RUBY_PLATFORM =~ /java/ ? "\n\n" : "\n")
     Sass::Util.sass_warn msg
     []
   ensure
-    @stack.pop
+    @environment.pop_frame
   end
 
   # Runs the child nodes until the continuation expression becomes false.
@@ -293,45 +271,23 @@ END
   end
 
   def visit_directive(node)
-    node.resolved_value = run_interp(node.value)
-    yield
-  end
+    if node.value['#{']
+      if node.value =~ /^@import (?!url\()/
+        Sass::Util.sass_warn <<WARNING
+DEPRECATION WARNING on line #{node.line}#{" of #{node.filename}" if node.filename}:
+@import directives using \#{} interpolation will need to use url() in Sass 3.2.
+For example:
 
-  def visit_media(node)
-    node.query = node.query.deep_copy
-    node.query.perform {|interp| run_interp(interp)}
-    yield
-  end
-
-  def visit_supports(node)
-    node.condition = node.condition.deep_copy
-    node.condition.perform(@environment)
-    yield
-  end
-
-  def visit_cssimport(node)
-    node.resolved_uri = run_interp([node.uri])
-    if node.query
-      node.query = node.query.deep_copy
-      node.query.perform {|interp| run_interp(interp)}
+  @import url("http://\#{$url}/style.css");
+WARNING
+      end
+      node.value = run_interp(Sass::Engine.parse_interp(node.value, node.line, 0, node.options))
     end
     yield
+    node
   end
 
   private
-
-  def stack_trace
-    trace = []
-    stack = @stack.map {|e| e.dup}.reverse
-    stack.each_cons(2) {|(e1, e2)| e1[:caller] = e2[:name]; [e1, e2]}
-    stack.each_with_index do |entry, i|
-      msg = "#{i == 0 ? "on" : "from"} line #{entry[:line]}"
-      msg << " of #{entry[:filename] || "an unknown file"}"
-      msg << ", in `#{entry[:caller]}'" if entry[:caller]
-      trace << msg
-    end
-    trace
-  end
 
   def run_interp_no_strip(text)
     text.map do |r|
@@ -349,23 +305,11 @@ END
 
   def handle_include_loop!(node)
     msg = "An @include loop has been found:"
-    content_count = 0
-    mixins = @stack.reverse.map {|s| s[:name]}.compact.select do |s|
-      if s == '@content'
-        content_count += 1
-        false
-      elsif content_count > 0
-        content_count -= 1
-        false
-      else
-        true
-      end
-    end
-
-    return if mixins.empty?
+    mixins = @environment.stack.map {|s| s[:mixin]}.compact
     raise Sass::SyntaxError.new("#{msg} #{node.name} includes itself") if mixins.size == 1
 
-    msg << "\n" << Sass::Util.enum_cons(mixins.reverse + [node.name], 2).map do |m1, m2|
+    mixins << node.name
+    msg << "\n" << Sass::Util.enum_cons(mixins, 2).map do |m1, m2|
       "    #{m1} includes #{m2}"
     end.join("\n")
     raise Sass::SyntaxError.new(msg)
@@ -373,7 +317,7 @@ END
 
   def handle_import_loop!(node)
     msg = "An @import loop has been found:"
-    files = @stack.map {|s| s[:filename]}.compact
+    files = @environment.stack.map {|s| s[:filename]}.compact
     if node.filename == node.imported_file.options[:filename]
       raise Sass::SyntaxError.new("#{msg} #{node.filename} imports itself")
     end
@@ -383,5 +327,31 @@ END
       "    #{m1} imports #{m2}"
     end.join("\n")
     raise Sass::SyntaxError.new(msg)
+  end
+
+  def check_for_loud_silent_comment(node)
+    return unless node.loud && node.silent
+    Sass::Util.sass_warn <<MESSAGE
+WARNING:
+On line #{node.line}#{" of '#{node.filename}'" if node.filename}
+`//` comments will no longer be allowed to use the `!` flag in Sass 3.2.
+Please change to `/*` comments.
+MESSAGE
+  end
+
+  def check_for_comment_interp(node)
+    return if node.loud
+    node.value.each do |e|
+      next unless e.is_a?(String)
+      e.scan(/(\\*)#\{/) do |esc|
+        Sass::Util.sass_warn <<MESSAGE if esc.first.size.even?
+WARNING:
+On line #{node.line}#{" of '#{node.filename}'" if node.filename}
+Comments will evaluate the contents of interpolations (\#{ ... }) in Sass 3.2.
+Please escape the interpolation by adding a backslash before the `#`.
+MESSAGE
+        return
+      end
+    end
   end
 end

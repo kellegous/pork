@@ -6,9 +6,9 @@ module Sass::Tree
   #
   # @see Sass::Tree
   class MediaNode < DirectiveNode
-    # The media query.
+    # The media query. A list of comma-separated queries (e.g. `print` or `screen`).
     #
-    # @return [Sass::Media::Query]
+    # @return [Array<String>]
     attr_accessor :query
 
     # @see RuleNode#tabs
@@ -17,7 +17,7 @@ module Sass::Tree
     # @see RuleNode#group_end
     attr_accessor :group_end
 
-    # @param query [Sass::Media::Query] See \{#query}
+    # @param query [Array<String>] See \{#query}
     def initialize(query)
       @query = query
       @tabs = 0
@@ -25,24 +25,8 @@ module Sass::Tree
     end
 
     # @see DirectiveNode#value
-    def value; raise NotImplementedError; end
-
-    # @see DirectiveNode#name
-    def name; '@media'; end
-
-    # @see DirectiveNode#resolved_value
-    def resolved_value
-      @resolved_value ||= "@media #{query.to_css}"
+    def value
+      "@media #{query.join(', ')}"
     end
-
-    # True when the directive has no visible children.
-    #
-    # @return [Boolean]
-    def invisible?
-      children.all? {|c| c.invisible?}
-    end
-
-    # @see Node#bubbles?
-    def bubbles?; true; end
   end
 end
