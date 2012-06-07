@@ -64,27 +64,65 @@ func pathToJsx() string {
   return filepath.Join(rootDir, "deps/jsx/bin/jsx")
 }
 
-func waitFor(procs ...*os.Process) error {
-  for _, proc := range procs {
-    if proc == nil {
-      continue
-    }
-
-    s, err := proc.Wait()
-    if err != nil {
-      return err
-    }
-
-    if !s.Success() {
-      return errors.New(fmt.Sprintf("exit code: %s", s.Sys()))
-    }
-  }
-
-  return nil
+type command struct {
+  args []string
+  cwd  string
+  env  []string
 }
 
-func cpp(filename string, includes []string, w *os.File) (*os.Process, error) {
-  cppArgs := []string{
+func pipe(c ...*command) (io.ReadCloser, error) {
+  if len(c) == 0 {
+    return nil, errors.New("Need commands")
+  }
+
+  var r *os.File
+  for i, n := 0, len(c); i < n; i++ {
+    nr, nw, err := os.Pipe()
+    if err != nil {
+      if r != nil {
+        r.Close()
+      }
+      return nil, err
+    }
+
+    cmd := c[i]
+    env := cmd.env
+    if cmd.env == nil {
+      env = os.Environ()
+    }
+
+    _, err = os.StartProcess(
+      cmd.args[0],
+      cmd.args,
+      &os.ProcAttr{
+        cmd.cwd,
+        env,
+        []*os.File{r, nw, os.Stderr},
+        nil,
+      })
+    if err != nil {
+      if r != nil {
+        r.Close()
+      }
+      nr.Close()
+      nw.Close()
+      return nil, err
+    }
+
+    // close handles we gave to other processes
+    if r != nil {
+      r.Close()
+    }
+    nw.Close()
+
+    r = nr
+  }
+
+  return r, nil
+}
+
+func cppCommand(filename string, includes []string) *command {
+  args := []string{
     PathToCpp,
     "-E",
     "-P",
@@ -93,44 +131,31 @@ func cpp(filename string, includes []string, w *os.File) (*os.Process, error) {
     fmt.Sprintf("-I%s", filepath.Join(rootDir, "js"))}
 
   for _, i := range includes {
-    cppArgs = append(cppArgs, fmt.Sprintf("-I%s", i))
+    args = append(args, fmt.Sprintf("-I%s", i))
   }
 
-  cppArgs = append(cppArgs, filename)
-
-  return os.StartProcess(cppArgs[0],
-    cppArgs,
-    &os.ProcAttr{
-      "",
-      os.Environ(),
-      []*os.File{nil, w, os.Stderr},
-      nil})
+  args = append(args, filename)
+  return &command{args, "", nil}
 }
 
-func jsc(r *os.File, w *os.File, externs []string, jscPath string, level Optimization) (*os.Process, error) {
-  jvmArgs := []string{PathToJava, "-jar", jscPath}
+func jscCommand(externs []string, jscPath string, level Optimization) *command {
+  args := []string{PathToJava, "-jar", jscPath}
   switch level {
   case Advanced:
-    jvmArgs = append(jvmArgs, "--compilation_level", "ADVANCED_OPTIMIZATIONS")
+    args = append(args, "--compilation_level", "ADVANCED_OPTIMIZATIONS")
   case Super:
-    jvmArgs = append(jvmArgs, "--compilation_level", "SUPER_OPTIMIZATIONS")
+    args = append(args, "--compilation_level", "SUPER_OPTIMIZATIONS")
   }
 
   for _, e := range externs {
-    jvmArgs = append(jvmArgs, "--externs", e)
+    args = append(args, "--externs", e)
   }
 
-  return os.StartProcess(jvmArgs[0],
-    jvmArgs,
-    &os.ProcAttr{
-      "",
-      os.Environ(),
-      []*os.File{r, w, os.Stderr},
-      nil})
+  return &command{args, "", nil}
 }
 
-func sass(filename string, w *os.File, sassPath string, level Optimization) (*os.Process, error) {
-  sassArgs := []string{
+func sassCommand(filename string, sassPath string, level Optimization) *command {
+  args := []string{
     PathToRuby,
     sassPath,
     "--no-cache",
@@ -138,20 +163,22 @@ func sass(filename string, w *os.File, sassPath string, level Optimization) (*os
 
   switch level {
   case Basic:
-    sassArgs = append(sassArgs, "--style", "compact")
+    args = append(args, "--style", "compact")
   case Advanced:
-    sassArgs = append(sassArgs, "--style", "compressed")
+    args = append(args, "--style", "compressed")
   }
 
-  sassArgs = append(sassArgs, filename)
+  args = append(args, filename)
+  return &command{args, "", nil}
+}
 
-  return os.StartProcess(sassArgs[0],
-    sassArgs,
-    &os.ProcAttr{
-      "",
-      os.Environ(),
-      []*os.File{nil, w, os.Stderr},
-      nil})
+func jsxCommand(filename, jsxPath string) *command {
+  return &command{
+    []string{
+      PathToNode,
+      jsxPath,
+      filename,
+    }, "", nil}
 }
 
 type Router interface {
@@ -407,7 +434,7 @@ func ServeContent(c Context, w http.ResponseWriter, r *http.Request, level Optim
     if found {
       // serve jsx
       w.Header().Set("Content-Type", "text/javascript")
-      if err := CompileJsx(jsxSrc, w); err != nil {
+      if err := CompileJsx(jsxSrc, w, level); err != nil {
         panic(err)
       }
       return
@@ -415,6 +442,7 @@ func ServeContent(c Context, w http.ResponseWriter, r *http.Request, level Optim
 
     prkSrc, found := findFile(d, changeTypeOfFile(path, javaScriptFileExtension, porkBundleFileExtension))
     if found {
+      // serve porkjs
       w.Header().Set("Content-Type", "text/javascript")
       if err := CompileBundle(prkSrc, w, level); err != nil {
         panic(err)
@@ -474,6 +502,22 @@ func (h *content) Productionize(d http.Dir) error {
     src := string(root)
     filepath.Walk(src, func(path string, info os.FileInfo, err error) error {
       switch typeOfFile(path) {
+      case jsx:
+        target, err := rebasePath(src, dst,
+          changeTypeOfFile(path, jsxFileExtension, javaScriptFileExtension))
+        if err != nil {
+          return err
+        }
+
+        file, err := createFile(target)
+        if err != nil {
+          return err
+        }
+        defer file.Close()
+
+        if err := CompileJsx(path, file, h.level); err != nil {
+          return err
+        }
       case porkBundle:
         target, err := rebasePath(src, dst,
           changeTypeOfFile(path, porkBundleFileExtension, javaScriptFileExtension))
@@ -518,25 +562,13 @@ func (h *content) Productionize(d http.Dir) error {
 }
 
 func CompileCss(filename string, w io.Writer, level Optimization) error {
-  rp, wp, err := os.Pipe()
+  r, err := pipe(sassCommand(filename, pathToSass(), level))
   if err != nil {
     return err
   }
-  defer rp.Close()
-  defer wp.Close()
+  defer r.Close()
 
-  p, err := sass(filename, wp, pathToSass(), level)
-  if err != nil {
-    return err
-  }
-  wp.Close()
-
-  _, err = io.Copy(w, rp)
-  if err != nil {
-    return err
-  }
-
-  err = waitFor(p)
+  _, err = io.Copy(w, r)
   if err != nil {
     return err
   }
@@ -581,40 +613,28 @@ func minLevel(a Optimization, b Optimization) Optimization {
   return b
 }
 
-func runJsx(filename string, w *os.File, jsxPath string) (*os.Process, error) {
-  return os.StartProcess(PathToNode,
-    []string{
-      PathToNode,
-      jsxPath,
-      filename,
-    },
-    &os.ProcAttr{
-      "",
-      os.Environ(),
-      []*os.File{nil, w, os.Stderr},
-      nil})
-}
+func CompileJsx(filename string, w io.Writer, level Optimization) error {
+  var r io.ReadCloser
+  var err error
 
-func CompileJsx(filename string, w io.Writer) error {
-  rp, wp, err := os.Pipe()
-  if err != nil {
-    return err
-  }
-  defer rp.Close()
-  defer wp.Close()
-
-  p, err := runJsx(filename, wp, pathToJsx())
-  if err != nil {
-    return err
-  }
-  wp.Close()
-
-  _, err = io.Copy(w, rp)
-  if err != nil {
-    return err
+  switch level {
+  case None:
+    r, err = pipe(jsxCommand(filename, pathToJsx()))
+    if err != nil {
+      return err
+    }
+    defer r.Close()
+  case Basic, Advanced:
+    r, err = pipe(
+      jsxCommand(filename, pathToJsx()),
+      jscCommand([]string{}, pathToJsc(), level))
+    if err != nil {
+      return err
+    }
+    defer r.Close()
   }
 
-  err = waitFor(p)
+  _, err = io.Copy(w, r)
   if err != nil {
     return err
   }
@@ -671,54 +691,29 @@ func CompileBundle(filename string, w io.Writer, level Optimization) error {
   return nil
 }
 
-// todo: make this private.
 func compileJs(filename string, externs []string, includes []string, w io.Writer, level Optimization) error {
-  // output pipe
-  orp, owp, err := os.Pipe()
-  if err != nil {
-    return err
-  }
-  defer orp.Close()
-  defer owp.Close()
 
-  var cp, jp *os.Process
+  var r io.ReadCloser
+  var err error
+
   switch level {
   case None:
-    cp, err = cpp(filename, includes, owp)
+    r, err = pipe(cppCommand(filename, includes))
     if err != nil {
       return err
     }
-    owp.Close()
+    defer r.Close()
   case Basic, Advanced:
-    irp, iwp, err := os.Pipe()
+    r, err = pipe(
+      cppCommand(filename, includes),
+      jscCommand(externs, pathToJsc(), level))
     if err != nil {
       return err
     }
-    defer irp.Close()
-    defer iwp.Close()
-
-    cp, err = cpp(filename, includes, iwp)
-    if err != nil {
-      return err
-    }
-
-    iwp.Close()
-
-    jp, err = jsc(irp, owp, externs, pathToJsc(), level)
-    if err != nil {
-      return err
-    }
-
-    irp.Close()
-    owp.Close()
+    defer r.Close()
   }
 
-  _, err = io.Copy(w, orp)
-  if err != nil {
-    return err
-  }
-
-  err = waitFor(cp, jp)
+  _, err = io.Copy(w, r)
   if err != nil {
     return err
   }
