@@ -1,3 +1,4 @@
+#pragma once
 #include "pork/base.js"
 #include "pork/debug.js"
 

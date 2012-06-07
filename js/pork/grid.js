@@ -1,3 +1,5 @@
+#pragma once
+
 goog.provide('pork.grid');
 
 /**

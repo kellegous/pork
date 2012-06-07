@@ -1,6 +1,8 @@
 #ifndef PORK_BASE_JS
 #define PORK_BASE_JS
 
+"use strict";
+
 /**
  * Base namespace for the Closure library.  Checks to see goog is
  * already defined in the current scope before assigning to prevent
