@@ -1,0 +1,381 @@
+#!/usr/bin/env node
+
+/*
+ * Copyright (c) 2012 DeNA Co., Ltd.
+ * 
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to
+ * deal in the Software without restriction, including without limitation the
+ * rights to use, copy, modify, merge, publish, distribute, sublicense, and/or
+ * sell copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ * 
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ * 
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+ * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
+ * IN THE SOFTWARE.
+ */
+
+var fs = require("fs");
+var path = require("path");
+var child_process = require("child_process");
+
+var Class = require("../src/Class");
+eval(Class.$import("../src/compiler"));
+eval(Class.$import("../src/platform"));
+eval(Class.$import("../src/jsemitter"));
+eval(Class.$import("../src/optimizer"));
+eval(Class.$import("../src/util"));
+
+"use strict";
+
+var NodePlatform = Platform.extend({
+	constructor: function() {
+		var root = path.dirname(__dirname);
+		this._root = root.replace(/\\/g, "/");
+	},
+
+	getRoot: function () {
+		return this._root;
+	},
+
+	fileExists: function (path) {
+		try {
+			fs.statSync(path);
+			return true;
+		} catch (e) {
+			return false;
+		}
+	},
+
+	getFilesInDirectory: function (path) {
+		return fs.readdirSync(path);
+	},
+
+	load: function (path) {
+		return fs.readFileSync(path).toString();
+	},
+
+	save: function (outputFile, content) {
+		if (outputFile == null) {
+			process.stdout.write(content);
+		}
+		else {
+			fs.writeFileSync(outputFile, content);
+		}
+	},
+
+	// called from JavaScriptEmitter
+	addLauncher: function (emitter, sourceFile, targetCode, entryPoint) {
+		if(emitter instanceof JavaScriptEmitter) {
+
+			var entryPointClass = Util.format("JSX.require('%1').%2",
+											 [ sourceFile, entryPoint ]);
+			switch(entryPoint) {
+			case "_Main":
+				return targetCode +
+					entryPointClass + ".main$AS(process.argv.slice(2));\n";
+			case "_Test":
+				var s = this.load(this.getRoot() + "/src/js/runtest.js");
+				return targetCode + s +
+					Util.format("$__jsx_runTests(%1$, process.argv.slice(2))", [entryPointClass]);
+			default:
+				throw new Error("Unknown entry point type: " +
+								entryPoint);
+			}
+		}
+		else {
+			throw new Error("FIXME");
+		}
+	}
+});
+
+var JSX = Class.extend({
+	$_meta: null,
+
+	$meta: function (name) {
+		if (JSX._meta === null) {
+			var j = fs.readFileSync( __dirname + "/../package.json" );
+			JSX._meta = JSON.parse(j);
+		}
+		return JSX._meta[name];
+	},
+
+	$execNodeJS: function (script, args) {
+		// XXX: node.js (0.6.x) doesn't suport "--" option :(
+		var tmpdir = process.env.TMPDIR || process.env.TMP || "/tmp";
+		var tmpfile = Util.format("%1/jsx.%2.%3.js", [
+			tmpdir, process.pid.toString(), Date.now().toString(16)
+		]);
+
+		fs.writeFileSync(tmpfile, script);
+		process.on("exit", function() {
+			fs.unlinkSync(tmpfile);
+		});
+
+		var child = child_process.spawn(process.execPath, [tmpfile].concat(args));
+
+		child.stdout.on("data", function (data) {
+			process.stdout.write(data);
+		});
+		child.stderr.on("data", function (data) {
+			process.stderr.write(data);
+		});
+		child.on("exit", function (status) {
+			process.exit(status);
+		});
+	},
+
+	$printHelp: function () {
+		console.log(
+			"JSX compiler version " + JSX.meta("version") + "\n" +
+			"\n" +
+			"Usage: jsx [options] source-files\n" +
+			"\n" +
+			"Options:\n" +
+			"  --add-search-path path     add a path to library search paths\n" +
+			"  --executable               compiles as an CLI executable, calling _Main.main(:string[]):void\n" +
+			"  --run                      runs _Main.main(:string[]):void after compiling\n" +
+			"  --test                     runs _Test#test*():void after compiling\n" +
+			"  --output file              output file (default:stdout)\n" +
+			"  --mode (compile|parse)     compilation mode (default:compile)\n" +
+			"  --target (javascript|c++)  target language (default:javascript)\n" +
+			"  --release                  omits the debugging features from the generated code (run-time type checking, logging, assertion)\n" +
+			"  --optimize cmd1,cmd2,...   list of optimize commands (no-assert, no-log, inline, return-if)\n" +
+			"  --enable-type-check        enables run-time type checking\n" +
+			"  --enable-source-map        enables source map debugging info\n" +
+			"  --version                  displays the version and exits\n" +
+			"  --help                     displays this help and exits\n" +
+			"");
+	},
+
+	$main: function (args) {
+
+		var platform = new NodePlatform();
+
+		var argIndex = 0;
+		var getopt = function () {
+			if (args.length <= argIndex)
+				return null;
+			var arg = args[argIndex++];
+			if (arg.match(/^-/))
+				return arg;
+			else if (arg == "--")
+				return null;
+			else {
+				--argIndex;
+				return null;
+			}
+		};
+		var getoptarg = function () {
+			if (args.length <= argIndex) {
+				console.error("option " + args[argIndex - 1] + " requires a value");
+				return null;
+			}
+			return args[argIndex++];
+		};
+
+		var compiler = new Compiler(platform);
+
+		var tasks = [];
+
+		var emitter = null;
+		var outputFile = null;
+		var executable = false;
+		var run = null;
+		var optimizeCommands = [];
+		var opt, optarg;
+		while ((opt = getopt()) != null) {
+		NEXTOPT:
+			switch (opt) {
+			case "--add-search-path":
+				if((optarg= getoptarg()) == null)
+					process.exit(1);
+				compiler.addSearchPath(optarg);
+				break;
+			case "--output":
+				if((outputFile = getoptarg()) == null)
+					process.exit(1);
+				tasks.push(function() {
+					emitter.setOutputFile(outputFile);
+				});
+				break;
+			case "--mode":
+				if ((optarg = getoptarg()) == null)
+					process.exit(1);
+				switch (optarg) {
+				case "compile":
+					compiler.setMode(Compiler.MODE_COMPILE);
+					break;
+				case "parse":
+					compiler.setMode(Compiler.MODE_PARSE);
+					break;
+				default:
+					console.error("unknown mode: " + optarg);
+					process.exit(1);
+					break;
+				}
+				break;
+			case "--target":
+				if ((optarg = getoptarg()) == null)
+					process.exit(1);
+				switch (optarg) {
+				case "javascript":
+					emitter = new JavaScriptEmitter(platform);
+					break;
+				case "c++":
+					throw new Error("FIXME");
+					break;
+				default:
+					console.log("unknown target: " + optarg);
+					process.exit(1);
+				}
+				break;
+			case "--release":
+				tasks.push(function () {
+					emitter.setEnableRunTimeTypeCheck(false);
+					optimizer.setEnableRunTimeTypeCheck(false);
+				});
+				optimizeCommands = [ "lto", "no-assert", "no-log", "fold-const", "return-if", "inline", "fold-const" ];
+				break;
+			case "--optimize":
+				if ((optarg = getoptarg()) == null)
+					process.exit(1);
+				optimizeCommands = optarg.split(",");
+				break;
+			case "--executable":
+				executable = true;
+				run = "_Main";
+				break;
+			case "--run":
+				run = "_Main";
+				break;
+			case "--test":
+				run = "_Test";
+				break;
+			case "--version":
+				console.log(JSX.meta("version"));
+				process.exit(0);
+				break;
+			case "--help":
+				JSX.printHelp();
+				process.exit(0);
+				break;
+			default:
+				var switchOpt = opt.match("^--(enable|disable)-(.*)$");
+				if (switchOpt != null) {
+					var mode = switchOpt[1] == "enable";
+					switch (switchOpt[2]) {
+					case "type-check":
+						tasks.push(function (mode) {
+							return function () {
+								emitter.setEnableRunTimeTypeCheck(mode);
+								optimizer.setEnableRunTimeTypeCheck(mode);
+							};
+						}(mode));
+						break NEXTOPT;
+					case "source-map":
+						tasks.push(function (mode) {
+							return function () {
+								emitter.setEnableSourceMap(mode);
+							};
+						}(mode));
+						break NEXTOPT;
+					default:
+						break;
+					}
+				}
+				console.error("unknown option: " + opt);
+				process.exit(1);
+				break;
+			}
+		}
+
+		if (argIndex == args.length) {
+			console.error("no files");
+			process.exit(1);
+		}
+
+		if(executable && outputFile == null) {
+			console.error("--executable requires --output to be specified");
+			process.exit(1);
+		}
+
+		var sourceFile = args[argIndex++];
+		compiler.addSourceFile(null, sourceFile);
+
+		if(compiler.getMode() === Compiler.MODE_PARSE) {
+			if (compiler.compile()) {
+				platform.save(outputFile, compiler.getAST());
+				process.exit(0);
+			}
+			else
+				process.exit(1);
+		}
+
+		// MODE_COMPILE
+		if (emitter == null)
+			emitter = new JavaScriptEmitter(platform);
+		var optimizer = new Optimizer();
+		var err = optimizer.setup(optimizeCommands);
+		if (err != null) {
+			console.error(err);
+			process.exit(1);
+		}
+
+		tasks.forEach(function(proc) { proc(); });
+
+		compiler.setEmitter(emitter);
+		compiler.setOptimizer(optimizer);
+
+		if (! compiler.compile())
+			process.exit(1);
+
+		var output = emitter.getOutput(sourceFile, run);
+
+		if (run == null || executable) { // compile and save
+			if(emitter instanceof JavaScriptEmitter && executable) {
+				// for CLI executable
+				output =  "#!" + process.execPath + "\n" + output;
+			}
+
+			platform.save(outputFile, output);
+
+			if (emitter instanceof JavaScriptEmitter) {
+				emitter.saveSourceMappingFile(platform);
+			
+				if (executable) {
+					fs.chmodSync(outputFile, "0755");
+				}
+			}
+
+		}
+		else { // compile and run immediately
+			if(emitter instanceof JavaScriptEmitter) {
+				JSX.execNodeJS(output, args.slice(argIndex));
+			}
+			else {
+				throw new Error("FIXME: run C+++ code");
+			}
+		}
+	}
+
+});
+
+function getEnvOpts() {
+	var opts = process.env["JSX_OPTS"];
+	if (! opts)
+		return [];
+	return opts.split(/\s+/);
+}
+
+JSX.main(getEnvOpts().concat(process.argv.slice(2)));
+
+// vim: set ft=javascript:
+// vim: set noexpandtab:
