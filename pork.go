@@ -398,7 +398,15 @@ func expandPath(fs http.Dir, name string) string {
   return filepath.Join(string(fs), filepath.FromSlash(path.Clean("/"+name)))
 }
 
-func findFile(d []http.Dir, name string) (string, bool) {
+type typeFound int
+
+const (
+  foundNothing typeFound = iota
+  foundFile
+  foundDirectory
+)
+
+func findFile(d []http.Dir, name string) (string, typeFound) {
   for i, n := 0, len(d); i < n; i++ {
     target := filepath.Join(string(d[i]), filepath.FromSlash(path.Clean("/"+name)))
 
@@ -410,16 +418,16 @@ func findFile(d []http.Dir, name string) (string, bool) {
 
     // if it's a file, return that
     if !s.IsDir() {
-      return target, true
+      return target, foundFile
     }
 
     // if it's a dir, check for an index
     target = filepath.Join(target, "index.html")
     if _, err := os.Stat(target); err == nil {
-      return target, true
+      return target, foundDirectory
     }
   }
-  return "", false
+  return "", foundNothing
 }
 
 func changeTypeOfFile(path, from, to string) string {
@@ -450,7 +458,12 @@ func ServeContent(c Context, w http.ResponseWriter, r *http.Request, level Optim
   path := r.URL.Path
 
   // if the file exists, just serve it.
-  if target, found := findFile(d, path); found {
+  if target, found := findFile(d, path); found != foundNothing {
+    // if this is a directory without a trailing /, we need to normalize.
+    if found == foundDirectory && path[len(path)-1] != '/' {
+      http.Redirect(w, r, path+"/", http.StatusMovedPermanently)
+      return
+    }
     http.ServeFile(w, r, target)
     return
   }
@@ -458,7 +471,7 @@ func ServeContent(c Context, w http.ResponseWriter, r *http.Request, level Optim
   switch typeOfFile(path) {
   case javascript:
     jsxSrc, found := findFile(d, changeTypeOfFile(path, javaScriptFileExtension, jsxFileExtension))
-    if found {
+    if found == foundFile {
       // serve jsx
       w.Header().Set("Content-Type", "text/javascript")
       if err := CompileJsx(jsxSrc, w, level); err != nil {
@@ -468,7 +481,7 @@ func ServeContent(c Context, w http.ResponseWriter, r *http.Request, level Optim
     }
 
     prkSrc, found := findFile(d, changeTypeOfFile(path, javaScriptFileExtension, porkBundleFileExtension))
-    if found {
+    if found == foundFile {
       // serve porkjs
       w.Header().Set("Content-Type", "text/javascript")
       if err := CompileBundle(prkSrc, w, level); err != nil {
@@ -480,7 +493,7 @@ func ServeContent(c Context, w http.ResponseWriter, r *http.Request, level Optim
     c.ServeNotFound(w, r)
   case css:
     source, found := findFile(d, changeTypeOfFile(path, cssFileExtension, sassFileExtension))
-    if !found {
+    if found != foundFile {
       c.ServeNotFound(w, r)
       return
     }
