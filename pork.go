@@ -193,13 +193,19 @@ func sassCommand(filename string, sassPath string, level Optimization) *command 
   return &command{args, "", nil}
 }
 
-func jsxCommand(filename, jsxPath string) *command {
-  return &command{
-    []string{
-      PathToNode,
-      jsxPath,
-      filename,
-    }, "", nil}
+func jsxCommand(filename, jsxPath string, level Optimization) *command {
+  args := []string{PathToNode, jsxPath}
+  switch level {
+  case Basic:
+    args = append(args, "--release")
+  case Advanced:
+    args = append(args,
+      "--release",
+      "--optimize",
+      "no-assert,no-log,inline,return-if")
+  }
+  args = append(args, filename)
+  return &command{args, "", nil}
 }
 
 type Router interface {
@@ -645,14 +651,14 @@ func CompileJsx(filename string, w io.Writer, level Optimization) error {
 
   switch level {
   case None:
-    r, p, err = pipe(jsxCommand(filename, pathToJsx()))
+    r, p, err = pipe(jsxCommand(filename, pathToJsx(), level))
     if err != nil {
       return err
     }
     defer r.Close()
   case Basic, Advanced:
     r, p, err = pipe(
-      jsxCommand(filename, pathToJsx()),
+      jsxCommand(filename, pathToJsx(), level),
       jscCommand([]string{}, pathToJsc(), level))
     if err != nil {
       return err
