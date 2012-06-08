@@ -70,11 +70,31 @@ type command struct {
   env  []string
 }
 
-func pipe(c ...*command) (io.ReadCloser, error) {
-  if len(c) == 0 {
-    return nil, errors.New("Need commands")
+func waitFor(procs []*os.Process) error {
+  for _, proc := range procs {
+    if proc == nil {
+      continue
+    }
+
+    s, err := proc.Wait()
+    if err != nil {
+      return err
+    }
+
+    if !s.Success() {
+      return errors.New(fmt.Sprintf("exit code: %s", s.Sys()))
+    }
   }
 
+  return nil
+}
+
+func pipe(c ...*command) (io.ReadCloser, []*os.Process, error) {
+  if len(c) == 0 {
+    return nil, nil, errors.New("Need commands")
+  }
+
+  procs := make([]*os.Process, len(c))
   var r *os.File
   for i, n := 0, len(c); i < n; i++ {
     nr, nw, err := os.Pipe()
@@ -82,7 +102,7 @@ func pipe(c ...*command) (io.ReadCloser, error) {
       if r != nil {
         r.Close()
       }
-      return nil, err
+      return nil, nil, err
     }
 
     cmd := c[i]
@@ -91,7 +111,7 @@ func pipe(c ...*command) (io.ReadCloser, error) {
       env = os.Environ()
     }
 
-    _, err = os.StartProcess(
+    p, err := os.StartProcess(
       cmd.args[0],
       cmd.args,
       &os.ProcAttr{
@@ -106,7 +126,7 @@ func pipe(c ...*command) (io.ReadCloser, error) {
       }
       nr.Close()
       nw.Close()
-      return nil, err
+      return nil, nil, err
     }
 
     // close handles we gave to other processes
@@ -115,10 +135,11 @@ func pipe(c ...*command) (io.ReadCloser, error) {
     }
     nw.Close()
 
+    procs = append(procs, p)
     r = nr
   }
 
-  return r, nil
+  return r, procs, nil
 }
 
 func cppCommand(filename string, includes []string) *command {
@@ -562,7 +583,7 @@ func (h *content) Productionize(d http.Dir) error {
 }
 
 func CompileCss(filename string, w io.Writer, level Optimization) error {
-  r, err := pipe(sassCommand(filename, pathToSass(), level))
+  r, p, err := pipe(sassCommand(filename, pathToSass(), level))
   if err != nil {
     return err
   }
@@ -570,6 +591,10 @@ func CompileCss(filename string, w io.Writer, level Optimization) error {
 
   _, err = io.Copy(w, r)
   if err != nil {
+    return err
+  }
+
+  if err := waitFor(p); err != nil {
     return err
   }
 
@@ -614,18 +639,19 @@ func minLevel(a Optimization, b Optimization) Optimization {
 }
 
 func CompileJsx(filename string, w io.Writer, level Optimization) error {
+  var p []*os.Process
   var r io.ReadCloser
   var err error
 
   switch level {
   case None:
-    r, err = pipe(jsxCommand(filename, pathToJsx()))
+    r, p, err = pipe(jsxCommand(filename, pathToJsx()))
     if err != nil {
       return err
     }
     defer r.Close()
   case Basic, Advanced:
-    r, err = pipe(
+    r, p, err = pipe(
       jsxCommand(filename, pathToJsx()),
       jscCommand([]string{}, pathToJsc(), level))
     if err != nil {
@@ -636,6 +662,10 @@ func CompileJsx(filename string, w io.Writer, level Optimization) error {
 
   _, err = io.Copy(w, r)
   if err != nil {
+    return err
+  }
+
+  if err := waitFor(p); err != nil {
     return err
   }
 
@@ -693,18 +723,19 @@ func CompileBundle(filename string, w io.Writer, level Optimization) error {
 
 func compileJs(filename string, externs []string, includes []string, w io.Writer, level Optimization) error {
 
+  var p []*os.Process
   var r io.ReadCloser
   var err error
 
   switch level {
   case None:
-    r, err = pipe(cppCommand(filename, includes))
+    r, p, err = pipe(cppCommand(filename, includes))
     if err != nil {
       return err
     }
     defer r.Close()
   case Basic, Advanced:
-    r, err = pipe(
+    r, p, err = pipe(
       cppCommand(filename, includes),
       jscCommand(externs, pathToJsc(), level))
     if err != nil {
@@ -715,6 +746,10 @@ func compileJs(filename string, externs []string, includes []string, w io.Writer
 
   _, err = io.Copy(w, r)
   if err != nil {
+    return err
+  }
+
+  if err := waitFor(p); err != nil {
     return err
   }
 
