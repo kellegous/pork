@@ -330,6 +330,10 @@ func pathToThisFile() string {
   return file
 }
 
+func Root() string {
+  return rootDir
+}
+
 func init() {
   rootDir = filepath.Dir(pathToThisFile())
 }

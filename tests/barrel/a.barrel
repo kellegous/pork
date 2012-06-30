@@ -1,0 +1,6 @@
+{
+  "Units" : [
+    { "File" : "../jsx/a.jsx" },
+    { "File" : "../pjs/a.pjs" }
+  ]
+}
