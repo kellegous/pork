@@ -3,7 +3,6 @@ package pork
 import (
   "bufio"
   "compress/gzip"
-  "encoding/json"
   "errors"
   "fmt"
   "io"
@@ -23,26 +22,36 @@ const (
   None Optimization = iota
   Basic
   Advanced
-  Super
 )
 
-type fileType int
+type srcType int
 
 const (
-  javascript fileType = iota
-  porkBundle
-  jsx
-  css
-  scss
-  unknown
+  srcOfJsx srcType = iota
+  srcOfScss
+  srcOfPjs
+  srcOfBarrel
+  srcOfUnknown
+)
+
+type dstType int
+
+const (
+  dstOfJs dstType = iota
+  dstOfCss
+  dstOfUnknown
 )
 
 const (
-  porkBundleFileExtension = ".pork"
-  jsxFileExtension        = ".jsx"
+  // src
+  barrelFileExtension = ".barrel"
+  jsxFileExtension    = ".jsx"
+  scssFileExtension   = ".scss"
+  pjsFileExtension    = ".pjs"
+
+  // dst
   javaScriptFileExtension = ".js"
   cssFileExtension        = ".css"
-  sassFileExtension       = ".scss"
 )
 
 var PathToCpp = "/usr/bin/gcc"
@@ -161,11 +170,10 @@ func cppCommand(filename string, includes []string) *command {
 
 func jscCommand(externs []string, jscPath string, level Optimization) *command {
   args := []string{PathToJava, "-jar", jscPath}
+  // todo: simple?
   switch level {
   case Advanced:
     args = append(args, "--compilation_level", "ADVANCED_OPTIMIZATIONS")
-  case Super:
-    args = append(args, "--compilation_level", "SUPER_OPTIMIZATIONS")
   }
 
   for _, e := range externs {
@@ -313,8 +321,8 @@ type Handler interface {
 }
 
 type content struct {
-  root  []http.Dir
-  level Optimization
+  root []http.Dir
+  *Config
 }
 
 func pathToThisFile() string {
@@ -361,6 +369,7 @@ func (h *errorFileHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
   }
 }
 
+// todo: try to make this private.
 // returns true if content should be delivered
 func ServeContentModificationTime(w http.ResponseWriter, r *http.Request, t time.Time) bool {
   if t.IsZero() {
@@ -390,8 +399,21 @@ func (h fileHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
   http.ServeFile(w, r, string(h))
 }
 
-func Content(level Optimization, d ...http.Dir) Handler {
-  return &content{d, level}
+type Config struct {
+  Level        Optimization
+  PjsIncludes  []string
+  PjsExterns   []string
+  JsxIncludes  []string
+  JsxExterns   []string
+  ScssIncludes []string
+}
+
+func (c Config) clone() *Config {
+  return &c
+}
+
+func Content(c *Config, d ...http.Dir) Handler {
+  return &content{d, c}
 }
 
 func expandPath(fs http.Dir, name string) string {
@@ -435,26 +457,30 @@ func changeTypeOfFile(path, from, to string) string {
   return path[0:len(path)-len(from)] + to
 }
 
-func typeOfFile(filename string) fileType {
-  if strings.HasSuffix(filename, porkBundleFileExtension) {
-    return porkBundle
+func typeOfSrc(filename string) srcType {
+  ext := filepath.Ext(filename)
+  switch ext {
+  case jsxFileExtension:
+    return srcOfJsx
+  case pjsFileExtension:
+    return srcOfPjs
+  case scssFileExtension:
+    return srcOfScss
   }
-  if strings.HasSuffix(filename, jsxFileExtension) {
-    return jsx
-  }
-  if strings.HasSuffix(filename, javaScriptFileExtension) {
-    return javascript
-  }
-  if strings.HasSuffix(filename, cssFileExtension) {
-    return css
-  }
-  if strings.HasSuffix(filename, sassFileExtension) {
-    return scss
-  }
-  return unknown
+  return srcOfUnknown
 }
 
-func ServeContent(c Context, w http.ResponseWriter, r *http.Request, level Optimization, d ...http.Dir) {
+func typeOfDst(filename string) dstType {
+  switch filepath.Ext(filename) {
+  case cssFileExtension:
+    return dstOfCss
+  case javaScriptFileExtension:
+    return dstOfJs
+  }
+  return dstOfUnknown
+}
+
+func ServeContent(c Context, w http.ResponseWriter, r *http.Request, cfg *Config, d ...http.Dir) {
   path := r.URL.Path
 
   // if the file exists, just serve it.
@@ -468,40 +494,47 @@ func ServeContent(c Context, w http.ResponseWriter, r *http.Request, level Optim
     return
   }
 
-  switch typeOfFile(path) {
-  case javascript:
+  switch typeOfDst(path) {
+  case dstOfJs:
     jsxSrc, found := findFile(d, changeTypeOfFile(path, javaScriptFileExtension, jsxFileExtension))
     if found == foundFile {
       // serve jsx
       w.Header().Set("Content-Type", "text/javascript")
-      if err := CompileJsx(jsxSrc, w, level); err != nil {
+      if err := CompileJsx(cfg, jsxSrc, w); err != nil {
         panic(err)
       }
       return
     }
 
-    prkSrc, found := findFile(d, changeTypeOfFile(path, javaScriptFileExtension, porkBundleFileExtension))
+    pjsSrc, found := findFile(d, changeTypeOfFile(path, javaScriptFileExtension, pjsFileExtension))
     if found == foundFile {
       // serve porkjs
       w.Header().Set("Content-Type", "text/javascript")
-      if err := CompileBundle(prkSrc, w, level); err != nil {
+      // todo: we need to be able to push externs in
+      if err := CompilePjs(cfg, pjsSrc, w); err != nil {
         panic(err)
       }
       return
     }
 
-    c.ServeNotFound(w, r)
-  case css:
-    source, found := findFile(d, changeTypeOfFile(path, cssFileExtension, sassFileExtension))
-    if found != foundFile {
-      c.ServeNotFound(w, r)
+    // todo: look for a barrel.
+    brlSrc, found := findFile(d, changeTypeOfFile(path, javaScriptFileExtension, barrelFileExtension))
+    if found == foundFile {
+      w.Header().Set("Content-Type", "text/javascript")
+      if err := CompileBarrel(cfg, brlSrc, w); err != nil {
+        panic(err)
+      }
       return
     }
-    w.Header().Set("Content-Type", "text/css")
-    err := CompileCss(source, w, level)
-    if err != nil {
-      // todo: send to ServeSiteError
-      panic(err)
+    c.ServeNotFound(w, r)
+  case dstOfCss:
+    cssSrc, found := findFile(d, changeTypeOfFile(path, cssFileExtension, scssFileExtension))
+    if found == foundFile {
+      w.Header().Set("Content-Type", "text/css")
+      if err := CompileScss(cfg, cssSrc, w); err != nil {
+        panic(err)
+      }
+      return
     }
   default:
     c.ServeNotFound(w, r)
@@ -509,7 +542,7 @@ func ServeContent(c Context, w http.ResponseWriter, r *http.Request, level Optim
 }
 
 func (h *content) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-  ServeContent(ContextFor(w, r), w, r, h.level, h.root...)
+  ServeContent(ContextFor(w, r), w, r, h.Config, h.root...)
 }
 
 func rebasePath(src, dst, filename string) (string, error) {
@@ -530,6 +563,7 @@ func createFile(path string) (*os.File, error) {
   return os.Create(path)
 }
 
+// todo: this will need to be refactored.
 func (h *content) Productionize(d http.Dir) error {
   dst := string(d)
   if _, err := os.Stat(dst); err != nil {
@@ -541,8 +575,8 @@ func (h *content) Productionize(d http.Dir) error {
   for _, root := range h.root {
     src := string(root)
     filepath.Walk(src, func(path string, info os.FileInfo, err error) error {
-      switch typeOfFile(path) {
-      case jsx:
+      switch typeOfSrc(path) {
+      case srcOfJsx:
         target, err := rebasePath(src, dst,
           changeTypeOfFile(path, jsxFileExtension, javaScriptFileExtension))
         if err != nil {
@@ -555,12 +589,12 @@ func (h *content) Productionize(d http.Dir) error {
         }
         defer file.Close()
 
-        if err := CompileJsx(path, file, h.level); err != nil {
+        if err := CompileJsx(h.Config, path, file); err != nil {
           return err
         }
-      case porkBundle:
+      case srcOfPjs:
         target, err := rebasePath(src, dst,
-          changeTypeOfFile(path, porkBundleFileExtension, javaScriptFileExtension))
+          changeTypeOfFile(path, pjsFileExtension, javaScriptFileExtension))
         if err != nil {
           return err
         }
@@ -571,14 +605,30 @@ func (h *content) Productionize(d http.Dir) error {
         }
         defer file.Close()
 
-        if err := CompileBundle(path, file, h.level); err != nil {
+        if err := CompilePjs(h.Config, path, file); err != nil {
           return err
         }
-      case scss:
+      case srcOfBarrel:
+        target, err := rebasePath(src, dst,
+          changeTypeOfFile(path, barrelFileExtension, javaScriptFileExtension))
+        if err != nil {
+          return err
+        }
+
+        file, err := createFile(target)
+        if err != nil {
+          return err
+        }
+        defer file.Close()
+
+        if err := CompileBarrel(h.Config, path, file); err != nil {
+          return err
+        }
+      case srcOfScss:
         // todo: there is an issue here in that I will compile things
         // that are only intended to be included.
         target, err := rebasePath(src, dst,
-          changeTypeOfFile(path, sassFileExtension, cssFileExtension))
+          changeTypeOfFile(path, scssFileExtension, cssFileExtension))
         if err != nil {
           return err
         }
@@ -589,7 +639,7 @@ func (h *content) Productionize(d http.Dir) error {
         }
         defer file.Close()
 
-        if err := CompileCss(path, file, h.level); err != nil {
+        if err := CompileScss(h.Config, path, file); err != nil {
           return err
         }
       }
@@ -601,8 +651,8 @@ func (h *content) Productionize(d http.Dir) error {
   return nil
 }
 
-func CompileCss(filename string, w io.Writer, level Optimization) error {
-  r, p, err := pipe(sassCommand(filename, pathToSass(), level))
+func CompileScss(c *Config, filename string, w io.Writer) error {
+  r, p, err := pipe(sassCommand(filename, pathToSass(), c.Level))
   if err != nil {
     return err
   }
@@ -620,36 +670,6 @@ func CompileCss(filename string, w io.Writer, level Optimization) error {
   return nil
 }
 
-type bundle struct {
-  Externs  []string
-  Includes []string
-  Units    []*unit
-}
-
-type unit struct {
-  File     string
-  LevelStr string `json:"Level"`
-}
-
-func (u *unit) Level() Optimization {
-  switch u.LevelStr {
-  case "Basic":
-    return Basic
-  case "None":
-    return None
-  }
-  return Advanced
-}
-
-func loadBundle(r io.Reader) (*bundle, error) {
-  b := &bundle{}
-  err := json.NewDecoder(r).Decode(&b)
-  if err != nil {
-    return nil, err
-  }
-  return b, nil
-}
-
 func minLevel(a Optimization, b Optimization) Optimization {
   if a < b {
     return a
@@ -657,22 +677,22 @@ func minLevel(a Optimization, b Optimization) Optimization {
   return b
 }
 
-func CompileJsx(filename string, w io.Writer, level Optimization) error {
+func CompileJsx(c *Config, filename string, w io.Writer) error {
   var p []*os.Process
   var r io.ReadCloser
   var err error
 
-  switch level {
+  switch c.Level {
   case None:
-    r, p, err = pipe(jsxCommand(filename, pathToJsx(), level))
+    r, p, err = pipe(jsxCommand(filename, pathToJsx(), c.Level))
     if err != nil {
       return err
     }
     defer r.Close()
   case Basic, Advanced:
     r, p, err = pipe(
-      jsxCommand(filename, pathToJsx(), level),
-      jscCommand([]string{}, pathToJsc(), level))
+      jsxCommand(filename, pathToJsx(), c.Level),
+      jscCommand([]string{}, pathToJsc(), c.Level))
     if err != nil {
       return err
     }
@@ -697,66 +717,22 @@ func CompileJsx(filename string, w io.Writer, level Optimization) error {
   return nil
 }
 
-func CompileBundle(filename string, w io.Writer, level Optimization) error {
-  dir, _ := filepath.Split(filename)
-
-  file, err := os.Open(filename)
-  if err != nil {
-    return err
-  }
-  defer file.Close()
-
-  bundle, err := loadBundle(file)
-  if err != nil {
-    return err
-  }
-
-  externs := []string{}
-  if bundle.Externs != nil {
-    for _, e := range bundle.Externs {
-      externs = append(externs, filepath.Join(dir, e))
-    }
-  }
-
-  includes := []string{}
-  if bundle.Includes != nil {
-    for _, i := range bundle.Includes {
-      includes = append(includes, filepath.Join(dir, i))
-    }
-  }
-
-  for _, u := range bundle.Units {
-    err := compileJs(filepath.Join(dir, u.File),
-      externs,
-      includes,
-      w,
-      minLevel(u.Level(),
-        level))
-    if err != nil {
-      return err
-    }
-  }
-
-  return nil
-}
-
-func compileJs(filename string, externs []string, includes []string, w io.Writer, level Optimization) error {
-
+func CompilePjs(c *Config, filename string, w io.Writer) error {
   var p []*os.Process
   var r io.ReadCloser
   var err error
 
-  switch level {
+  switch c.Level {
   case None:
-    r, p, err = pipe(cppCommand(filename, includes))
+    r, p, err = pipe(cppCommand(filename, c.PjsIncludes))
     if err != nil {
       return err
     }
     defer r.Close()
   case Basic, Advanced:
     r, p, err = pipe(
-      cppCommand(filename, includes),
-      jscCommand(externs, pathToJsc(), level))
+      cppCommand(filename, c.PjsIncludes),
+      jscCommand(c.PjsExterns, pathToJsc(), c.Level))
     if err != nil {
       return err
     }
