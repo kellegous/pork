@@ -30,16 +30,18 @@ func (u *unit) Level() Optimization {
   return Advanced
 }
 
-func appendPaths(dir string, dst, src []string) []string {
-  if src == nil {
-    return dst
+func minLevel(a Optimization, b Optimization) Optimization {
+  if a < b {
+    return a
   }
+  return b
+}
 
-  for _, p := range src {
-    dst = append(dst, filepath.Join(dir, p))
+func appendPaths(base string, into, from []string) []string {
+  for _, p := range from {
+    into = append(into, filepath.Join(base, p))
   }
-
-  return dst
+  return into
 }
 
 func CompileBarrel(c *Config, filename string, w io.Writer) error {

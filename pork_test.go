@@ -28,27 +28,27 @@ func test(t *testing.T, fn func(*Config, string, io.Writer) error, c *Config, pa
 func TestJsx(t *testing.T) {
   test(t,
     CompileJsx,
-    &Config{},
+    NewConfig(None),
     filepath.Join(Root(), "tests/jsx/a.jsx"))
 }
 
 func TestPjs(t *testing.T) {
   test(t,
     CompilePjs,
-    &Config{},
+    NewConfig(None),
     filepath.Join(Root(), "tests/pjs/a.pjs"))
 }
 
 func TestScss(t *testing.T) {
   test(t,
     CompileScss,
-    &Config{},
+    NewConfig(None),
     filepath.Join(Root(), "tests/scss/a.scss"))
 }
 
 func TestBarrel(t *testing.T) {
   test(t,
     CompileBarrel,
-    &Config{},
+    NewConfig(None),
     filepath.Join(Root(), "tests/barrel/a.barrel"))
 }
