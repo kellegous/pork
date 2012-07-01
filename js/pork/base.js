@@ -1,7 +1,7 @@
 #ifndef PORK_BASE_JS
 #define PORK_BASE_JS
 
-"use strict";
+//"use strict";
 
 /**
  * Base namespace for the Closure library.  Checks to see goog is
