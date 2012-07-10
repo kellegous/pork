@@ -11,8 +11,11 @@ func pathToJsx() string {
   return filepath.Join(rootDir, "deps/jsx/bin/jsx")
 }
 
-func jsxCommand(filename, jsxPath string, level Optimization) *command {
+func jsxCommand(filename, jsxPath string, includes []string, level Optimization) *command {
   args := []string{PathToNode, jsxPath}
+  for _, i := range includes {
+    args = append(args, "--add-search-path", i)
+  }
   switch level {
   case Basic:
     args = append(args, "--release")
@@ -34,14 +37,14 @@ func CompileJsx(c *Config, filename string, w io.Writer) error {
 
   switch c.Level {
   case None:
-    r, p, err = pipe(jsxCommand(filename, pathToJsx(), c.Level))
+    r, p, err = pipe(jsxCommand(filename, pathToJsx(), c.JsxIncludes, c.Level))
     if err != nil {
       return err
     }
     defer r.Close()
   case Basic, Advanced:
     r, p, err = pipe(
-      jsxCommand(filename, pathToJsx(), c.Level),
+      jsxCommand(filename, pathToJsx(), c.JsxIncludes, c.Level),
       jscCommand(c.JsxExterns, pathToJsc(), c.Level))
     if err != nil {
       return err
