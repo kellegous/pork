@@ -33,6 +33,10 @@ var Util = exports.Util = Class.extend({
 		return r;
 	},
 
+	$cloneNullable: function (o) {
+		return o == null ? null : o.clone();
+	},
+
 	$serializeArray: function (a) {
 		if (a == null)
 			return null;
@@ -73,9 +77,33 @@ var Util = exports.Util = Class.extend({
 		});
 	},
 
-	$analyzeArgs: function (context, args, parentExpr) {
+	$analyzeArgs: function (context, args, parentExpr, expectedCallbackTypes) {
+		var Expression = require("./expression");
 		var argTypes = [];
 		for (var i = 0; i < args.length; ++i) {
+			if (args[i] instanceof Expression.FunctionExpression && ! args[i].typesAreIdentified()) {
+				// find the only expected types, by counting the number of arguments
+				var funcDef = args[i].getFuncDef();
+				var expectedCallbackType = null;
+				for (var j = 0; j < expectedCallbackTypes.length; ++j) {
+					if (expectedCallbackTypes[j][i].getArgumentTypes().length == funcDef.getArguments().length) {
+						if (expectedCallbackType == null) {
+							expectedCallbackType = expectedCallbackTypes[j][i];
+						} else if (Util.typesAreEqual(expectedCallbackType.getArgumentTypes(), expectedCallbackTypes[j][i].getArgumentTypes())
+							&& expectedCallbackType.getReturnType().equals(expectedCallbackTypes[j][i].getReturnType())) {
+							// function signatures are equal
+						} else {
+							break;
+						}
+					}
+				}
+				if (j != expectedCallbackTypes.length) {
+					// multiple canditates, skip
+				} else if (expectedCallbackType != null) {
+					if (! funcDef.deductTypeIfUnknown(context, expectedCallbackType))
+						return null;
+				}
+			}
 			if (! args[i].analyze(context, parentExpr))
 				return null;
 			argTypes[i] = args[i].getType();
@@ -196,6 +224,7 @@ var TemplateInstantiationRequest = exports.TemplateInstantiationRequest = Class.
 		this._token = token;
 		this._className = className;
 		this._typeArgs = typeArgs;
+		this._instantiationRequests = [];
 	},
 
 	getToken: function() {
@@ -208,11 +237,15 @@ var TemplateInstantiationRequest = exports.TemplateInstantiationRequest = Class.
 
 	getTypeArguments: function () {
 		return this._typeArgs;
+	},
+
+	getInstantiationRequests: function () {
+		return this._instantiationRequests;
 	}
 
 });
 
-var CompileError = exports.CompileError = Class.extend({
+var CompileIssue = exports.CompileError = Class.extend({
 
 	constructor: function () {
 		switch (arguments.length) {
@@ -263,11 +296,42 @@ var CompileError = exports.CompileError = Class.extend({
 		sourceLine += Util.repeat(" ", col);
 		sourceLine += Util.repeat("^", this._size);
 
-		return Util.format("[%1:%2] %3\n%4\n",
-						   [this._filename, this._lineNumber, this._message, sourceLine]);
+		return Util.format("[%1:%2] %3%4\n%5\n",
+						   [this._filename, this._lineNumber, this.getPrefix(), this._message, sourceLine]);
 	}
 
 });
 
+var CompileError = exports.CompileError = CompileIssue.extend({
+
+	constructor: function () {
+		CompileIssue.prototype.constructor.apply(this, arguments);
+	},
+
+	getPrefix: function () {
+		return "";
+	}
+
+});
+
+var CompileWarning = exports.CompileWarning = CompileIssue.extend({
+
+	constructor: function () {
+		CompileIssue.prototype.constructor.apply(this, arguments);
+	},
+
+	getPrefix: function () {
+		return "Warning: ";
+	}
+
+});
+
+var DeprecatedWarning = exports.DeprecatedWarning = CompileWarning.extend({
+
+	constructor: function () {
+		CompileWarning.prototype.constructor.apply(this, arguments);
+	}
+
+});
 
 // vim: set noexpandtab:

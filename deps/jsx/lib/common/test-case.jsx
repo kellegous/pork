@@ -77,14 +77,14 @@ class TestCase {
 	var _tests : string[];
 
 	// async stuff
-	var _currentName : MayBeUndefined.<string>;
+	var _currentName : Nullable.<string>;
 	var _tasks = [] : Array.<function():void>; // async tasks
 
 	/* hooks called by src/js/runtests.js */
 
 	function beforeClass(tests : string[]) : void {
 		this._tests = tests;
-		log "1.." + this._tests.length.toString();
+		this._say("1.." + this._tests.length as string);
 	}
 
 	function run(name : string, testFunction : function():void) : void {
@@ -117,14 +117,14 @@ class TestCase {
 
 	function after(name : string) : void {
 		++this._totalCount;
-		log "\t" + "1.." + this._count.toString();
+		this._say("\t" + "1.." + this._count as string);
 
 		if(this._count == this._pass) {
 			++this._totalPass;
-			log "ok", this._totalCount, "-", name;
+			this._say("ok " + this._totalCount as string +  " - " + name);
 		}
 		else {
-			log "not ok", this._totalCount, "-", name;
+			this._say("not ok " + this._totalCount as string + " - " + name);
 		}
 		this._count = 0;
 		this._pass  = 0;
@@ -169,21 +169,21 @@ class TestCase {
 		return new _Matcher(this, value, message);
 	}
 
-	function _ok(name : MayBeUndefined.<string>) : void {
+	function _ok(name : Nullable.<string>) : void {
 		++this._pass;
 
-		var s = name != undefined ? " - " + name :  "";
+		var s = name != null ? " - " + name :  "";
 		this._say("\t" + "ok " + (this._count) as string + s);
 	}
 
 	function _nok(
-		name : MayBeUndefined.<string>,
+		name : Nullable.<string>,
 		op : string,
 		got : variant,
 		expected : variant
 	) : void {
 
-		var s = name != undefined ? " - " + name :  "";
+		var s = name != null ? " - " + name :  "";
 		this._say("\t" + "not ok " + (this._count) as string + s);
 
 		this.diag("comparing with " + op + s.replace(" - ", " for "));
@@ -269,7 +269,7 @@ class _Matcher {
 
 	var _test : TestCase;
 	var _got  : variant;
-	var _name : MayBeUndefined.<string>;
+	var _name : Nullable.<string>;
 
 	function constructor(test : TestCase, got : variant) {
 		this._test = test;

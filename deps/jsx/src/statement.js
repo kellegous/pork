@@ -31,11 +31,13 @@ eval(Class.$import("./util"));
 var Statement = exports.Statement = Class.extend({
 
 	constructor: function () {
+		// FIXME clone the stash the right way
 		this._optimizerStash = {};
 	},
 
 	// returns whether or not to continue analysing the following statements
 	analyze: function (context) {
+		var Parser = require("./parser");
 		if (! (this instanceof CaseStatement || this instanceof DefaultStatement))
 			if (! Statement.assertIsReachable(context, this.getToken()))
 				return false;
@@ -43,7 +45,7 @@ var Statement = exports.Statement = Class.extend({
 			return this.doAnalyze(context);
 		} catch (e) {
 			var token = this.getToken();
-			console.error("fatal error while compiling statement at file: " + token.getFilename() + ", line " + token.getLineNumber());
+			console.error("fatal error while compiling statement" + (token instanceof Parser.Token ? " at file " + token.getFilename() + ", line " + token.getLineNumber() : ""));
 			throw e;
 		}
 	},
@@ -51,6 +53,8 @@ var Statement = exports.Statement = Class.extend({
 	forEachStatement: function (cb) {
 		return true;
 	},
+
+	clone: null, // function clone() : Statement
 
 	forEachExpression: null, // function forEachExpression(cb : function (expr, replaceCb) : boolean) : boolean
 
@@ -87,20 +91,20 @@ var Statement = exports.Statement = Class.extend({
 
 var ConstructorInvocationStatement = exports.ConstructorInvocationStatement = Statement.extend({
 
-	constructor: function (qualifiedName, args) {
+	constructor: function (token, ctorClassType, args, ctorFunctionType /* optional */) {
 		Statement.prototype.constructor.call(this);
-		this._qualifiedName = qualifiedName;
+		this._token = token;
+		this._ctorClassType = ctorClassType;
 		this._args = args;
-		this._ctorClassDef = null;
-		this._ctorType = null;
+		this._ctorFunctionType = ctorFunctionType != null ? ctorFunctionType : null;
+	},
+
+	clone: function () {
+		return new ConstructorInvocationStatement(this._token, this._ctorClassType, Util.cloneArray(this._args), this._ctorFunctionType);
 	},
 
 	getToken: function () {
-		return this._qualifiedName.getToken();
-	},
-
-	getQualifiedName: function () {
-		return this._qualifiedName;
+		return this._token;
 	},
 
 	getArguments: function () {
@@ -108,48 +112,44 @@ var ConstructorInvocationStatement = exports.ConstructorInvocationStatement = St
 	},
 
 	getConstructingClassDef: function () {
-		return this._ctorClassDef;
+		return this._ctorClassType.getClassDef();
 	},
 
 	getConstructorType: function () {
-		return this._ctorType;
+		return this._ctorFunctionType;
 	},
 
 	serialize: function () {
 		return [
 			"ConstructorInvocationStatement",
-			this._qualifiedName.serialize(),
+			this._ctorClassType.serialize(),
 			Util.serializeArray(this._args)
 		];
 	},
 
 	doAnalyze: function (context) {
-		if (this._qualifiedName.getImport() == null && this._qualifiedName.getToken().getValue() == "super") {
-			this._ctorClassDef = context.funcDef.getClassDef().extendClassDef();
-		} else {
-			if ((this._ctorClassDef = this._qualifiedName.getClass(context)) == null) {
-				// error should have been reported already
-				return true;
-			}
-		}
-		// analyze args
-		var argTypes = Util.analyzeArgs(context, this._args, null);
-		if (argTypes == null) {
-			// error is reported by callee
-			return true;
-		}
-		var ctorType = this._ctorClassDef.getMemberTypeByName("constructor", false, ClassDefinition.GET_MEMBER_MODE_CLASS_ONLY);
+		var ctorType = this.getConstructingClassDef().getMemberTypeByName("constructor", false, ClassDefinition.GET_MEMBER_MODE_CLASS_ONLY);
 		if (ctorType == null) {
 			if (this._args.length != 0) {
-				context.errors.push(new CompileError(this._qualifiedName.getToken(), "no function with matching arguments"));
+				context.errors.push(new CompileError(this.getToken().getToken(), "no function with matching arguments"));
 				return true;
 			}
 			ctorType = new ResolvedFunctionType(Type.voidType, [], false); // implicit constructor
-		} else if ((ctorType = ctorType.deduceByArgumentTypes(context, this._qualifiedName.getToken(), argTypes, false)) == null) {
-			// error is reported by callee
-			return true;
+		} else {
+			// analyze args
+			var argTypes = Util.analyzeArgs(
+				context, this._args, null,
+				ctorType.getExpectedCallbackTypes(this._args.length, false));
+			if (argTypes == null) {
+				// error is reported by callee
+				return true;
+			}
+			if ((ctorType = ctorType.deduceByArgumentTypes(context, this.getToken(), argTypes, false)) == null) {
+				// error is reported by callee
+				return true;
+			}
 		}
-		this._ctorType = ctorType;
+		this._ctorFunctionType = ctorType;
 		return true;
 	},
 
@@ -199,6 +199,10 @@ var ExpressionStatement = exports.ExpressionStatement = UnaryExpressionStatement
 		UnaryExpressionStatement.prototype.constructor.call(this, expr);
 	},
 
+	clone: function () {
+		return new ExpressionStatement(this._expr.clone());
+	},
+
 	serialize: function () {
 		return [
 			"ExpressionStatement",
@@ -214,6 +218,10 @@ var ReturnStatement = exports.ReturnStatement = Statement.extend({
 		Statement.prototype.constructor.call(this);
 		this._token = token;
 		this._expr = expr; // nullable
+	},
+
+	clone: function () {
+		return new ReturnStatement(this._token, Util.cloneNullable(this._expr));
 	},
 
 	getToken: function () {
@@ -245,6 +253,10 @@ var ReturnStatement = exports.ReturnStatement = Statement.extend({
 				context.errors.push(new CompileError(this._token, "cannot return void, the function is declared to return a value of type '" + returnType.toString() + "'"));
 				return true;
 			}
+			if (this._expr instanceof FunctionExpression && ! this._expr.typesAreIdentified() && returnType instanceof StaticFunctionType) {
+				if (! this._expr.getFuncDef().deductTypeIfUnknown(context, returnType))
+					return false;
+			}
 			if (! this._analyzeExpr(context, this._expr))
 				return true;
 			var exprType = this._expr != null ? this._expr.getType() : Type.voidType;
@@ -274,6 +286,10 @@ var DeleteStatement = exports.DeleteStatement = UnaryExpressionStatement.extend(
 		this._token = token;
 	},
 
+	clone: function () {
+		return new DeleteStatement(this._token, this._expr.clone());
+	},
+
 	getToken: function () {
 		return this._token;
 	},
@@ -295,7 +311,7 @@ var DeleteStatement = exports.DeleteStatement = UnaryExpressionStatement.extend(
 		var secondExprType = this._expr.getSecondExpr().getType();
 		if (secondExprType == null)
 			return true; // error should have been already reported
-		if (! secondExprType.resolveIfMayBeUndefined().equals(Type.stringType)) {
+		if (! secondExprType.resolveIfNullable().equals(Type.stringType)) {
 			context.errors.push(new CompileError(this._token, "only properties of a hash object can be deleted"));
 			return true;
 		}
@@ -384,6 +400,10 @@ var BreakStatement = exports.BreakStatement = JumpStatement.extend({
 		JumpStatement.prototype.constructor.call(this, token, label);
 	},
 
+	clone: function () {
+		return new BreakStatement(this._token, this._label);
+	},
+
 	_getName: function () {
 		return "BreakStatement";
 	},
@@ -398,6 +418,10 @@ var ContinueStatement = exports.ContinueStatement = JumpStatement.extend({
 
 	constructor: function (token, label) {
 		JumpStatement.prototype.constructor.call(this, token, label);
+	},
+
+	clone: function () {
+		return new ContinueStatement(this._token, this._label);
 	},
 
 	_getName: function () {
@@ -515,6 +539,10 @@ var DoWhileStatement = exports.DoWhileStatement = ContinuableStatement.extend({
 		this._expr = expr;
 	},
 
+	clone: function () {
+		return new DoWhileStatement(this._token, this._label, this._expr.clone(), Util.cloneArray(this._statements));
+	},
+
 	getExpr: function () {
 		return this._expr;
 	},
@@ -538,8 +566,8 @@ var DoWhileStatement = exports.DoWhileStatement = ContinuableStatement.extend({
 			if (! Statement.assertIsReachable(context, this._expr.getToken()))
 				return false;
 			if (this._analyzeExpr(context, this._expr))
-				if (! this._expr.getType().equals(Type.booleanType))
-					context.errors.push(new CompileError(this._expr.getToken(), "expression of the while statement should return a boolean"));
+				if (this._expr.getType().resolveIfNullable().equals(Type.voidType))
+					context.errors.push(new CompileError(this._expr.getToken(), "expression of the do-while statement should not return void"));
 			this.registerVariableStatusesOnBreak(context.getTopBlock().localVariableStatuses);
 			this._finalizeBlockAnalysis(context);
 		} catch (e) {
@@ -571,6 +599,10 @@ var ForInStatement = exports.ForInStatement = ContinuableStatement.extend({
 		this._listExpr = listExpr;
 	},
 
+	clone: function () {
+		return new ForInStatement(this._token, this._label, this._lhsExpr.clone(), this._listExpr.clone(), Util.cloneArray(this._statements));
+	},
+
 	getLHSExpr: function () {
 		return this._lhsExpr;
 	},
@@ -596,7 +628,7 @@ var ForInStatement = exports.ForInStatement = ContinuableStatement.extend({
 	doAnalyze: function (context) {
 		if (! this._analyzeExpr(context, this._listExpr))
 			return true;
-		var listType = this._listExpr.getType().resolveIfMayBeUndefined();
+		var listType = this._listExpr.getType().resolveIfNullable();
 		var listClassDef;
 		var listTypeName;
 		if (listType instanceof ObjectType
@@ -644,13 +676,21 @@ var ForStatement = exports.ForStatement = ContinuableStatement.extend({
 
 	constructor: function (token, label, initExpr, condExpr, postExpr, statements) {
 		ContinuableStatement.prototype.constructor.call(this, token, label, statements);
-		this._initExpr = initExpr;
-		this._condExpr = condExpr;
-		this._postExpr = postExpr;
+		this._initExpr = initExpr; // nullable
+		this._condExpr = condExpr; // nullable
+		this._postExpr = postExpr; // nullable
+	},
+
+	clone: function () {
+		return new ForStatement(this._token, this._label, Util.cloneNullable(this._initExpr), Util.cloneNullable(this._condExpr), Util.cloneNullable(this._postExpr), Util.cloneArray(this._statements));
 	},
 
 	getInitExpr: function () {
 		return this._initExpr;
+	},
+
+	setInitExpr: function (expr) {
+		this._initExpr = expr;
 	},
 
 	getCondExpr: function () {
@@ -681,8 +721,8 @@ var ForStatement = exports.ForStatement = ContinuableStatement.extend({
 			this._analyzeExpr(context, this._initExpr);
 		if (this._condExpr != null)
 			if (this._analyzeExpr(context, this._condExpr))
-				if (! this._condExpr.getType().equals(Type.booleanType))
-					context.errors.push(new CompileError(this._condExpr.getToken(), "condition expression of the for statement should return a boolean"));
+				if (this._condExpr.getType().resolveIfNullable().equals(Type.voidType))
+					context.errors.push(new CompileError(this._condExpr.getToken(), "condition expression of the for statement should not return void"));
 		this._prepareBlockAnalysis(context);
 		try {
 			for (var i = 0; i < this._statements.length; ++i)
@@ -731,6 +771,10 @@ var IfStatement = exports.IfStatement = Statement.extend({
 		this._onFalseStatements = onFalseStatements;
 	},
 
+	clone: function () {
+		return new IfStatement(this._token, this._expr.clone(), Util.cloneArray(this._onTrueStatements), Util.cloneArray(this._onFalseStatements));
+	},
+
 	getToken: function () {
 		return this._token;
 	},
@@ -762,8 +806,8 @@ var IfStatement = exports.IfStatement = Statement.extend({
 
 	doAnalyze: function (context) {
 		if (this._analyzeExpr(context, this._expr))
-			if (! this._expr.getType().equals(Type.booleanType))
-				context.errors.push(new CompileError(this._expr.getToken(), "expression of the if statement should return a boolean"));
+			if (this._expr.getType().resolveIfNullable().equals(Type.voidType))
+				context.errors.push(new CompileError(this._expr.getToken(), "expression of the if statement should not return void"));
 		// if the expr is true
 		context.blockStack.push(new BlockContext(context.getTopBlock().localVariableStatuses.clone(), this));
 		try {
@@ -819,6 +863,10 @@ var SwitchStatement = exports.SwitchStatement = LabellableStatement.extend({
 		this._statements = statements;
 	},
 
+	clone: function () {
+		return new SwitchStatement(this._token, this._label, this._expr.clone(), Util.cloneARray(this._statements));
+	},
+
 	getExpr: function () {
 		return this._expr;
 	},
@@ -839,7 +887,7 @@ var SwitchStatement = exports.SwitchStatement = LabellableStatement.extend({
 	doAnalyze: function (context) {
 		if (! this._analyzeExpr(context, this._expr))
 			return true;
-		var exprType = this._expr.getType().resolveIfMayBeUndefined();
+		var exprType = this._expr.getType().resolveIfNullable();
 		if (! (exprType.equals(Type.booleanType) || exprType.equals(Type.integerType) || exprType.equals(Type.numberType) || exprType.equals(Type.stringType))) {
 			context.errors.push(new CompileError(this._token, "switch statement only accepts boolean, number, or string expressions"));
 			return true;
@@ -890,6 +938,10 @@ var CaseStatement = exports.CaseStatement = Statement.extend({
 		this._expr = expr;
 	},
 
+	clone: function () {
+		return new CaseStatement(this._token, this._expr.clone());
+	},
+
 	getToken: function () {
 		return this._token;
 	},
@@ -914,11 +966,11 @@ var CaseStatement = exports.CaseStatement = Statement.extend({
 		var expectedType = statement.getExpr().getType();
 		if (expectedType == null)
 			return true;
-		expectedType = expectedType.resolveIfMayBeUndefined();
+		expectedType = expectedType.resolveIfNullable();
 		var exprType = this._expr.getType();
 		if (exprType == null)
 			return true;
-		exprType = exprType.resolveIfMayBeUndefined();
+		exprType = exprType.resolveIfNullable();
 		if (exprType.equals(expectedType)) {
 			// ok
 		} else if (Type.isIntegerOrNumber(exprType) && Type.isIntegerOrNumber(expectedType)) {
@@ -946,6 +998,10 @@ var DefaultStatement = exports.DefaultStatement = Statement.extend({
 	constructor: function (token) {
 		Statement.prototype.constructor.call(this);
 		this._token = token;
+	},
+
+	clone: function () {
+		return new DefaultStatement(this._token);
 	},
 
 	getToken: function () {
@@ -976,6 +1032,10 @@ var WhileStatement = exports.WhileStatement = ContinuableStatement.extend({
 		this._expr = expr;
 	},
 
+	clone: function () {
+		return new WhileStatement(this._token, this._label, this._expr.clone(), Util.cloneArray(this._statements));
+	},
+
 	getExpr: function () {
 		return this._expr;
 	},
@@ -995,8 +1055,8 @@ var WhileStatement = exports.WhileStatement = ContinuableStatement.extend({
 
 	doAnalyze: function (context) {
 		if (this._analyzeExpr(context, this._expr))
-			if (! this._expr.getType().equals(Type.booleanType))
-				context.errors.push(new CompileError(this._expr.getToken(), "expression of the while statement should return a boolean"));
+			if (this._expr.getType().resolveIfNullable().equals(Type.voidType))
+				context.errors.push(new CompileError(this._expr.getToken(), "expression of the while statement should not return void"));
 		this._prepareBlockAnalysis(context);
 		try {
 			for (var i = 0; i < this._statements.length; ++i)
@@ -1033,6 +1093,10 @@ var TryStatement = exports.TryStatement = Statement.extend({
 		this._tryStatements = tryStatements;
 		this._catchStatements = catchStatements;
 		this._finallyStatements = finallyStatements;
+	},
+
+	clone: function () {
+		return new TryStatement(this._token, Util.cloneArray(this._tryStatements), Util.cloneArray(this._catchStatements), Util.cloneArray(this._finallyStatements));
 	},
 
 	getToken: function () {
@@ -1111,12 +1175,22 @@ var CatchStatement = exports.CatchStatement = Statement.extend({
 		this._statements = statements;
 	},
 
+	clone: function () {
+		// TODO rewrite the references from _statements to _local
+		return new CatchStatement(this._token, this._local.clone(), Util.cloneArray(this._statements));
+	},
+
 	getToken: function () {
 		return this._token;
 	},
 
 	getLocal: function () {
 		return this._local;
+	},
+
+	setLocal: function (local) {
+		// NOTE: does not rewrite the references to the local from the statements within
+		this._local = local;
 	},
 
 	getStatements: function () {
@@ -1159,7 +1233,8 @@ var CatchStatement = exports.CatchStatement = Statement.extend({
 		} finally {
 			context.blockStack.pop();
 		}
-		context.getTopBlock().localVariableStatuses = context.getTopBlock().localVariableStatuses.merge(lvStatusesAfterCatch);
+		if (lvStatusesAfterCatch != null)
+			context.getTopBlock().localVariableStatuses = context.getTopBlock().localVariableStatuses.merge(lvStatusesAfterCatch);
 		return true;
 	},
 
@@ -1179,6 +1254,10 @@ var ThrowStatement = exports.ThrowStatement = Statement.extend({
 		Statement.prototype.constructor.call(this);
 		this._token = token;
 		this._expr = expr;
+	},
+
+	clone: function () {
+		return new ThrowStatement(this._token, this._expr.clone());
 	},
 
 	getToken: function () {
@@ -1240,6 +1319,10 @@ var AssertStatement = exports.AssertStatement = InformationStatement.extend({
 		this._expr = expr;
 	},
 
+	clone: function () {
+		return new AssertStatement(this._token, this._expr.clone());
+	},
+
 	getExpr: function () {
 		return this._expr;
 	},
@@ -1256,8 +1339,8 @@ var AssertStatement = exports.AssertStatement = InformationStatement.extend({
 		if (! this._analyzeExpr(context, this._expr))
 			return true;
 		var exprType = this._expr.getType();
-		if (! exprType.equals(Type.booleanType))
-			context.errors.push(new CompileError(this._exprs[0].getToken(), "cannot assert type " + exprType.serialize()));
+		if (exprType.equals(Type.voidType))
+			context.errors.push(new CompileError(this._exprs[0].getToken(), "argument of the assert statement cannot be void"));
 		return true;
 	},
 
@@ -1274,6 +1357,10 @@ var LogStatement = exports.LogStatement = InformationStatement.extend({
 	constructor: function (token, exprs) {
 		InformationStatement.prototype.constructor.call(this, token);
 		this._exprs = exprs;
+	},
+
+	clone: function () {
+		return new LogStatement(this._token, Util.cloneArray(this._exprs));
 	},
 
 	getExprs: function () {
@@ -1313,6 +1400,10 @@ var DebuggerStatement = exports.DebuggerStatement = InformationStatement.extend(
 
 	constructor: function (token) {
 		InformationStatement.prototype.constructor.call(this, token);
+	},
+
+	clone: function () {
+		return new DebuggerStatement(this._token);
 	},
 
 	serialize: function () {

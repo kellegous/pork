@@ -48,12 +48,15 @@ my @specs = (
 
         #"http://www.w3.org/TR/webaudio/", # no correct IDL
         "http://www.w3.org/TR/touch-events/",
-        "http://dev.w3.org/html5/websockets/",
-        "http://dev.w3.org/geo/api/spec-source-v2.html",
+        "http://www.w3.org/TR/websockets/",
+        #"http://dev.w3.org/html5/websockets/", # too new
+        "http://dev.w3.org/geo/api/spec-source.html",
         "http://dev.w3.org/html5/webstorage/",
         'http://www.w3.org/TR/selectors-api/',
         "http://www.w3.org/TR/webmessaging/",
         "http://www.w3.org/TR/workers/",
+        "http://www.w3.org/TR/eventsource/",
+        #"http://dev.w3.org/html5/eventsource/", # too new
 
         # WebRTC has no correct IDL
         #"http://dev.w3.org/2011/webrtc/editor/webrtc.html",

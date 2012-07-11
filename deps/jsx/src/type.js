@@ -30,7 +30,6 @@ var Type = exports.Type = Class.extend({
 
 	$_initialize: function () {
 		this.voidType = new VoidType();
-		this.undefinedType = new UndefinedType();
 		this.nullType = new NullType();
 		this.booleanType = new BooleanType();
 		this.integerType = new IntegerType();
@@ -51,8 +50,8 @@ var Type = exports.Type = Class.extend({
 		return this == x || ((x instanceof Type) && this.toString() == x.toString());
 	},
 
-	resolveIfMayBeUndefined: function () {
-		if (this instanceof MayBeUndefinedType)
+	resolveIfNullable: function () {
+		if (this instanceof NullableType)
 			return this.getBaseType();
 		return this;
 	},
@@ -61,10 +60,11 @@ var Type = exports.Type = Class.extend({
 		return this;
 	},
 
-	toMayBeUndefinedType: function () {
-		if (this instanceof MayBeUndefinedType || this instanceof VariantType)
-			return this;
-		return new MayBeUndefinedType(this);
+	toNullableType: function (force) {
+		if (force || this instanceof PrimitiveType) {
+			return new NullableType(this);
+		}
+		return this;
 	},
 
 	$templateTypeToString: function (parameterizedTypeName, typeArgs) {
@@ -121,8 +121,7 @@ var NullType = exports.NullType = Type.extend({
 	},
 
 	isConvertibleTo: function (type) {
-		type = type.resolveIfMayBeUndefined();
-		return type instanceof ObjectType || type instanceof VariantType || type instanceof StaticFunctionType;
+		return type instanceof NullableType || type instanceof ObjectType || type instanceof VariantType || type instanceof StaticFunctionType;
 	},
 
 	getClassDef: function () {
@@ -154,7 +153,7 @@ var BooleanType = exports.BooleanType = PrimitiveType.extend({
 	$_classDef: null,
 
 	isConvertibleTo: function (type) {
-		type = type.resolveIfMayBeUndefined();
+		type = type.resolveIfNullable();
 		return type instanceof BooleanType || type instanceof VariantType;
 	},
 
@@ -173,7 +172,7 @@ var IntegerType = exports.IntegerType = PrimitiveType.extend({
 	$_classDef: null,
 
 	isConvertibleTo: function (type) {
-		type = type.resolveIfMayBeUndefined();
+		type = type.resolveIfNullable();
 		return type instanceof IntegerType || type instanceof NumberType || type instanceof VariantType;
 	},
 
@@ -192,7 +191,7 @@ var NumberType = exports.NumberType = PrimitiveType.extend({
 	$_classDef: null,
 
 	isConvertibleTo: function (type) {
-		type = type.resolveIfMayBeUndefined();
+		type = type.resolveIfNullable();
 		return type instanceof IntegerType || type instanceof NumberType || type instanceof VariantType;
 	},
 
@@ -211,7 +210,7 @@ var StringType = exports.StringType = PrimitiveType.extend({
 	$_classDef: null,
 
 	isConvertibleTo: function (type) {
-		type = type.resolveIfMayBeUndefined();
+		type = type.resolveIfNullable();
 		return type instanceof StringType || type instanceof VariantType;
 	},
 
@@ -237,7 +236,7 @@ var VariantType = exports.VariantType = Type.extend({
 	},
 
 	isConvertibleTo: function (type) {
-		type = type.resolveIfMayBeUndefined();
+		type = type.resolveIfNullable();
 		return type instanceof VariantType;
 	},
 
@@ -251,48 +250,22 @@ var VariantType = exports.VariantType = Type.extend({
 
 });
 
-// undefined and MayBeUndefined
-
-var UndefinedType = exports.UndefinedType = Type.extend({
-
-	instantiate: function (instantiationContext) {
-		return this;
-	},
-
-	isAssignable: function () {
-		return false;
-	},
-
-	isConvertibleTo: function (type) {
-		return type instanceof MayBeUndefinedType || type instanceof VariantType;
-	},
-
-	getClassDef: function () {
-		throw new Error("not supported");
-	},
-
-	toString: function () {
-		return "undefined";
-	}
-
-});
-
-
-var MayBeUndefinedType = exports.MayBeUndefinedType = Type.extend({
+// Nullable
+var NullableType = exports.NullableType = Type.extend({
 
 	constructor: function (type) {
 		if (type.equals(Type.variantType))
-			throw new Error("logic error, cannot create MayBeUndefined.<variant>");
-		this._baseType = type instanceof MayBeUndefinedType ? type._baseType : type;
+			throw new Error("logic error, cannot create Nullable.<variant>");
+		this._baseType = type instanceof NullableType ? type._baseType : type;
 	},
 
 	instantiate: function (instantiationContext) {
-		var baseType = this._baseType.instantiate(instantiationContext);
-		return baseType.toMayBeUndefinedType();
+		var baseType = this._baseType.resolveIfNullable().instantiate(instantiationContext);
+		return baseType.toNullableType();
 	},
 
 	isConvertibleTo: function (type) {
-		return this._baseType.isConvertibleTo(type instanceof MayBeUndefinedType ? type._baseType : type);
+		return this._baseType.isConvertibleTo(type instanceof NullableType ? type._baseType : type);
 	},
 
 	isAssignable: function () {
@@ -308,40 +281,47 @@ var MayBeUndefinedType = exports.MayBeUndefinedType = Type.extend({
 	},
 
 	toString: function () {
-		return "MayBeUndefined.<" + this._baseType.toString() + ">";
+		return "Nullable.<" + this._baseType.toString() + ">";
+	}
+
+});
+
+var VariableLengthArgumentType = exports.VariableLengthArgumentType = Type.extend({
+
+	constructor: function (type) {
+		if (type instanceof VariableLengthArgumentType)
+			throw new Error("logic flaw");
+		this._baseType = type;
+	},
+
+	instantiate: function (instantiationContext) {
+		var baseType = this._baseType.instantiate(instantiationContext);
+		return new VariableLengthArgumentType(baseType);
+	},
+
+	isConvertibleTo: function (type) {
+		throw new Error("logic flaw"); // never becomes LHS
+	},
+
+	isAssignable: function () {
+		throw new Error("logic flaw"); // never becomes LHS
+	},
+
+	getClassDef: function () {
+		throw new Error("logic flaw"); // never becomes LHS
+	},
+
+	getBaseType: function () {
+		return this._baseType;
+	},
+
+	toString: function () {
+		return "..." + this._baseType.toString();
 	}
 
 });
 
 // class and object types
-
-var ClassDefType = exports.ClassDefType = Type.extend({
-
-	constructor: function (classDef) {
-		this._classDef = classDef;
-	},
-
-	instantiate: function (instantiationContext) {
-		throw new Error("logic flaw; ClassDefType is created during semantic analysis, after template instantiation");
-	},
-
-	isConvertibleTo: function (type) {
-		return false;
-	},
-
-	isAssignable: function () {
-		return false;
-	},
-
-	getClassDef: function () {
-		return this._classDef;
-	},
-
-	toString: function () {
-		return this._classDef.className();
-	}
-
-});
 
 var ObjectType = exports.ObjectType = Type.extend({
 
@@ -359,7 +339,7 @@ var ObjectType = exports.ObjectType = Type.extend({
 	},
 
 	isConvertibleTo: function (type) {
-		type = type.resolveIfMayBeUndefined();
+		type = type.resolveIfNullable();
 		if (type instanceof VariantType)
 			return true;
 		// conversions from Number / String to number / string is handled in each operator (since the behavior differ bet. the operators)
@@ -377,7 +357,7 @@ var ObjectType = exports.ObjectType = Type.extend({
 	},
 
 	toString: function () {
-		return this._classDef.className();
+		return this._classDef != null ? this._classDef.className() : "(null)";
 	}
 
 });
@@ -390,17 +370,41 @@ var ParsedObjectType = exports.ParsedObjectType = ObjectType.extend({
 		this._typeArguments = typeArgs;
 	},
 
+	getToken: function () {
+		return this._qualifiedName.getToken();
+	},
+
+	getTypeArguments: function () {
+		return this._typeArguments;
+	},
+
 	instantiate: function (instantiationContext) {
 		if (this._typeArguments.length == 0) {
 			var actualType = instantiationContext.typemap[this._qualifiedName.getToken().getValue()];
 			if (actualType != undefined)
 				return actualType;
+			if (this._classDef == null)
+				instantiationContext.objectTypesUsed.push(this);
+			return this;
 		}
 		var typeArgs = [];
 		for (var i = 0; i < this._typeArguments.length; ++i) {
-			var actualType = instantiationContext.typemap[this._typeArguments[i].toString()];
+			if (this._typeArguments[i] instanceof ParsedObjectType && this._typeArguments[i].getTypeArguments().length != 0) {
+				var actualType = this._typeArguments[i].instantiate(instantiationContext);
+			} else {
+				actualType = instantiationContext.typemap[this._typeArguments[i].toString()];
+			}
 			typeArgs[i] = actualType != undefined ? actualType : this._typeArguments[i];
+			// special handling for (Array|Map).<T> (T should not be NullableType)
+			if (typeArgs[i] instanceof NullableType) {
+				var templateClassName = this._qualifiedName.getToken().getValue();
+				if (templateClassName == "Array" || templateClassName == "Map") {
+					typeArgs[i] = typeArgs[i].getBaseType();
+				}
+			}
 		}
+		instantiationContext.request.getInstantiationRequests().push(
+			new TemplateInstantiationRequest(this._qualifiedName.getToken(), this._qualifiedName.getToken().getValue(), typeArgs));
 		var objectType = new ParsedObjectType(this._qualifiedName, typeArgs);
 		instantiationContext.objectTypesUsed.push(objectType);
 		return objectType;
@@ -413,7 +417,7 @@ var ParsedObjectType = exports.ParsedObjectType = ObjectType.extend({
 			} else {
 				// get the already-instantiated class (FIXME refactor, or should we move QualifiedName#getClass to somewhere else?)
 				if ((this._classDef = context.parser.lookup(context.errors, this._qualifiedName.getToken(), this.toString())) == null)
-					context.errors.push(new CompileError(this._token, "'" + this.toString() + "' is not defined"));
+					context.errors.push(new CompileError(this._qualifiedName.getToken(), "'" + this.toString() + "' is not defined"));
 			}
 		}
 	},
@@ -429,6 +433,11 @@ var ParsedObjectType = exports.ParsedObjectType = ObjectType.extend({
 var FunctionType = exports.FunctionType = Type.extend({
 
 	$_classDef: null,
+
+	isConvertibleTo: function (type) {
+		// functions except StaticFunctionType are unassignable
+		return false;
+	},
 
 	getClassDef: function () {
 		return FunctionType._classDef;
@@ -448,10 +457,6 @@ var FunctionChoiceType = exports.FunctionChoiceType = FunctionType.extend({
 
 	asAssignableType: function () {
 		throw new Error("logic flaw");
-	},
-
-	isConvertibleTo: function (type) {
-		return false;
 	},
 
 	deduceByArgumentTypes: function (context, operatorToken, argTypes, isStatic) {
@@ -475,6 +480,14 @@ var FunctionChoiceType = exports.FunctionChoiceType = FunctionType.extend({
 			break;
 		}
 		return null;
+	},
+
+	// used for left to right deduction of callback function types
+	getExpectedCallbackTypes: function (numberOfArgs, isStatic) {
+		var expected = [];
+		for (var i = 0; i < this._types.length; ++i)
+			this._types[i]._getExpectedCallbackTypes(expected, numberOfArgs, isStatic);
+		return expected;
 	},
 
 	toString: function () {
@@ -521,27 +534,77 @@ var ResolvedFunctionType = exports.ResolvedFunctionType = FunctionType.extend({
 	},
 
 	_deduceByArgumentTypes: function (argTypes, isStatic, exact) {
+		var compareArg = function (formal, actual) {
+			if (formal.equals(actual))
+				return true;
+			else if (! exact && actual.isConvertibleTo(formal))
+				return true;
+			return false;
+		};
 		if ((this instanceof StaticFunctionType) != isStatic)
 			return false;
-		if (this._argTypes.length != argTypes.length)
-			return false;
-		for (var i = 0; i < argTypes.length; i++) {
-			if (this._argTypes[i].equals(argTypes[i])) {
-				// ok
-			} else {
-				if (exact)
+		if (this._argTypes.length != 0 && this._argTypes[this._argTypes.length - 1] instanceof VariableLengthArgumentType) {
+			// a vararg function
+			if (argTypes.length < this._argTypes.length - 1)
+				return false;
+			for (var i = 0; i < this._argTypes.length - 1; ++i) {
+				if (! compareArg(this._argTypes[i], argTypes[i]))
 					return false;
-				if (! argTypes[i].isConvertibleTo(this._argTypes[i]))
+			}
+			if (argTypes[i] instanceof VariableLengthArgumentType && argTypes.length == this._argTypes.length) {
+				if (! compareArg(this._argTypes[i].getBaseType(), argTypes[i].getBaseType()))
+					return false;
+			} else {
+				for (; i < argTypes.length; ++i) {
+					if (! compareArg(this._argTypes[this._argTypes.length - 1].getBaseType(), argTypes[i]))
+						return false;
+				}
+			}
+		} else {
+			// non-vararg function
+			if (this._argTypes.length != argTypes.length)
+				return false;
+			for (var i = 0; i < argTypes.length; ++i) {
+				if (! compareArg(this._argTypes[i], argTypes[i]))
 					return false;
 			}
 		}
 		return true;
 	},
 
+	getExpectedCallbackTypes: function (numberOfArgs, isStatic) {
+		var expected = [];
+		this._getExpectedCallbackTypes(expected, numberOfArgs, isStatic);
+		return expected;
+	},
+
+	_getExpectedCallbackTypes: function (expected, numberOfArgs, isStatic) {
+		if ((this instanceof StaticFunctionType) != isStatic)
+			return false;
+		if (this._argTypes.length != numberOfArgs)
+			return false;
+		var hasCallback = false;
+		var callbackArgTypes = this._argTypes.map(function (argType) {
+			if (argType instanceof StaticFunctionType) {
+				hasCallback = true;
+				return argType;
+			} else {
+				return null;
+			}
+		});
+		if (hasCallback)
+			expected.push(callbackArgTypes);
+	},
+
 	toString: function () {
 		var args = [];
-		for (var i = 0; i < this._argTypes.length; ++i)
-			args[i] = " : " + this._argTypes[i].toString();
+		for (var i = 0; i < this._argTypes.length; ++i) {
+			if (this._argTypes[i] instanceof VariableLengthArgumentType) {
+				args[i] = "... : " + this._argTypes[i].getBaseType().toString();
+			} else {
+				args[i] = " : " + this._argTypes[i].toString();
+			}
+		}
 		return this._toStringPrefix() + "function (" + args.join(", ") + ") : " + this._returnType.toString();
 	}
 
@@ -569,7 +632,7 @@ var StaticFunctionType = exports.StaticFunctionType = ResolvedFunctionType.exten
 	},
 
 	isConvertibleTo: function (type) {
-		type = type.resolveIfMayBeUndefined();
+		type = type.resolveIfNullable();
 		if (type instanceof VariantType)
 			return true;
 		if (! (type instanceof StaticFunctionType))

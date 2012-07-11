@@ -3,6 +3,20 @@
 * Table of contents
 {:toc}
 
+## 3.1.20
+
+* Don't crash if a UTF encoding isn't found. Thanks to [Andrew
+  Garbutt](http://github.com/techsplicer).
+* Properly watch files recursively with `sass --watch`. Thanks to [Sébastien
+  Tisserant](https://github.com/sebweaver).
+* Fix the documentation for the \{Sass::Script::Functions#append append()}
+  function.
+* Support the `saturate()`, `opacity()`, and `invert()` functions when used as
+  in the [Filter Effects][filter] spec.
+* Support MacRuby. Thanks to [Will Glynn](http://github.com/delta407).
+
+[filter]: https://dvcs.w3.org/hg/FXTF/raw-file/tip/filters/index.html
+
 ## 3.1.19
 
 * Fix an `uninitialized constant Sass::Exec::Sass::Util` error when using the

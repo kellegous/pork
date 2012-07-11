@@ -4,8 +4,7 @@
     <meta charset="utf-8">
     <title>Hello, JSX!</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="">
-    <meta name="author" content="">
+    <meta name="robots" content="noindex,nofollow">
 
     <!-- Le styles -->
     <link href="../assets/css/bootstrap.css" rel="stylesheet">
@@ -21,12 +20,10 @@
       <script src="http://html5shim.googlecode.com/svn/trunk/html5.js"></script>
     <![endif]-->
 
-    <script src="../jsx.combined.js"></script>
-    <script src="../assets/js/jsx-browser-platform.js"></script>
-    <script src="../assets/js/jsx-script-loader.js"></script>
+    <script src="../build/jsx-compiler.js"></script>
     <script type="application/jsx" src="hello-world.jsx"></script>
     <script>
-      window.addEventListener("DOMContentLoaded", function(e) {
+      window.addEventListener("load", function(e) {
         document.getElementById("run").addEventListener("click", function(e) {
           e.preventDefault();
           e.stopPropagation();
@@ -50,7 +47,9 @@
           <a class="brand" href="/">JSX</a>
           <div class="nav-collapse">
             <ul class="nav">
-              <li><a href="/">Home</a></li>
+              <li><a href="../">Try</a></li>
+              <li><a href="../source-map/">Debug with SourceMap</a></li>
+              <li class="active"><a href="../example/">Web Application Examples</a></li>
             </ul>
           </div><!--/.nav-collapse -->
         </div>

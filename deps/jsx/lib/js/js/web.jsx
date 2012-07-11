@@ -32,36 +32,10 @@ final class dom {
 
 }
 
-/*
-automatically generated from:
-	http://www.w3.org/TR/dom/
-	http://www.w3.org/TR/DOM-Level-2-Views/idl/views.idl
-	http://www.w3.org/TR/DOM-Level-3-Events/
-	idl2jsx/extra/events.idl
-	http://www.w3.org/TR/XMLHttpRequest/
-	http://dev.w3.org/csswg/cssom/
-	http://dev.w3.org/csswg/cssom-view/
-	idl2jsx/extra/chrome.idl
-	idl2jsx/extra/firefox.idl
-	http://www.w3.org/TR/html5/single-page.html
-	http://www.w3.org/TR/FileAPI/
-	idl2jsx/extra/file.idl
-	http://www.w3.org/TR/touch-events/
-	http://dev.w3.org/html5/websockets/
-	http://dev.w3.org/geo/api/spec-source-v2.html
-	http://dev.w3.org/html5/webstorage/
-	http://www.w3.org/TR/selectors-api/
-	http://www.w3.org/TR/webmessaging/
-	http://www.w3.org/TR/workers/
-	http://html5.org/specs/dom-parsing.html
-	https://www.khronos.org/registry/typedarray/specs/latest/typedarray.idl
-	http://dev.w3.org/html5/2dcontext/
-	https://www.khronos.org/registry/webgl/specs/latest/webgl.idl
-	idl2jsx/extra/timers.idl
-	idl2jsx/extra/animation-timing.idl
-	idl2jsx/extra/legacy.idl
-*/
-native class DOMException {
+// alias MutationCallback = function(mutations:MutationRecord[],observer:MutationObserver):void
+
+/** @see http://www.w3.org/TR/dom/ */
+native final class DOMException {
 
 	static __readonly__ var INDEX_SIZE_ERR : int/*unsigned short*/;
 	       __readonly__ var INDEX_SIZE_ERR : int/*unsigned short*/;
@@ -121,38 +95,61 @@ native class DOMException {
 
 } // end of DOMException
 
-native class DOMError {
+/** @see http://www.w3.org/TR/dom/ */
+native final class DOMError {
 
 	__readonly__ var name : string/*DOMString*/;
 
 } // end of DOMError
 
+/** @see http://www.w3.org/TR/DOM-Level-3-Events/ */
 native class Event {
 
+	/** @see http://www.w3.org/TR/dom/ */
 	function constructor(type : string/*DOMString*/);
+	/** @see http://www.w3.org/TR/dom/ */
 	function constructor(
 		type : string/*DOMString*/,
 		eventInitDict : EventInit
 	);
 
+	/** @see http://www.w3.org/TR/dom/ */
 	__readonly__ var type : string/*DOMString*/;
+	/** @see http://www.w3.org/TR/dom/ */
 	__readonly__ var target : EventTarget;
+	/** @see http://www.w3.org/TR/dom/ */
 	__readonly__ var currentTarget : EventTarget;
+	/** @see http://www.w3.org/TR/dom/ */
 	static __readonly__ var CAPTURING_PHASE : int/*unsigned short*/;
+	/** @see http://www.w3.org/TR/dom/ */
 	       __readonly__ var CAPTURING_PHASE : int/*unsigned short*/;
+	/** @see http://www.w3.org/TR/dom/ */
 	static __readonly__ var AT_TARGET : int/*unsigned short*/;
+	/** @see http://www.w3.org/TR/dom/ */
 	       __readonly__ var AT_TARGET : int/*unsigned short*/;
+	/** @see http://www.w3.org/TR/dom/ */
 	static __readonly__ var BUBBLING_PHASE : int/*unsigned short*/;
+	/** @see http://www.w3.org/TR/dom/ */
 	       __readonly__ var BUBBLING_PHASE : int/*unsigned short*/;
+	/** @see http://www.w3.org/TR/dom/ */
 	__readonly__ var eventPhase : int/*unsigned short*/;
+	/** @see http://www.w3.org/TR/dom/ */
 	function stopPropagation() : void;
+	/** @see http://www.w3.org/TR/dom/ */
 	function stopImmediatePropagation() : void;
+	/** @see http://www.w3.org/TR/dom/ */
 	__readonly__ var bubbles : boolean;
+	/** @see http://www.w3.org/TR/dom/ */
 	__readonly__ var cancelable : boolean;
+	/** @see http://www.w3.org/TR/dom/ */
 	function preventDefault() : void;
+	/** @see http://www.w3.org/TR/dom/ */
 	__readonly__ var defaultPrevented : boolean;
+	/** @see http://www.w3.org/TR/dom/ */
 	__readonly__ var isTrusted : boolean;
+	/** @see http://www.w3.org/TR/dom/ */
 	__readonly__ var timeStamp : number/*DOMTimeStamp*/;
+	/** @see http://www.w3.org/TR/dom/ */
 	function initEvent(
 		type : string/*DOMString*/,
 		bubbles : boolean,
@@ -160,30 +157,38 @@ native class Event {
 	) : void;
 
 	// PhaseType
-	// Introduced in DOM Level 3:
-
-	// PhaseType
+	static __readonly__ var NONE : int/*unsigned short*/;
+	       __readonly__ var NONE : int/*unsigned short*/;
 	// Introduced in DOM Level 3:
 
 } // end of Event
 
 native class EventInit {
 
+	/** @see http://www.w3.org/TR/dom/ */
 	var bubbles : boolean;
+	/** @see http://www.w3.org/TR/dom/ */
 	var cancelable : boolean;
+
 
 } // end of EventInit
 
-native class CustomEvent extends Event {
+/** @see http://www.w3.org/TR/DOM-Level-3-Events/ */
+native final class CustomEvent extends Event {
 
+	/** @see http://www.w3.org/TR/dom/ */
 	function constructor(type : string/*DOMString*/);
+	/** @see http://www.w3.org/TR/dom/ */
 	function constructor(
 		type : string/*DOMString*/,
 		eventInitDict : CustomEventInit
 	);
 
+	/** @see http://www.w3.org/TR/dom/ */
 	__readonly__ var detail : variant/*any*/;
 
+
+	// Originally introduced (and deprecated) in DOM Level 3:
 	function initCustomEvent(
 		typeArg : string/*DOMString*/,
 		canBubbleArg : boolean,
@@ -191,48 +196,59 @@ native class CustomEvent extends Event {
 		detailArg : variant/*any*/
 	) : void;
 
-
 } // end of CustomEvent
 
-native class CustomEventInit extends EventInit {
+/** @see http://www.w3.org/TR/DOM-Level-3-Events/ */
+native final class CustomEventInit extends EventInit {
 
+	/** @see http://www.w3.org/TR/dom/ */
 	var detail : variant/*any*/;
+
+	// Attributes from Event:
+	// inherits var bubbles : boolean;
+	// inherits var cancelable : boolean;
+	// Attributes for CustomEvent:
 
 } // end of CustomEventInit
 
+/** @see http://www.w3.org/TR/DOM-Level-3-Events/ */
 native __fake__ class EventTarget {
 
+	/** @see http://www.w3.org/TR/dom/ */
 	function addEventListener(
 		type : string/*DOMString*/,
 		callback : function(:Event):void/*EventListener?*/
 	) : void;
+	/** @see http://www.w3.org/TR/dom/ */
 	function addEventListener(
 		type : string/*DOMString*/,
 		callback : function(:Event):void/*EventListener?*/,
 		capture : boolean
 	) : void;
+	/** @see http://www.w3.org/TR/dom/ */
 	function removeEventListener(
 		type : string/*DOMString*/,
 		callback : function(:Event):void/*EventListener?*/
 	) : void;
+	/** @see http://www.w3.org/TR/dom/ */
 	function removeEventListener(
 		type : string/*DOMString*/,
 		callback : function(:Event):void/*EventListener?*/,
 		capture : boolean
 	) : void;
+	/** @see http://www.w3.org/TR/dom/ */
 	function dispatchEvent(event : Event) : boolean;
-
-	// Modified in DOM Level 3:
 
 	// Modified in DOM Level 3:
 
 } // end of EventTarget
 
-native class MutationObserver {
+/** @see http://www.w3.org/TR/dom/ */
+native final class MutationObserver {
 
 	function constructor(
-		callback : function(:MutationRecord[],
-		:MutationObserver):void/*MutationCallback*/
+		callback : function(mutations:MutationRecord[],
+		observer:MutationObserver):void/*MutationCallback*/
 	);
 
 	function observe(
@@ -243,7 +259,8 @@ native class MutationObserver {
 
 } // end of MutationObserver
 
-native class MutationObserverInit {
+/** @see http://www.w3.org/TR/dom/ */
+native final class MutationObserverInit {
 
 	var childList : boolean;
 	var attributes : boolean;
@@ -255,7 +272,8 @@ native class MutationObserverInit {
 
 } // end of MutationObserverInit
 
-native class MutationRecord {
+/** @see http://www.w3.org/TR/dom/ */
+native final class MutationRecord {
 
 	__readonly__ var type : string/*DOMString*/;
 	__readonly__ var target : Node;
@@ -263,12 +281,13 @@ native class MutationRecord {
 	__readonly__ var removedNodes : NodeList;
 	__readonly__ var previousSibling : Node;
 	__readonly__ var nextSibling : Node;
-	__readonly__ var attributeName : string/*DOMString?*/;
-	__readonly__ var attributeNamespace : string/*DOMString?*/;
-	__readonly__ var oldValue : string/*DOMString?*/;
+	__readonly__ var attributeName : Nullable.<string>/*DOMString?*/;
+	__readonly__ var attributeNamespace : Nullable.<string>/*DOMString?*/;
+	__readonly__ var oldValue : Nullable.<string>/*DOMString?*/;
 
 } // end of MutationRecord
 
+/** @see http://www.w3.org/TR/dom/ */
 native class Node extends EventTarget {
 
 	static __readonly__ var ELEMENT_NODE : int/*unsigned short*/;
@@ -302,7 +321,7 @@ native class Node extends EventTarget {
 	// historical
 	__readonly__ var nodeType : int/*unsigned short*/;
 	__readonly__ var nodeName : string/*DOMString*/;
-	__readonly__ var baseURI : string/*DOMString?*/;
+	__readonly__ var baseURI : Nullable.<string>/*DOMString?*/;
 	__readonly__ var ownerDocument : Document;
 	__readonly__ var parentNode : Node;
 	__readonly__ var parentElement : Element;
@@ -329,8 +348,8 @@ native class Node extends EventTarget {
 		other : Node
 	) : int/*unsigned short*/;
 	function contains(other : Node) : boolean;
-	var nodeValue : string/*DOMString?*/;
-	var textContent : string/*DOMString?*/;
+	var nodeValue : Nullable.<string>/*DOMString?*/;
+	var textContent : Nullable.<string>/*DOMString?*/;
 	function insertBefore(node : Node, child : Node) : Node;
 	function appendChild(node : Node) : Node;
 	function replaceChild(node : Node, child : Node) : Node;
@@ -340,17 +359,18 @@ native class Node extends EventTarget {
 	function cloneNode(deep : boolean) : Node;
 	function isEqualNode(node : Node) : boolean;
 	function lookupPrefix(
-		namespace : string/*DOMString?*/
+		namespace : Nullable.<string>/*DOMString?*/
 	) : string/*DOMString*/;
 	function lookupNamespaceURI(
-		prefix : string/*DOMString?*/
+		prefix : Nullable.<string>/*DOMString?*/
 	) : string/*DOMString*/;
 	function isDefaultNamespace(
-		namespace : string/*DOMString?*/
+		namespace : Nullable.<string>/*DOMString?*/
 	) : boolean;
 
 } // end of Node
 
+/** @see http://www.w3.org/TR/dom/ */
 native class Document extends Node {
 
 	__readonly__ var implementation : DOMImplementation;
@@ -365,7 +385,7 @@ native class Document extends Node {
 		localName : string/*DOMString*/
 	) : HTMLCollection;
 	function getElementsByTagNameNS(
-		namespace : string/*DOMString?*/,
+		namespace : Nullable.<string>/*DOMString?*/,
 		localName : string/*DOMString*/
 	) : HTMLCollection;
 	function getElementsByClassName(
@@ -374,7 +394,7 @@ native class Document extends Node {
 	function getElementById(elementId : string/*DOMString*/) : Element;
 	function createElement(localName : string/*DOMString*/) : Element;
 	function createElementNS(
-		namespace : string/*DOMString?*/,
+		namespace : Nullable.<string>/*DOMString?*/,
 		qualifiedName : string/*DOMString*/
 	) : Element;
 	function createDocumentFragment() : DocumentFragment;
@@ -412,37 +432,42 @@ native class Document extends Node {
 		filter : NodeFilter
 	) : TreeWalker;
 	// NEW
-	function prepend() : void;
-	function prepend(nodes : Node) : void;
-	function prepend(nodes : string/*DOMString*/) : void;
-	function append() : void;
-	function append(nodes : Node) : void;
-	function append(nodes : string/*DOMString*/) : void;
+	function prepend(...nodes : Node) : void;
+	function prepend(...nodes : string/*DOMString*/) : void;
+	function append(...nodes : Node) : void;
+	function append(...nodes : string/*DOMString*/) : void;
 
 	// implements DocumentEvent
 
 	// Modified in DOM Level 3:
 
-	// Modified in DOM Level 3:
-
+	/** @see http://dev.w3.org/csswg/cssom/ */
 	__readonly__ var styleSheets : StyleSheet[]/*StyleSheetList*/;
-	var selectedStyleSheetSet : string/*DOMString?*/;
-	__readonly__ var lastStyleSheetSet : string/*DOMString?*/;
-	__readonly__ var preferredStyleSheetSet : string/*DOMString?*/;
+	/** @see http://dev.w3.org/csswg/cssom/ */
+	var selectedStyleSheetSet : Nullable.<string>/*DOMString?*/;
+	/** @see http://dev.w3.org/csswg/cssom/ */
+	__readonly__ var lastStyleSheetSet : Nullable.<string>/*DOMString?*/;
+	/** @see http://dev.w3.org/csswg/cssom/ */
+	__readonly__ var preferredStyleSheetSet : Nullable.<string>/*DOMString?*/;
+	/** @see http://dev.w3.org/csswg/cssom/ */
 	__readonly__ var styleSheetSets : DOMStringList;
+	/** @see http://dev.w3.org/csswg/cssom/ */
 	function enableStyleSheetsForSet(
-		name : string/*DOMString?*/
+		name : Nullable.<string>/*DOMString?*/
 	) : void;
 
+	/** @see http://dev.w3.org/csswg/cssom-view/ */
 	function elementFromPoint(
 		x : number/*float*/,
 		y : number/*float*/
 	) : Element;
+	/** @see http://dev.w3.org/csswg/cssom-view/ */
 	function caretPositionFromPoint(
 		x : number/*float*/,
 		y : number/*float*/
 	) : CaretPosition;
 
+	/** @see http://www.w3.org/TR/touch-events/ */
 	function createTouch(
 		view : AbstractView,
 		target : EventTarget,
@@ -452,25 +477,30 @@ native class Document extends Node {
 		screenX : int/*long*/,
 		screenY : int/*long*/
 	) : Touch;
+	/** @see http://www.w3.org/TR/touch-events/ */
 	function createTouchList(touches : Touch[]) : TouchList;
+	/** @see http://www.w3.org/TR/touch-events/ */
 	function createTouchList(touch : Touch) : TouchList;
 
-	// implements NodeSelector
-
+	/** @see http://www.w3.org/TR/selectors-api/ */
 	function querySelector(selectors : string/*DOMString*/) : Element;
+	/** @see http://www.w3.org/TR/selectors-api/ */
 	function querySelectorAll(
 		selectors : string/*DOMString*/
 	) : NodeList;
 
 } // end of Document
 
-native class XMLDocument extends Document {
+/** @see http://www.w3.org/TR/dom/ */
+native final class XMLDocument extends Document {
 
+	/** @see http://www.w3.org/TR/html5/single-page.html */
 	function load(url : string/*DOMString*/) : boolean;
 
 } // end of XMLDocument
 
-native class DOMImplementation {
+/** @see http://www.w3.org/TR/dom/ */
+native final class DOMImplementation {
 
 	function createDocumentType(
 		qualifiedName : string/*DOMString*/,
@@ -478,7 +508,7 @@ native class DOMImplementation {
 		systemId : string/*DOMString*/
 	) : DocumentType;
 	function createDocument(
-		namespace : string/*DOMString?*/,
+		namespace : Nullable.<string>/*DOMString?*/,
 		qualifiedName : string/*DOMString*/,
 		doctype : DocumentType
 	) : XMLDocument;
@@ -490,48 +520,46 @@ native class DOMImplementation {
 
 } // end of DOMImplementation
 
-native class DocumentFragment extends Node {
+/** @see http://www.w3.org/TR/dom/ */
+native final class DocumentFragment extends Node {
 
 	// NEW
-	function prepend() : void;
-	function prepend(nodes : Node) : void;
-	function prepend(nodes : string/*DOMString*/) : void;
-	function append() : void;
-	function append(nodes : Node) : void;
-	function append(nodes : string/*DOMString*/) : void;
+	function prepend(...nodes : Node) : void;
+	function prepend(...nodes : string/*DOMString*/) : void;
+	function append(...nodes : Node) : void;
+	function append(...nodes : string/*DOMString*/) : void;
 
-	// implements NodeSelector
-
+	/** @see http://www.w3.org/TR/selectors-api/ */
 	function querySelector(selectors : string/*DOMString*/) : Element;
+	/** @see http://www.w3.org/TR/selectors-api/ */
 	function querySelectorAll(
 		selectors : string/*DOMString*/
 	) : NodeList;
 
 } // end of DocumentFragment
 
-native class DocumentType extends Node {
+/** @see http://www.w3.org/TR/dom/ */
+native final class DocumentType extends Node {
 
 	__readonly__ var name : string/*DOMString*/;
 	__readonly__ var publicId : string/*DOMString*/;
 	__readonly__ var systemId : string/*DOMString*/;
 	// NEW
-	function before() : void;
-	function before(nodes : Node) : void;
-	function before(nodes : string/*DOMString*/) : void;
-	function after() : void;
-	function after(nodes : Node) : void;
-	function after(nodes : string/*DOMString*/) : void;
-	function replace() : void;
-	function replace(nodes : Node) : void;
-	function replace(nodes : string/*DOMString*/) : void;
+	function before(...nodes : Node) : void;
+	function before(...nodes : string/*DOMString*/) : void;
+	function after(...nodes : Node) : void;
+	function after(...nodes : string/*DOMString*/) : void;
+	function replace(...nodes : Node) : void;
+	function replace(...nodes : string/*DOMString*/) : void;
 	function remove() : void;
 
 } // end of DocumentType
 
+/** @see http://www.w3.org/TR/dom/ */
 native class Element extends Node {
 
-	__readonly__ var namespaceURI : string/*DOMString?*/;
-	__readonly__ var prefix : string/*DOMString?*/;
+	__readonly__ var namespaceURI : Nullable.<string>/*DOMString?*/;
+	__readonly__ var prefix : Nullable.<string>/*DOMString?*/;
 	__readonly__ var localName : string/*DOMString*/;
 	__readonly__ var tagName : string/*DOMString*/;
 	var id : string/*DOMString*/;
@@ -540,35 +568,35 @@ native class Element extends Node {
 	__readonly__ var attributes : Attr[];
 	function getAttribute(
 		name : string/*DOMString*/
-	) : string/*DOMString?*/;
+	) : Nullable.<string>/*DOMString?*/;
 	function getAttributeNS(
-		namespace : string/*DOMString?*/,
+		namespace : Nullable.<string>/*DOMString?*/,
 		localName : string/*DOMString*/
-	) : string/*DOMString?*/;
+	) : Nullable.<string>/*DOMString?*/;
 	function setAttribute(
 		name : string/*DOMString*/,
 		value : string/*DOMString*/
 	) : void;
 	function setAttributeNS(
-		namespace : string/*DOMString?*/,
+		namespace : Nullable.<string>/*DOMString?*/,
 		name : string/*DOMString*/,
 		value : string/*DOMString*/
 	) : void;
 	function removeAttribute(name : string/*DOMString*/) : void;
 	function removeAttributeNS(
-		namespace : string/*DOMString?*/,
+		namespace : Nullable.<string>/*DOMString?*/,
 		localName : string/*DOMString*/
 	) : void;
 	function hasAttribute(name : string/*DOMString*/) : boolean;
 	function hasAttributeNS(
-		namespace : string/*DOMString?*/,
+		namespace : Nullable.<string>/*DOMString?*/,
 		localName : string/*DOMString*/
 	) : boolean;
 	function getElementsByTagName(
 		localName : string/*DOMString*/
 	) : HTMLCollection;
 	function getElementsByTagNameNS(
-		namespace : string/*DOMString?*/,
+		namespace : Nullable.<string>/*DOMString?*/,
 		localName : string/*DOMString*/
 	) : HTMLCollection;
 	function getElementsByClassName(
@@ -581,48 +609,58 @@ native class Element extends Node {
 	__readonly__ var nextElementSibling : Element;
 	__readonly__ var childElementCount : int/*unsigned long*/;
 	// NEW
-	function prepend() : void;
-	function prepend(nodes : Node) : void;
-	function prepend(nodes : string/*DOMString*/) : void;
-	function append() : void;
-	function append(nodes : Node) : void;
-	function append(nodes : string/*DOMString*/) : void;
-	function before() : void;
-	function before(nodes : Node) : void;
-	function before(nodes : string/*DOMString*/) : void;
-	function after() : void;
-	function after(nodes : Node) : void;
-	function after(nodes : string/*DOMString*/) : void;
-	function replace() : void;
-	function replace(nodes : Node) : void;
-	function replace(nodes : string/*DOMString*/) : void;
+	function prepend(...nodes : Node) : void;
+	function prepend(...nodes : string/*DOMString*/) : void;
+	function append(...nodes : Node) : void;
+	function append(...nodes : string/*DOMString*/) : void;
+	function before(...nodes : Node) : void;
+	function before(...nodes : string/*DOMString*/) : void;
+	function after(...nodes : Node) : void;
+	function after(...nodes : string/*DOMString*/) : void;
+	function replace(...nodes : Node) : void;
+	function replace(...nodes : string/*DOMString*/) : void;
 	function remove() : void;
 
+	/** @see http://dev.w3.org/csswg/cssom-view/ */
 	function getClientRects() : ClientRectList;
+	/** @see http://dev.w3.org/csswg/cssom-view/ */
 	function getBoundingClientRect() : ClientRect;
 	// scrolling
+	/** @see http://dev.w3.org/csswg/cssom-view/ */
 	function scrollIntoView() : void;
+	/** @see http://dev.w3.org/csswg/cssom-view/ */
 	function scrollIntoView(top : boolean) : void;
+	/** @see http://dev.w3.org/csswg/cssom-view/ */
 	var scrollTop : int/*long*/;
 	// scroll on setting
+	/** @see http://dev.w3.org/csswg/cssom-view/ */
 	var scrollLeft : int/*long*/;
 	// scroll on setting
+	/** @see http://dev.w3.org/csswg/cssom-view/ */
 	__readonly__ var scrollWidth : int/*long*/;
+	/** @see http://dev.w3.org/csswg/cssom-view/ */
 	__readonly__ var scrollHeight : int/*long*/;
+	/** @see http://dev.w3.org/csswg/cssom-view/ */
 	__readonly__ var clientTop : int/*long*/;
+	/** @see http://dev.w3.org/csswg/cssom-view/ */
 	__readonly__ var clientLeft : int/*long*/;
+	/** @see http://dev.w3.org/csswg/cssom-view/ */
 	__readonly__ var clientWidth : int/*long*/;
+	/** @see http://dev.w3.org/csswg/cssom-view/ */
 	__readonly__ var clientHeight : int/*long*/;
 
-	// implements NodeSelector
-
+	/** @see http://www.w3.org/TR/selectors-api/ */
 	function querySelector(selectors : string/*DOMString*/) : Element;
+	/** @see http://www.w3.org/TR/selectors-api/ */
 	function querySelectorAll(
 		selectors : string/*DOMString*/
 	) : NodeList;
 
+	/** @see http://html5.org/specs/dom-parsing.html */
 	var innerHTML : string/*DOMString*/;
+	/** @see http://html5.org/specs/dom-parsing.html */
 	var outerHTML : string/*DOMString*/;
+	/** @see http://html5.org/specs/dom-parsing.html */
 	function insertAdjacentHTML(
 		position : string/*insertAdjacentHTMLPosition*/,
 		text : string/*DOMString*/
@@ -630,16 +668,18 @@ native class Element extends Node {
 
 } // end of Element
 
-native class Attr {
+/** @see http://www.w3.org/TR/dom/ */
+native final class Attr {
 
 	__readonly__ var name : string/*DOMString*/;
 	var value : string/*DOMString*/;
-	__readonly__ var namespaceURI : string/*DOMString?*/;
-	__readonly__ var prefix : string/*DOMString?*/;
+	__readonly__ var namespaceURI : Nullable.<string>/*DOMString?*/;
+	__readonly__ var prefix : Nullable.<string>/*DOMString?*/;
 	__readonly__ var localName : string/*DOMString*/;
 
 } // end of Attr
 
+/** @see http://www.w3.org/TR/dom/ */
 native class CharacterData extends Node {
 
 	var data : string/*DOMString*/;
@@ -663,42 +703,45 @@ native class CharacterData extends Node {
 		data : string/*DOMString*/
 	) : void;
 	// NEW
-	function before() : void;
-	function before(nodes : Node) : void;
-	function before(nodes : string/*DOMString*/) : void;
-	function after() : void;
-	function after(nodes : Node) : void;
-	function after(nodes : string/*DOMString*/) : void;
-	function replace() : void;
-	function replace(nodes : Node) : void;
-	function replace(nodes : string/*DOMString*/) : void;
+	function before(...nodes : Node) : void;
+	function before(...nodes : string/*DOMString*/) : void;
+	function after(...nodes : Node) : void;
+	function after(...nodes : string/*DOMString*/) : void;
+	function replace(...nodes : Node) : void;
+	function replace(...nodes : string/*DOMString*/) : void;
 	function remove() : void;
 
 } // end of CharacterData
 
-native class Text extends CharacterData {
+/** @see http://www.w3.org/TR/dom/ */
+native final class Text extends CharacterData {
 
 	function splitText(offset : int/*unsigned long*/) : Text;
 	__readonly__ var wholeText : string/*DOMString*/;
 
+	/** @see http://html5.org/specs/dom-parsing.html */
 	var serializeAsCDATA : boolean;
 
 } // end of Text
 
-native class ProcessingInstruction extends CharacterData {
+/** @see http://www.w3.org/TR/dom/ */
+native final class ProcessingInstruction extends CharacterData {
 
 	__readonly__ var target : string/*DOMString*/;
 
 	// implements LinkStyle
 
+	/** @see http://dev.w3.org/csswg/cssom/ */
 	__readonly__ var sheet : StyleSheet;
 
 } // end of ProcessingInstruction
 
-native class Comment extends CharacterData {
+/** @see http://www.w3.org/TR/dom/ */
+native final class Comment extends CharacterData {
 }
 
-native class Range {
+/** @see http://www.w3.org/TR/dom/ */
+native final class Range {
 
 	__readonly__ var startContainer : Node;
 	__readonly__ var startOffset : int/*unsigned long*/;
@@ -750,16 +793,20 @@ native class Range {
 	) : int/*short*/;
 	function intersectsNode(node : Node) : boolean;
 
+	/** @see http://dev.w3.org/csswg/cssom-view/ */
 	function getClientRects() : ClientRectList;
+	/** @see http://dev.w3.org/csswg/cssom-view/ */
 	function getBoundingClientRect() : ClientRect;
 
+	/** @see http://html5.org/specs/dom-parsing.html */
 	function createContextualFragment(
 		fragment : string/*DOMString*/
 	) : DocumentFragment;
 
 } // end of Range
 
-native class NodeIterator {
+/** @see http://www.w3.org/TR/dom/ */
+native final class NodeIterator {
 
 	__readonly__ var root : Node;
 	__readonly__ var referenceNode : Node;
@@ -772,7 +819,8 @@ native class NodeIterator {
 
 } // end of NodeIterator
 
-native class TreeWalker {
+/** @see http://www.w3.org/TR/dom/ */
+native final class TreeWalker {
 
 	__readonly__ var root : Node;
 	__readonly__ var whatToShow : int/*unsigned long*/;
@@ -788,7 +836,8 @@ native class TreeWalker {
 
 } // end of TreeWalker
 
-native class NodeFilter {
+/** @see http://www.w3.org/TR/dom/ */
+native final class NodeFilter {
 
 	// Constants for acceptNode()
 	static __readonly__ var FILTER_ACCEPT : int/*unsigned short*/;
@@ -834,62 +883,62 @@ native class NodeFilter {
 
 } // end of NodeFilter
 
+/** @see http://www.w3.org/TR/dom/ */
 native class NodeList {
 
 	function __native_index_operator__(
 		index : int/*unsigned long*/
-	) : MayBeUndefined.<Node>;
+	) : Node;
 	/* getter */
-	function item(index : int/*unsigned long*/) : MayBeUndefined.<Node>;
+	function item(index : int/*unsigned long*/) : Node;
 	__readonly__ var length : int/*unsigned long*/;
 
 } // end of NodeList
 
+/** @see http://www.w3.org/TR/dom/ */
 native class HTMLCollection {
 
 	__readonly__ var length : int/*unsigned long*/;
 	function __native_index_operator__(
 		index : int/*unsigned long*/
-	) : MayBeUndefined.<Element>;
+	) : Element;
 	/* getter */
-	function item(
-		index : int/*unsigned long*/
-	) : MayBeUndefined.<Element>;
+	function item(index : int/*unsigned long*/) : Element;
 	function __native_index_operator__(
 		name : string/*DOMString*/
-	) : MayBeUndefined.<Object/*object?*/>;
+	) : Object/*object?*/;
 	/* getter */
-	function namedItem(
-		name : string/*DOMString*/
-	) : MayBeUndefined.<Object/*object?*/>;
+	function namedItem(name : string/*DOMString*/) : Object/*object?*/;
 	// only returns Element
 
 } // end of HTMLCollection
 
-native __fake__ class DOMStringList {
+/** @see http://www.w3.org/TR/dom/ */
+native final __fake__ class DOMStringList {
 
 	__readonly__ var length : int/*unsigned long*/;
 	function __native_index_operator__(
 		index : int/*unsigned long*/
-	) : MayBeUndefined.<string/*DOMString?*/>;
+	) : Nullable.<string>/*DOMString?*/;
 	/* getter */
 	function item(
 		index : int/*unsigned long*/
-	) : MayBeUndefined.<string/*DOMString?*/>;
+	) : Nullable.<string>/*DOMString?*/;
 	function contains(string : string/*DOMString*/) : boolean;
 
 } // end of DOMStringList
 
+/** @see http://www.w3.org/TR/dom/ */
 native class DOMTokenList {
 
 	__readonly__ var length : int/*unsigned long*/;
 	function __native_index_operator__(
 		index : int/*unsigned long*/
-	) : MayBeUndefined.<string/*DOMString?*/>;
+	) : Nullable.<string>/*DOMString?*/;
 	/* getter */
 	function item(
 		index : int/*unsigned long*/
-	) : MayBeUndefined.<string/*DOMString?*/>;
+	) : Nullable.<string>/*DOMString?*/;
 	function contains(token : string/*DOMString*/) : boolean;
 	function add(token : string/*DOMString*/) : void;
 	function remove(token : string/*DOMString*/) : void;
@@ -897,53 +946,41 @@ native class DOMTokenList {
 
 } // end of DOMTokenList
 
-native class DOMSettableTokenList extends DOMTokenList {
+/** @see http://www.w3.org/TR/dom/ */
+native final class DOMSettableTokenList extends DOMTokenList {
 
 	var value : string/*DOMString*/;
 
 } // end of DOMSettableTokenList
 
-native __fake__ class AbstractView {
+/** @see http://www.w3.org/TR/DOM-Level-2-Views/idl/views.idl */
+native final __fake__ class AbstractView {
 
 	__readonly__ var document : DocumentView;
 
 } // end of AbstractView
 
-native __fake__ class DocumentView {
+/** @see http://www.w3.org/TR/DOM-Level-2-Views/idl/views.idl */
+native final __fake__ class DocumentView {
 
 	__readonly__ var defaultView : AbstractView;
 
 } // end of DocumentView
 
-native class EventException {
-
-	// EventExceptionCode
-	static __readonly__ var UNSPECIFIED_EVENT_TYPE_ERR : int/*unsigned short*/;
-	       __readonly__ var UNSPECIFIED_EVENT_TYPE_ERR : int/*unsigned short*/;
-	// Introduced in DOM Level 3:
-	static __readonly__ var DISPATCH_REQUEST_ERR : int/*unsigned short*/;
-	       __readonly__ var DISPATCH_REQUEST_ERR : int/*unsigned short*/;
-	// Introduced in DOM Level 2:
-	var code : int/*unsigned short*/;
-
-	// EventExceptionCode
-	// Introduced in DOM Level 3:
-
-} // end of EventException
-
+/** @see http://www.w3.org/TR/DOM-Level-3-Events/ */
 native __fake__ class DocumentEvent {
 
 	// Modified in DOM Level 3:
 	function createEvent(eventInterface : string/*DOMString*/) : Event;
 
-	// Modified in DOM Level 3:
-
 } // end of DocumentEvent
 
+/** @see http://www.w3.org/TR/DOM-Level-3-Events/ */
 native class UIEvent extends Event {
 
 	__readonly__ var view : AbstractView;
 	__readonly__ var detail : int/*long*/;
+	// Deprecated in DOM Level 3:
 	function initUIEvent(
 		typeArg : string/*DOMString*/,
 		canBubbleArg : boolean,
@@ -951,13 +988,25 @@ native class UIEvent extends Event {
 		viewArg : AbstractView,
 		detailArg : int/*long*/
 	) : void;
-
+	function constructor(typeArg : string/*DOMString*/);
+	function constructor(
+		typeArg : string/*DOMString*/,
+		dictUIEventInit : UIEventInit
+	);
 
 } // end of UIEvent
 
-native class FocusEvent extends UIEvent {
+/** @see http://www.w3.org/TR/DOM-Level-3-Events/ */
+native final class FocusEvent extends UIEvent {
 
 	__readonly__ var relatedTarget : EventTarget;
+	function constructor(typeArg : string/*DOMString*/);
+	function constructor(
+		typeArg : string/*DOMString*/,
+		focusEventInitDict : FocusEventInit
+	);
+
+	// Originally introduced (and deprecated) in DOM Level 3:
 	function initFocusEvent(
 		typeArg : string/*DOMString*/,
 		canBubbleArg : boolean,
@@ -967,9 +1016,9 @@ native class FocusEvent extends UIEvent {
 		relatedTargetArg : EventTarget
 	) : void;
 
-
 } // end of FocusEvent
 
+/** @see http://www.w3.org/TR/DOM-Level-3-Events/ */
 native class MouseEvent extends UIEvent {
 
 	__readonly__ var screenX : int/*long*/;
@@ -983,6 +1032,7 @@ native class MouseEvent extends UIEvent {
 	__readonly__ var button : int/*unsigned short*/;
 	__readonly__ var buttons : int/*unsigned short*/;
 	__readonly__ var relatedTarget : EventTarget;
+	// Deprecated in DOM Level 3:
 	function initMouseEvent(
 		typeArg : string/*DOMString*/,
 		canBubbleArg : boolean,
@@ -1002,19 +1052,30 @@ native class MouseEvent extends UIEvent {
 	) : void;
 	// Introduced in DOM Level 3:
 	function getModifierState(keyArg : string/*DOMString*/) : boolean;
+	function constructor(typeArg : string/*DOMString*/);
+	function constructor(
+		typeArg : string/*DOMString*/,
+		mouseEventInitDict : MouseEventInit
+	);
 
-	// Introduced in DOM Level 3:
 
+	/** @see http://dev.w3.org/csswg/cssom-view/ */
 	__readonly__ var pageX : int/*long*/;
+	/** @see http://dev.w3.org/csswg/cssom-view/ */
 	__readonly__ var pageY : int/*long*/;
+	/** @see http://dev.w3.org/csswg/cssom-view/ */
 	__readonly__ var x : int/*long*/;
+	/** @see http://dev.w3.org/csswg/cssom-view/ */
 	__readonly__ var y : int/*long*/;
+	/** @see http://dev.w3.org/csswg/cssom-view/ */
 	__readonly__ var offsetX : int/*long*/;
+	/** @see http://dev.w3.org/csswg/cssom-view/ */
 	__readonly__ var offsetY : int/*long*/;
 
 } // end of MouseEvent
 
-native class WheelEvent extends MouseEvent {
+/** @see http://www.w3.org/TR/DOM-Level-3-Events/ */
+native final class WheelEvent extends MouseEvent {
 
 	// DeltaModeCode
 	static __readonly__ var DOM_DELTA_PIXEL : int/*unsigned long*/;
@@ -1027,6 +1088,13 @@ native class WheelEvent extends MouseEvent {
 	__readonly__ var deltaY : number/*float*/;
 	__readonly__ var deltaZ : number/*float*/;
 	__readonly__ var deltaMode : int/*unsigned long*/;
+	function constructor(typeArg : string/*DOMString*/);
+	function constructor(
+		typeArg : string/*DOMString*/,
+		wheelEventInitDict : WheelEventInit
+	);
+
+	// Originally introduced (and deprecated) in DOM Level 3:
 	function initWheelEvent(
 		typeArg : string/*DOMString*/,
 		canBubbleArg : boolean,
@@ -1046,51 +1114,10 @@ native class WheelEvent extends MouseEvent {
 		deltaMode : int/*unsigned long*/
 	) : void;
 
-	// DeltaModeCode
-
 } // end of WheelEvent
 
-native class TextEvent extends UIEvent {
-
-	// InputMethodCode
-	static __readonly__ var DOM_INPUT_METHOD_UNKNOWN : int/*unsigned long*/;
-	       __readonly__ var DOM_INPUT_METHOD_UNKNOWN : int/*unsigned long*/;
-	static __readonly__ var DOM_INPUT_METHOD_KEYBOARD : int/*unsigned long*/;
-	       __readonly__ var DOM_INPUT_METHOD_KEYBOARD : int/*unsigned long*/;
-	static __readonly__ var DOM_INPUT_METHOD_PASTE : int/*unsigned long*/;
-	       __readonly__ var DOM_INPUT_METHOD_PASTE : int/*unsigned long*/;
-	static __readonly__ var DOM_INPUT_METHOD_DROP : int/*unsigned long*/;
-	       __readonly__ var DOM_INPUT_METHOD_DROP : int/*unsigned long*/;
-	static __readonly__ var DOM_INPUT_METHOD_IME : int/*unsigned long*/;
-	       __readonly__ var DOM_INPUT_METHOD_IME : int/*unsigned long*/;
-	static __readonly__ var DOM_INPUT_METHOD_OPTION : int/*unsigned long*/;
-	       __readonly__ var DOM_INPUT_METHOD_OPTION : int/*unsigned long*/;
-	static __readonly__ var DOM_INPUT_METHOD_HANDWRITING : int/*unsigned long*/;
-	       __readonly__ var DOM_INPUT_METHOD_HANDWRITING : int/*unsigned long*/;
-	static __readonly__ var DOM_INPUT_METHOD_VOICE : int/*unsigned long*/;
-	       __readonly__ var DOM_INPUT_METHOD_VOICE : int/*unsigned long*/;
-	static __readonly__ var DOM_INPUT_METHOD_MULTIMODAL : int/*unsigned long*/;
-	       __readonly__ var DOM_INPUT_METHOD_MULTIMODAL : int/*unsigned long*/;
-	static __readonly__ var DOM_INPUT_METHOD_SCRIPT : int/*unsigned long*/;
-	       __readonly__ var DOM_INPUT_METHOD_SCRIPT : int/*unsigned long*/;
-	__readonly__ var data : string/*DOMString*/;
-	__readonly__ var inputMethod : int/*unsigned long*/;
-	__readonly__ var locale : string/*DOMString*/;
-	function initTextEvent(
-		typeArg : string/*DOMString*/,
-		canBubbleArg : boolean,
-		cancelableArg : boolean,
-		viewArg : AbstractView,
-		dataArg : string/*DOMString*/,
-		inputMethod : int/*unsigned long*/,
-		localeArg : string/*DOMString*/
-	) : void;
-
-	// InputMethodCode
-
-} // end of TextEvent
-
-native class KeyboardEvent extends UIEvent {
+/** @see http://www.w3.org/TR/DOM-Level-3-Events/ */
+native final class KeyboardEvent extends UIEvent {
 
 	// KeyLocationCode
 	static __readonly__ var DOM_KEY_LOCATION_STANDARD : int/*unsigned long*/;
@@ -1115,6 +1142,13 @@ native class KeyboardEvent extends UIEvent {
 	__readonly__ var repeat : boolean;
 	__readonly__ var locale : string/*DOMString*/;
 	function getModifierState(keyArg : string/*DOMString*/) : boolean;
+	function constructor(typeArg : string/*DOMString*/);
+	function constructor(
+		typeArg : string/*DOMString*/,
+		keyboardEventInitDict : KeyboardEventInit
+	);
+
+	// Originally introduced (and deprecated) in DOM Level 3:
 	function initKeyboardEvent(
 		typeArg : string/*DOMString*/,
 		canBubbleArg : boolean,
@@ -1128,31 +1162,38 @@ native class KeyboardEvent extends UIEvent {
 		localeArg : string/*DOMString*/
 	) : void;
 
+	// The following support legacy user agents:
 	__readonly__ var charCode : int/*unsigned long*/;
 	__readonly__ var keyCode : int/*unsigned long*/;
 	__readonly__ var which : int/*unsigned long*/;
 
-	// KeyLocationCode
-
 } // end of KeyboardEvent
 
-native class CompositionEvent extends UIEvent {
+/** @see http://www.w3.org/TR/DOM-Level-3-Events/ */
+native final class CompositionEvent extends UIEvent {
 
-	__readonly__ var data : string/*DOMString*/;
+	__readonly__ var data : Nullable.<string>/*DOMString?*/;
 	__readonly__ var locale : string/*DOMString*/;
+	function constructor(typeArg : string/*DOMString*/);
+	function constructor(
+		typeArg : string/*DOMString*/,
+		compositionEventInitDict : CompositionEventInit
+	);
+
+	// Originally introduced (and deprecated) in DOM Level 3:
 	function initCompositionEvent(
 		typeArg : string/*DOMString*/,
 		canBubbleArg : boolean,
 		cancelableArg : boolean,
 		viewArg : AbstractView,
-		dataArg : string/*DOMString*/,
+		dataArg : Nullable.<string>/*DOMString?*/,
 		localeArg : string/*DOMString*/
 	) : void;
 
-
 } // end of CompositionEvent
 
-native class MutationEvent extends Event {
+/** @see http://www.w3.org/TR/DOM-Level-3-Events/ */
+native final class MutationEvent extends Event {
 
 	// attrChangeType
 	static __readonly__ var MODIFICATION : int/*unsigned short*/;
@@ -1177,34 +1218,142 @@ native class MutationEvent extends Event {
 		attrChangeArg : int/*unsigned short*/
 	) : void;
 
-	// attrChangeType
-
 } // end of MutationEvent
 
-native class MutationNameEvent extends MutationEvent {
-
-	__readonly__ var prevNamespaceURI : string/*DOMString*/;
-	__readonly__ var prevNodeName : string/*DOMString*/;
-	// Introduced in DOM Level 3:
-	function initMutationNameEvent(
-		typeArg : string/*DOMString*/,
-		canBubbleArg : boolean,
-		cancelableArg : boolean,
-		relatedNodeArg : Node,
-		prevNamespaceURIArg : string/*DOMString*/,
-		prevNodeNameArg : string/*DOMString*/
-	) : void;
-
-	// Introduced in DOM Level 3:
-
-} // end of MutationNameEvent
-
 native class UIEventInit extends EventInit {
-}
+
+	// Attributes from Event:
+	// inherits var bubbles : boolean;
+	// inherits var cancelable : boolean;
+	// Attributes for UIEvent:
+	/** @see http://www.w3.org/TR/DOM-Level-3-Events/ */
+	var view : AbstractView;
+	/** @see http://www.w3.org/TR/DOM-Level-3-Events/ */
+	var detail : int/*long*/;
+
+} // end of UIEventInit
+
+/** @see http://www.w3.org/TR/DOM-Level-3-Events/ */
+native final class FocusEventInit {
+
+	// Attributes from Event:
+	var bubbles : boolean;
+	var cancelable : boolean;
+	// Attributes from UIEvent:
+	var view : AbstractView;
+	var detail : int/*long*/;
+	// Attributes for FocusEvent:
+	var relatedTarget : EventTarget;
+
+} // end of FocusEventInit
 
 native class MouseEventInit extends UIEventInit {
-}
 
+	// Attributes from Event:
+	// inherits var bubbles : boolean;
+	// inherits var cancelable : boolean;
+	// Attributes from UIEvent:
+	// inherits var view : AbstractView;
+	// inherits var detail : int/*long*/;
+	// Attributes for MouseEvent:
+	/** @see http://www.w3.org/TR/DOM-Level-3-Events/ */
+	var screenX : int/*long*/;
+	/** @see http://www.w3.org/TR/DOM-Level-3-Events/ */
+	var screenY : int/*long*/;
+	/** @see http://www.w3.org/TR/DOM-Level-3-Events/ */
+	var clientX : int/*long*/;
+	/** @see http://www.w3.org/TR/DOM-Level-3-Events/ */
+	var clientY : int/*long*/;
+	/** @see http://www.w3.org/TR/DOM-Level-3-Events/ */
+	var ctrlKey : boolean;
+	/** @see http://www.w3.org/TR/DOM-Level-3-Events/ */
+	var shiftKey : boolean;
+	/** @see http://www.w3.org/TR/DOM-Level-3-Events/ */
+	var altKey : boolean;
+	/** @see http://www.w3.org/TR/DOM-Level-3-Events/ */
+	var metaKey : boolean;
+	/** @see http://www.w3.org/TR/DOM-Level-3-Events/ */
+	var button : int/*unsigned short*/;
+	// Note: "buttons" was not previously initializable through initMouseEvent!
+	/** @see http://www.w3.org/TR/DOM-Level-3-Events/ */
+	var buttons : int/*unsigned short*/;
+	/** @see http://www.w3.org/TR/DOM-Level-3-Events/ */
+	var relatedTarget : EventTarget;
+
+} // end of MouseEventInit
+
+/** @see http://www.w3.org/TR/DOM-Level-3-Events/ */
+native final class WheelEventInit {
+
+	// Attributes from Event:
+	var bubbles : boolean;
+	var cancelable : boolean;
+	// Attributes from UIEvent:
+	var view : AbstractView;
+	var detail : int/*long*/;
+	// Attributes from MouseEvent:
+	var screenX : int/*long*/;
+	var screenY : int/*long*/;
+	var clientX : int/*long*/;
+	var clientY : int/*long*/;
+	var ctrlKey : boolean;
+	var shiftKey : boolean;
+	var altKey : boolean;
+	var metaKey : boolean;
+	var button : int/*unsigned short*/;
+	// Note: "buttons" was not previously initializable through initMouseEvent!
+	var buttons : int/*unsigned short*/;
+	var relatedTarget : EventTarget;
+	// Attributes for WheelEvent:
+	var deltaX : number/*float*/;
+	var deltaY : number/*float*/;
+	var deltaZ : number/*float*/;
+	var deltaMode : int/*unsigned long*/;
+
+} // end of WheelEventInit
+
+/** @see http://www.w3.org/TR/DOM-Level-3-Events/ */
+native final class KeyboardEventInit {
+
+	// Attributes from Event:
+	var bubbles : boolean;
+	var cancelable : boolean;
+	// Attributes from UIEvent:
+	var view : AbstractView;
+	var detail : int/*long*/;
+	// Attributes for KeyboardEvent:
+	var char : string/*DOMString*/;
+	var key : string/*DOMString*/;
+	var location : int/*unsigned long*/;
+	var ctrlKey : boolean;
+	var shiftKey : boolean;
+	var altKey : boolean;
+	var metaKey : boolean;
+	var repeat : boolean;
+	var locale : string/*DOMString*/;
+	// (Legacy) key attributes for KeyboardEvent:
+	var charCode : int/*unsigned long*/;
+	var keyCode : int/*unsigned long*/;
+	var which : int/*unsigned long*/;
+
+} // end of KeyboardEventInit
+
+/** @see http://www.w3.org/TR/DOM-Level-3-Events/ */
+native final class CompositionEventInit {
+
+	// Attributes from Event:
+	var bubbles : boolean;
+	var cancelable : boolean;
+	// Attributes from UIEvent:
+	var view : AbstractView;
+	var detail : int/*long*/;
+	// Attributes for CompositionEvent:
+	var data : Nullable.<string>/*DOMString?*/;
+	var locale : string/*DOMString*/;
+
+} // end of CompositionEventInit
+
+/** @see http://www.w3.org/TR/XMLHttpRequest/ */
 native __fake__ class XMLHttpRequestEventTarget extends EventTarget {
 
 	// event handlers
@@ -1218,9 +1367,11 @@ native __fake__ class XMLHttpRequestEventTarget extends EventTarget {
 
 } // end of XMLHttpRequestEventTarget
 
-native class XMLHttpRequestUpload extends XMLHttpRequestEventTarget {
+/** @see http://www.w3.org/TR/XMLHttpRequest/ */
+native final class XMLHttpRequestUpload extends XMLHttpRequestEventTarget {
 }
 
+/** @see http://www.w3.org/TR/XMLHttpRequest/ */
 native class XMLHttpRequest extends XMLHttpRequestEventTarget {
 
 	function constructor();
@@ -1253,14 +1404,14 @@ native class XMLHttpRequest extends XMLHttpRequestEventTarget {
 		method : string/*DOMString*/,
 		url : string/*DOMString*/,
 		async : boolean,
-		user : string/*DOMString?*/
+		user : Nullable.<string>/*DOMString?*/
 	) : void;
 	function open(
 		method : string/*DOMString*/,
 		url : string/*DOMString*/,
 		async : boolean,
-		user : string/*DOMString?*/,
-		password : string/*DOMString?*/
+		user : Nullable.<string>/*DOMString?*/,
+		password : Nullable.<string>/*DOMString?*/
 	) : void;
 	function setRequestHeader(
 		header : string/*DOMString*/,
@@ -1273,7 +1424,7 @@ native class XMLHttpRequest extends XMLHttpRequestEventTarget {
 	function send(data : ArrayBuffer) : void;
 	function send(data : Blob) : void;
 	function send(data : Document) : void;
-	function send(data : string/*DOMString?*/) : void;
+	function send(data : Nullable.<string>/*DOMString?*/) : void;
 	function send(data : FormData) : void;
 	function abort() : void;
 	// response
@@ -1291,13 +1442,15 @@ native class XMLHttpRequest extends XMLHttpRequestEventTarget {
 
 } // end of XMLHttpRequest
 
-native class AnonXMLHttpRequest extends XMLHttpRequest {
+/** @see http://www.w3.org/TR/XMLHttpRequest/ */
+native final class AnonXMLHttpRequest extends XMLHttpRequest {
 
 	function constructor();
 
 } // end of AnonXMLHttpRequest
 
-native class FormData {
+/** @see http://www.w3.org/TR/XMLHttpRequest/ */
+native final class FormData {
 
 	function constructor();
 	function constructor(form : HTMLFormElement);
@@ -1315,22 +1468,24 @@ native class FormData {
 
 } // end of FormData
 
-native class MediaList {
+/** @see http://dev.w3.org/csswg/cssom/ */
+native final class MediaList {
 
 	var mediaText : string/*DOMString*/;
 	__readonly__ var length : int/*unsigned long*/;
 	function __native_index_operator__(
 		index : int/*unsigned long*/
-	) : MayBeUndefined.<string/*DOMString*/>;
+	) : Nullable.<string>/*DOMString*/;
 	/* getter */
 	function item(
 		index : int/*unsigned long*/
-	) : MayBeUndefined.<string/*DOMString*/>;
+	) : Nullable.<string>/*DOMString*/;
 	function appendMedium(medium : string/*DOMString*/) : void;
 	function deleteMedium(medium : string/*DOMString*/) : void;
 
 } // end of MediaList
 
+/** @see http://dev.w3.org/csswg/cssom/ */
 native class StyleSheet {
 
 	__readonly__ var type : string/*DOMString*/;
@@ -1343,7 +1498,8 @@ native class StyleSheet {
 
 } // end of StyleSheet
 
-native class CSSStyleSheet extends StyleSheet {
+/** @see http://dev.w3.org/csswg/cssom/ */
+native final class CSSStyleSheet extends StyleSheet {
 
 	__readonly__ var ownerRule : CSSRule;
 	__readonly__ var cssRules : CSSRule[]/*CSSRuleList*/;
@@ -1355,12 +1511,14 @@ native class CSSStyleSheet extends StyleSheet {
 
 } // end of CSSStyleSheet
 
+/** @see http://dev.w3.org/csswg/cssom/ */
 native __fake__ class LinkStyle {
 
 	__readonly__ var sheet : StyleSheet;
 
 } // end of LinkStyle
 
+/** @see http://dev.w3.org/csswg/cssom/ */
 native class CSSRule {
 
 	// Types
@@ -1385,14 +1543,16 @@ native class CSSRule {
 
 } // end of CSSRule
 
-native class CSSStyleRule extends CSSRule {
+/** @see http://dev.w3.org/csswg/cssom/ */
+native final class CSSStyleRule extends CSSRule {
 
 	var selectorText : string/*DOMString*/;
 	__readonly__ var style : CSSStyleDeclaration;
 
 } // end of CSSStyleRule
 
-native class CSSImportRule extends CSSRule {
+/** @see http://dev.w3.org/csswg/cssom/ */
+native final class CSSImportRule extends CSSRule {
 
 	__readonly__ var href : string/*DOMString*/;
 	__readonly__ var media : MediaList;
@@ -1400,7 +1560,8 @@ native class CSSImportRule extends CSSRule {
 
 } // end of CSSImportRule
 
-native class CSSMediaRule extends CSSRule {
+/** @see http://dev.w3.org/csswg/cssom/ */
+native final class CSSMediaRule extends CSSRule {
 
 	__readonly__ var media : MediaList;
 	__readonly__ var cssRules : CSSRule[]/*CSSRuleList*/;
@@ -1412,27 +1573,31 @@ native class CSSMediaRule extends CSSRule {
 
 } // end of CSSMediaRule
 
-native class CSSFontFaceRule extends CSSRule {
+/** @see http://dev.w3.org/csswg/cssom/ */
+native final class CSSFontFaceRule extends CSSRule {
 
 	__readonly__ var style : CSSStyleDeclaration;
 
 } // end of CSSFontFaceRule
 
-native class CSSPageRule extends CSSRule {
+/** @see http://dev.w3.org/csswg/cssom/ */
+native final class CSSPageRule extends CSSRule {
 
 	var selectorText : string/*DOMString*/;
 	__readonly__ var style : CSSStyleDeclaration;
 
 } // end of CSSPageRule
 
-native class CSSNamespaceRule extends CSSRule {
+/** @see http://dev.w3.org/csswg/cssom/ */
+native final class CSSNamespaceRule extends CSSRule {
 
 	__readonly__ var namespaceURI : string/*DOMString*/;
-	__readonly__ var prefix : string/*DOMString?*/;
+	__readonly__ var prefix : Nullable.<string>/*DOMString?*/;
 
 } // end of CSSNamespaceRule
 
-native class CSSStyleDeclaration {
+/** @see http://dev.w3.org/csswg/cssom/ */
+native final class CSSStyleDeclaration {
 
 	var cssText : string/*DOMString*/;
 	__readonly__ var length : int/*unsigned long*/;
@@ -1580,403 +1745,422 @@ native class CSSStyleDeclaration {
 	var wordSpacing : string/*DOMString*/;
 	var zIndex : string/*DOMString*/;
 
-	var alignmentBaseline : MayBeUndefined.<string>;
-	var backgroundClip : MayBeUndefined.<string>;
-	var backgroundOrigin : MayBeUndefined.<string>;
-	var backgroundPositionX : MayBeUndefined.<string>;
-	var backgroundPositionY : MayBeUndefined.<string>;
-	var backgroundRepeatX : MayBeUndefined.<string>;
-	var backgroundRepeatY : MayBeUndefined.<string>;
-	var backgroundSize : MayBeUndefined.<string>;
-	var baselineShift : MayBeUndefined.<string>;
-	var borderBottomLeftRadius : MayBeUndefined.<string>;
-	var borderBottomRightRadius : MayBeUndefined.<string>;
-	var borderImage : MayBeUndefined.<string>;
-	var borderImageOutset : MayBeUndefined.<string>;
-	var borderImageRepeat : MayBeUndefined.<string>;
-	var borderImageSlice : MayBeUndefined.<string>;
-	var borderImageSource : MayBeUndefined.<string>;
-	var borderImageWidth : MayBeUndefined.<string>;
-	var borderRadius : MayBeUndefined.<string>;
-	var borderTopLeftRadius : MayBeUndefined.<string>;
-	var borderTopRightRadius : MayBeUndefined.<string>;
-	var boxShadow : MayBeUndefined.<string>;
-	var boxSizing : MayBeUndefined.<string>;
-	var clipPath : MayBeUndefined.<string>;
-	var clipRule : MayBeUndefined.<string>;
-	var colorInterpolation : MayBeUndefined.<string>;
-	var colorInterpolationFilters : MayBeUndefined.<string>;
-	var colorProfile : MayBeUndefined.<string>;
-	var colorRendering : MayBeUndefined.<string>;
-	var dominantBaseline : MayBeUndefined.<string>;
-	var enableBackground : MayBeUndefined.<string>;
-	var fill : MayBeUndefined.<string>;
-	var fillOpacity : MayBeUndefined.<string>;
-	var fillRule : MayBeUndefined.<string>;
-	var filter : MayBeUndefined.<string>;
-	var float : MayBeUndefined.<string>;
-	var floodColor : MayBeUndefined.<string>;
-	var floodOpacity : MayBeUndefined.<string>;
-	var glyphOrientationHorizontal : MayBeUndefined.<string>;
-	var glyphOrientationVertical : MayBeUndefined.<string>;
-	var imageRendering : MayBeUndefined.<string>;
-	var kerning : MayBeUndefined.<string>;
-	var lightingColor : MayBeUndefined.<string>;
-	var marker : MayBeUndefined.<string>;
-	var markerEnd : MayBeUndefined.<string>;
-	var markerMid : MayBeUndefined.<string>;
-	var markerStart : MayBeUndefined.<string>;
-	var mask : MayBeUndefined.<string>;
-	var opacity : MayBeUndefined.<string>;
-	var outlineOffset : MayBeUndefined.<string>;
-	var overflowX : MayBeUndefined.<string>;
-	var overflowY : MayBeUndefined.<string>;
-	var pointerEvents : MayBeUndefined.<string>;
-	var resize : MayBeUndefined.<string>;
-	var shapeRendering : MayBeUndefined.<string>;
-	var src : MayBeUndefined.<string>;
-	var stopColor : MayBeUndefined.<string>;
-	var stopOpacity : MayBeUndefined.<string>;
-	var stroke : MayBeUndefined.<string>;
-	var strokeDasharray : MayBeUndefined.<string>;
-	var strokeDashoffset : MayBeUndefined.<string>;
-	var strokeLinecap : MayBeUndefined.<string>;
-	var strokeLinejoin : MayBeUndefined.<string>;
-	var strokeMiterlimit : MayBeUndefined.<string>;
-	var strokeOpacity : MayBeUndefined.<string>;
-	var strokeWidth : MayBeUndefined.<string>;
-	var textAnchor : MayBeUndefined.<string>;
-	var textLineThrough : MayBeUndefined.<string>;
-	var textLineThroughColor : MayBeUndefined.<string>;
-	var textLineThroughMode : MayBeUndefined.<string>;
-	var textLineThroughStyle : MayBeUndefined.<string>;
-	var textLineThroughWidth : MayBeUndefined.<string>;
-	var textOverflow : MayBeUndefined.<string>;
-	var textOverline : MayBeUndefined.<string>;
-	var textOverlineColor : MayBeUndefined.<string>;
-	var textOverlineMode : MayBeUndefined.<string>;
-	var textOverlineStyle : MayBeUndefined.<string>;
-	var textOverlineWidth : MayBeUndefined.<string>;
-	var textRendering : MayBeUndefined.<string>;
-	var textUnderline : MayBeUndefined.<string>;
-	var textUnderlineColor : MayBeUndefined.<string>;
-	var textUnderlineMode : MayBeUndefined.<string>;
-	var textUnderlineStyle : MayBeUndefined.<string>;
-	var textUnderlineWidth : MayBeUndefined.<string>;
-	var unicodeRange : MayBeUndefined.<string>;
-	var vectorEffect : MayBeUndefined.<string>;
-	var webkitAnimation : MayBeUndefined.<string>;
-	var webkitAnimationDelay : MayBeUndefined.<string>;
-	var webkitAnimationDirection : MayBeUndefined.<string>;
-	var webkitAnimationDuration : MayBeUndefined.<string>;
-	var webkitAnimationFillMode : MayBeUndefined.<string>;
-	var webkitAnimationIterationCount : MayBeUndefined.<string>;
-	var webkitAnimationName : MayBeUndefined.<string>;
-	var webkitAnimationPlayState : MayBeUndefined.<string>;
-	var webkitAnimationTimingFunction : MayBeUndefined.<string>;
-	var webkitAppearance : MayBeUndefined.<string>;
-	var webkitAspectRatio : MayBeUndefined.<string>;
-	var webkitBackfaceVisibility : MayBeUndefined.<string>;
-	var webkitBackgroundClip : MayBeUndefined.<string>;
-	var webkitBackgroundComposite : MayBeUndefined.<string>;
-	var webkitBackgroundOrigin : MayBeUndefined.<string>;
-	var webkitBackgroundSize : MayBeUndefined.<string>;
-	var webkitBorderAfter : MayBeUndefined.<string>;
-	var webkitBorderAfterColor : MayBeUndefined.<string>;
-	var webkitBorderAfterStyle : MayBeUndefined.<string>;
-	var webkitBorderAfterWidth : MayBeUndefined.<string>;
-	var webkitBorderBefore : MayBeUndefined.<string>;
-	var webkitBorderBeforeColor : MayBeUndefined.<string>;
-	var webkitBorderBeforeStyle : MayBeUndefined.<string>;
-	var webkitBorderBeforeWidth : MayBeUndefined.<string>;
-	var webkitBorderEnd : MayBeUndefined.<string>;
-	var webkitBorderEndColor : MayBeUndefined.<string>;
-	var webkitBorderEndStyle : MayBeUndefined.<string>;
-	var webkitBorderEndWidth : MayBeUndefined.<string>;
-	var webkitBorderFit : MayBeUndefined.<string>;
-	var webkitBorderHorizontalSpacing : MayBeUndefined.<string>;
-	var webkitBorderImage : MayBeUndefined.<string>;
-	var webkitBorderRadius : MayBeUndefined.<string>;
-	var webkitBorderStart : MayBeUndefined.<string>;
-	var webkitBorderStartColor : MayBeUndefined.<string>;
-	var webkitBorderStartStyle : MayBeUndefined.<string>;
-	var webkitBorderStartWidth : MayBeUndefined.<string>;
-	var webkitBorderVerticalSpacing : MayBeUndefined.<string>;
-	var webkitBoxAlign : MayBeUndefined.<string>;
-	var webkitBoxDirection : MayBeUndefined.<string>;
-	var webkitBoxFlex : MayBeUndefined.<string>;
-	var webkitBoxFlexGroup : MayBeUndefined.<string>;
-	var webkitBoxLines : MayBeUndefined.<string>;
-	var webkitBoxOrdinalGroup : MayBeUndefined.<string>;
-	var webkitBoxOrient : MayBeUndefined.<string>;
-	var webkitBoxPack : MayBeUndefined.<string>;
-	var webkitBoxReflect : MayBeUndefined.<string>;
-	var webkitBoxShadow : MayBeUndefined.<string>;
-	var webkitColorCorrection : MayBeUndefined.<string>;
-	var webkitColumnAxis : MayBeUndefined.<string>;
-	var webkitColumnBreakAfter : MayBeUndefined.<string>;
-	var webkitColumnBreakBefore : MayBeUndefined.<string>;
-	var webkitColumnBreakInside : MayBeUndefined.<string>;
-	var webkitColumnCount : MayBeUndefined.<string>;
-	var webkitColumnGap : MayBeUndefined.<string>;
-	var webkitColumnRule : MayBeUndefined.<string>;
-	var webkitColumnRuleColor : MayBeUndefined.<string>;
-	var webkitColumnRuleStyle : MayBeUndefined.<string>;
-	var webkitColumnRuleWidth : MayBeUndefined.<string>;
-	var webkitColumnSpan : MayBeUndefined.<string>;
-	var webkitColumnWidth : MayBeUndefined.<string>;
-	var webkitColumns : MayBeUndefined.<string>;
-	var webkitFilter : MayBeUndefined.<string>;
-	var webkitFlexAlign : MayBeUndefined.<string>;
-	var webkitFlexDirection : MayBeUndefined.<string>;
-	var webkitFlexFlow : MayBeUndefined.<string>;
-	var webkitFlexItemAlign : MayBeUndefined.<string>;
-	var webkitFlexLinePack : MayBeUndefined.<string>;
-	var webkitFlexOrder : MayBeUndefined.<string>;
-	var webkitFlexPack : MayBeUndefined.<string>;
-	var webkitFlexWrap : MayBeUndefined.<string>;
-	var webkitFlowFrom : MayBeUndefined.<string>;
-	var webkitFlowInto : MayBeUndefined.<string>;
-	var webkitFontFeatureSettings : MayBeUndefined.<string>;
-	var webkitFontKerning : MayBeUndefined.<string>;
-	var webkitFontSizeDelta : MayBeUndefined.<string>;
-	var webkitFontSmoothing : MayBeUndefined.<string>;
-	var webkitFontVariantLigatures : MayBeUndefined.<string>;
-	var webkitHighlight : MayBeUndefined.<string>;
-	var webkitHyphenateCharacter : MayBeUndefined.<string>;
-	var webkitHyphenateLimitAfter : MayBeUndefined.<string>;
-	var webkitHyphenateLimitBefore : MayBeUndefined.<string>;
-	var webkitHyphenateLimitLines : MayBeUndefined.<string>;
-	var webkitHyphens : MayBeUndefined.<string>;
-	var webkitLineAlign : MayBeUndefined.<string>;
-	var webkitLineBoxContain : MayBeUndefined.<string>;
-	var webkitLineBreak : MayBeUndefined.<string>;
-	var webkitLineClamp : MayBeUndefined.<string>;
-	var webkitLineGrid : MayBeUndefined.<string>;
-	var webkitLineSnap : MayBeUndefined.<string>;
-	var webkitLocale : MayBeUndefined.<string>;
-	var webkitLogicalHeight : MayBeUndefined.<string>;
-	var webkitLogicalWidth : MayBeUndefined.<string>;
-	var webkitMarginAfter : MayBeUndefined.<string>;
-	var webkitMarginAfterCollapse : MayBeUndefined.<string>;
-	var webkitMarginBefore : MayBeUndefined.<string>;
-	var webkitMarginBeforeCollapse : MayBeUndefined.<string>;
-	var webkitMarginBottomCollapse : MayBeUndefined.<string>;
-	var webkitMarginCollapse : MayBeUndefined.<string>;
-	var webkitMarginEnd : MayBeUndefined.<string>;
-	var webkitMarginStart : MayBeUndefined.<string>;
-	var webkitMarginTopCollapse : MayBeUndefined.<string>;
-	var webkitMarquee : MayBeUndefined.<string>;
-	var webkitMarqueeDirection : MayBeUndefined.<string>;
-	var webkitMarqueeIncrement : MayBeUndefined.<string>;
-	var webkitMarqueeRepetition : MayBeUndefined.<string>;
-	var webkitMarqueeSpeed : MayBeUndefined.<string>;
-	var webkitMarqueeStyle : MayBeUndefined.<string>;
-	var webkitMask : MayBeUndefined.<string>;
-	var webkitMaskAttachment : MayBeUndefined.<string>;
-	var webkitMaskBoxImage : MayBeUndefined.<string>;
-	var webkitMaskBoxImageOutset : MayBeUndefined.<string>;
-	var webkitMaskBoxImageRepeat : MayBeUndefined.<string>;
-	var webkitMaskBoxImageSlice : MayBeUndefined.<string>;
-	var webkitMaskBoxImageSource : MayBeUndefined.<string>;
-	var webkitMaskBoxImageWidth : MayBeUndefined.<string>;
-	var webkitMaskClip : MayBeUndefined.<string>;
-	var webkitMaskComposite : MayBeUndefined.<string>;
-	var webkitMaskImage : MayBeUndefined.<string>;
-	var webkitMaskOrigin : MayBeUndefined.<string>;
-	var webkitMaskPosition : MayBeUndefined.<string>;
-	var webkitMaskPositionX : MayBeUndefined.<string>;
-	var webkitMaskPositionY : MayBeUndefined.<string>;
-	var webkitMaskRepeat : MayBeUndefined.<string>;
-	var webkitMaskRepeatX : MayBeUndefined.<string>;
-	var webkitMaskRepeatY : MayBeUndefined.<string>;
-	var webkitMaskSize : MayBeUndefined.<string>;
-	var webkitMatchNearestMailBlockquoteColor : MayBeUndefined.<string>;
-	var webkitMaxLogicalHeight : MayBeUndefined.<string>;
-	var webkitMaxLogicalWidth : MayBeUndefined.<string>;
-	var webkitMinLogicalHeight : MayBeUndefined.<string>;
-	var webkitMinLogicalWidth : MayBeUndefined.<string>;
-	var webkitNbspMode : MayBeUndefined.<string>;
-	var webkitOverflowScrolling : MayBeUndefined.<string>;
-	var webkitPaddingAfter : MayBeUndefined.<string>;
-	var webkitPaddingBefore : MayBeUndefined.<string>;
-	var webkitPaddingEnd : MayBeUndefined.<string>;
-	var webkitPaddingStart : MayBeUndefined.<string>;
-	var webkitPerspective : MayBeUndefined.<string>;
-	var webkitPerspectiveOrigin : MayBeUndefined.<string>;
-	var webkitPerspectiveOriginX : MayBeUndefined.<string>;
-	var webkitPerspectiveOriginY : MayBeUndefined.<string>;
-	var webkitPrintColorAdjust : MayBeUndefined.<string>;
-	var webkitRegionBreakAfter : MayBeUndefined.<string>;
-	var webkitRegionBreakBefore : MayBeUndefined.<string>;
-	var webkitRegionBreakInside : MayBeUndefined.<string>;
-	var webkitRegionOverflow : MayBeUndefined.<string>;
-	var webkitRtlOrdering : MayBeUndefined.<string>;
-	var webkitSvgShadow : MayBeUndefined.<string>;
-	var webkitTapHighlightColor : MayBeUndefined.<string>;
-	var webkitTextCombine : MayBeUndefined.<string>;
-	var webkitTextDecorationsInEffect : MayBeUndefined.<string>;
-	var webkitTextEmphasis : MayBeUndefined.<string>;
-	var webkitTextEmphasisColor : MayBeUndefined.<string>;
-	var webkitTextEmphasisPosition : MayBeUndefined.<string>;
-	var webkitTextEmphasisStyle : MayBeUndefined.<string>;
-	var webkitTextFillColor : MayBeUndefined.<string>;
-	var webkitTextOrientation : MayBeUndefined.<string>;
-	var webkitTextSecurity : MayBeUndefined.<string>;
-	var webkitTextSizeAdjust : MayBeUndefined.<string>;
-	var webkitTextStroke : MayBeUndefined.<string>;
-	var webkitTextStrokeColor : MayBeUndefined.<string>;
-	var webkitTextStrokeWidth : MayBeUndefined.<string>;
-	var webkitTransform : MayBeUndefined.<string>;
-	var webkitTransformOrigin : MayBeUndefined.<string>;
-	var webkitTransformOriginX : MayBeUndefined.<string>;
-	var webkitTransformOriginY : MayBeUndefined.<string>;
-	var webkitTransformOriginZ : MayBeUndefined.<string>;
-	var webkitTransformStyle : MayBeUndefined.<string>;
-	var webkitTransition : MayBeUndefined.<string>;
-	var webkitTransitionDelay : MayBeUndefined.<string>;
-	var webkitTransitionDuration : MayBeUndefined.<string>;
-	var webkitTransitionProperty : MayBeUndefined.<string>;
-	var webkitTransitionTimingFunction : MayBeUndefined.<string>;
-	var webkitUserDrag : MayBeUndefined.<string>;
-	var webkitUserModify : MayBeUndefined.<string>;
-	var webkitUserSelect : MayBeUndefined.<string>;
-	var webkitWrap : MayBeUndefined.<string>;
-	var webkitWrapFlow : MayBeUndefined.<string>;
-	var webkitWrapMargin : MayBeUndefined.<string>;
-	var webkitWrapPadding : MayBeUndefined.<string>;
-	var webkitWrapShapeInside : MayBeUndefined.<string>;
-	var webkitWrapShapeOutside : MayBeUndefined.<string>;
-	var webkitWrapThrough : MayBeUndefined.<string>;
-	var webkitWritingMode : MayBeUndefined.<string>;
-	var wordBreak : MayBeUndefined.<string>;
-	var wordWrap : MayBeUndefined.<string>;
-	var writingMode : MayBeUndefined.<string>;
-	var zoom : MayBeUndefined.<string>;
+	var alignmentBaseline : Nullable.<string>;
+	var backgroundClip : Nullable.<string>;
+	var backgroundOrigin : Nullable.<string>;
+	var backgroundPositionX : Nullable.<string>;
+	var backgroundPositionY : Nullable.<string>;
+	var backgroundRepeatX : Nullable.<string>;
+	var backgroundRepeatY : Nullable.<string>;
+	var backgroundSize : Nullable.<string>;
+	var baselineShift : Nullable.<string>;
+	var borderBottomLeftRadius : Nullable.<string>;
+	var borderBottomRightRadius : Nullable.<string>;
+	var borderImage : Nullable.<string>;
+	var borderImageOutset : Nullable.<string>;
+	var borderImageRepeat : Nullable.<string>;
+	var borderImageSlice : Nullable.<string>;
+	var borderImageSource : Nullable.<string>;
+	var borderImageWidth : Nullable.<string>;
+	var borderRadius : Nullable.<string>;
+	var borderTopLeftRadius : Nullable.<string>;
+	var borderTopRightRadius : Nullable.<string>;
+	var boxShadow : Nullable.<string>;
+	var boxSizing : Nullable.<string>;
+	var clipPath : Nullable.<string>;
+	var clipRule : Nullable.<string>;
+	var colorInterpolation : Nullable.<string>;
+	var colorInterpolationFilters : Nullable.<string>;
+	var colorProfile : Nullable.<string>;
+	var colorRendering : Nullable.<string>;
+	var dominantBaseline : Nullable.<string>;
+	var enableBackground : Nullable.<string>;
+	var fill : Nullable.<string>;
+	var fillOpacity : Nullable.<string>;
+	var fillRule : Nullable.<string>;
+	var filter : Nullable.<string>;
+	var float : Nullable.<string>;
+	var floodColor : Nullable.<string>;
+	var floodOpacity : Nullable.<string>;
+	var glyphOrientationHorizontal : Nullable.<string>;
+	var glyphOrientationVertical : Nullable.<string>;
+	var imageRendering : Nullable.<string>;
+	var kerning : Nullable.<string>;
+	var lightingColor : Nullable.<string>;
+	var marker : Nullable.<string>;
+	var markerEnd : Nullable.<string>;
+	var markerMid : Nullable.<string>;
+	var markerStart : Nullable.<string>;
+	var mask : Nullable.<string>;
+	var opacity : Nullable.<string>;
+	var outlineOffset : Nullable.<string>;
+	var overflowX : Nullable.<string>;
+	var overflowY : Nullable.<string>;
+	var pointerEvents : Nullable.<string>;
+	var resize : Nullable.<string>;
+	var shapeRendering : Nullable.<string>;
+	var src : Nullable.<string>;
+	var stopColor : Nullable.<string>;
+	var stopOpacity : Nullable.<string>;
+	var stroke : Nullable.<string>;
+	var strokeDasharray : Nullable.<string>;
+	var strokeDashoffset : Nullable.<string>;
+	var strokeLinecap : Nullable.<string>;
+	var strokeLinejoin : Nullable.<string>;
+	var strokeMiterlimit : Nullable.<string>;
+	var strokeOpacity : Nullable.<string>;
+	var strokeWidth : Nullable.<string>;
+	var textAnchor : Nullable.<string>;
+	var textLineThrough : Nullable.<string>;
+	var textLineThroughColor : Nullable.<string>;
+	var textLineThroughMode : Nullable.<string>;
+	var textLineThroughStyle : Nullable.<string>;
+	var textLineThroughWidth : Nullable.<string>;
+	var textOverflow : Nullable.<string>;
+	var textOverline : Nullable.<string>;
+	var textOverlineColor : Nullable.<string>;
+	var textOverlineMode : Nullable.<string>;
+	var textOverlineStyle : Nullable.<string>;
+	var textOverlineWidth : Nullable.<string>;
+	var textRendering : Nullable.<string>;
+	var textUnderline : Nullable.<string>;
+	var textUnderlineColor : Nullable.<string>;
+	var textUnderlineMode : Nullable.<string>;
+	var textUnderlineStyle : Nullable.<string>;
+	var textUnderlineWidth : Nullable.<string>;
+	var unicodeRange : Nullable.<string>;
+	var vectorEffect : Nullable.<string>;
+	var webkitAnimation : Nullable.<string>;
+	var webkitAnimationDelay : Nullable.<string>;
+	var webkitAnimationDirection : Nullable.<string>;
+	var webkitAnimationDuration : Nullable.<string>;
+	var webkitAnimationFillMode : Nullable.<string>;
+	var webkitAnimationIterationCount : Nullable.<string>;
+	var webkitAnimationName : Nullable.<string>;
+	var webkitAnimationPlayState : Nullable.<string>;
+	var webkitAnimationTimingFunction : Nullable.<string>;
+	var webkitAppearance : Nullable.<string>;
+	var webkitAspectRatio : Nullable.<string>;
+	var webkitBackfaceVisibility : Nullable.<string>;
+	var webkitBackgroundClip : Nullable.<string>;
+	var webkitBackgroundComposite : Nullable.<string>;
+	var webkitBackgroundOrigin : Nullable.<string>;
+	var webkitBackgroundSize : Nullable.<string>;
+	var webkitBorderAfter : Nullable.<string>;
+	var webkitBorderAfterColor : Nullable.<string>;
+	var webkitBorderAfterStyle : Nullable.<string>;
+	var webkitBorderAfterWidth : Nullable.<string>;
+	var webkitBorderBefore : Nullable.<string>;
+	var webkitBorderBeforeColor : Nullable.<string>;
+	var webkitBorderBeforeStyle : Nullable.<string>;
+	var webkitBorderBeforeWidth : Nullable.<string>;
+	var webkitBorderEnd : Nullable.<string>;
+	var webkitBorderEndColor : Nullable.<string>;
+	var webkitBorderEndStyle : Nullable.<string>;
+	var webkitBorderEndWidth : Nullable.<string>;
+	var webkitBorderFit : Nullable.<string>;
+	var webkitBorderHorizontalSpacing : Nullable.<string>;
+	var webkitBorderImage : Nullable.<string>;
+	var webkitBorderRadius : Nullable.<string>;
+	var webkitBorderStart : Nullable.<string>;
+	var webkitBorderStartColor : Nullable.<string>;
+	var webkitBorderStartStyle : Nullable.<string>;
+	var webkitBorderStartWidth : Nullable.<string>;
+	var webkitBorderVerticalSpacing : Nullable.<string>;
+	var webkitBoxAlign : Nullable.<string>;
+	var webkitBoxDirection : Nullable.<string>;
+	var webkitBoxFlex : Nullable.<string>;
+	var webkitBoxFlexGroup : Nullable.<string>;
+	var webkitBoxLines : Nullable.<string>;
+	var webkitBoxOrdinalGroup : Nullable.<string>;
+	var webkitBoxOrient : Nullable.<string>;
+	var webkitBoxPack : Nullable.<string>;
+	var webkitBoxReflect : Nullable.<string>;
+	var webkitBoxShadow : Nullable.<string>;
+	var webkitColorCorrection : Nullable.<string>;
+	var webkitColumnAxis : Nullable.<string>;
+	var webkitColumnBreakAfter : Nullable.<string>;
+	var webkitColumnBreakBefore : Nullable.<string>;
+	var webkitColumnBreakInside : Nullable.<string>;
+	var webkitColumnCount : Nullable.<string>;
+	var webkitColumnGap : Nullable.<string>;
+	var webkitColumnRule : Nullable.<string>;
+	var webkitColumnRuleColor : Nullable.<string>;
+	var webkitColumnRuleStyle : Nullable.<string>;
+	var webkitColumnRuleWidth : Nullable.<string>;
+	var webkitColumnSpan : Nullable.<string>;
+	var webkitColumnWidth : Nullable.<string>;
+	var webkitColumns : Nullable.<string>;
+	var webkitFilter : Nullable.<string>;
+	var webkitFlexAlign : Nullable.<string>;
+	var webkitFlexDirection : Nullable.<string>;
+	var webkitFlexFlow : Nullable.<string>;
+	var webkitFlexItemAlign : Nullable.<string>;
+	var webkitFlexLinePack : Nullable.<string>;
+	var webkitFlexOrder : Nullable.<string>;
+	var webkitFlexPack : Nullable.<string>;
+	var webkitFlexWrap : Nullable.<string>;
+	var webkitFlowFrom : Nullable.<string>;
+	var webkitFlowInto : Nullable.<string>;
+	var webkitFontFeatureSettings : Nullable.<string>;
+	var webkitFontKerning : Nullable.<string>;
+	var webkitFontSizeDelta : Nullable.<string>;
+	var webkitFontSmoothing : Nullable.<string>;
+	var webkitFontVariantLigatures : Nullable.<string>;
+	var webkitHighlight : Nullable.<string>;
+	var webkitHyphenateCharacter : Nullable.<string>;
+	var webkitHyphenateLimitAfter : Nullable.<string>;
+	var webkitHyphenateLimitBefore : Nullable.<string>;
+	var webkitHyphenateLimitLines : Nullable.<string>;
+	var webkitHyphens : Nullable.<string>;
+	var webkitLineAlign : Nullable.<string>;
+	var webkitLineBoxContain : Nullable.<string>;
+	var webkitLineBreak : Nullable.<string>;
+	var webkitLineClamp : Nullable.<string>;
+	var webkitLineGrid : Nullable.<string>;
+	var webkitLineSnap : Nullable.<string>;
+	var webkitLocale : Nullable.<string>;
+	var webkitLogicalHeight : Nullable.<string>;
+	var webkitLogicalWidth : Nullable.<string>;
+	var webkitMarginAfter : Nullable.<string>;
+	var webkitMarginAfterCollapse : Nullable.<string>;
+	var webkitMarginBefore : Nullable.<string>;
+	var webkitMarginBeforeCollapse : Nullable.<string>;
+	var webkitMarginBottomCollapse : Nullable.<string>;
+	var webkitMarginCollapse : Nullable.<string>;
+	var webkitMarginEnd : Nullable.<string>;
+	var webkitMarginStart : Nullable.<string>;
+	var webkitMarginTopCollapse : Nullable.<string>;
+	var webkitMarquee : Nullable.<string>;
+	var webkitMarqueeDirection : Nullable.<string>;
+	var webkitMarqueeIncrement : Nullable.<string>;
+	var webkitMarqueeRepetition : Nullable.<string>;
+	var webkitMarqueeSpeed : Nullable.<string>;
+	var webkitMarqueeStyle : Nullable.<string>;
+	var webkitMask : Nullable.<string>;
+	var webkitMaskAttachment : Nullable.<string>;
+	var webkitMaskBoxImage : Nullable.<string>;
+	var webkitMaskBoxImageOutset : Nullable.<string>;
+	var webkitMaskBoxImageRepeat : Nullable.<string>;
+	var webkitMaskBoxImageSlice : Nullable.<string>;
+	var webkitMaskBoxImageSource : Nullable.<string>;
+	var webkitMaskBoxImageWidth : Nullable.<string>;
+	var webkitMaskClip : Nullable.<string>;
+	var webkitMaskComposite : Nullable.<string>;
+	var webkitMaskImage : Nullable.<string>;
+	var webkitMaskOrigin : Nullable.<string>;
+	var webkitMaskPosition : Nullable.<string>;
+	var webkitMaskPositionX : Nullable.<string>;
+	var webkitMaskPositionY : Nullable.<string>;
+	var webkitMaskRepeat : Nullable.<string>;
+	var webkitMaskRepeatX : Nullable.<string>;
+	var webkitMaskRepeatY : Nullable.<string>;
+	var webkitMaskSize : Nullable.<string>;
+	var webkitMatchNearestMailBlockquoteColor : Nullable.<string>;
+	var webkitMaxLogicalHeight : Nullable.<string>;
+	var webkitMaxLogicalWidth : Nullable.<string>;
+	var webkitMinLogicalHeight : Nullable.<string>;
+	var webkitMinLogicalWidth : Nullable.<string>;
+	var webkitNbspMode : Nullable.<string>;
+	var webkitOverflowScrolling : Nullable.<string>;
+	var webkitPaddingAfter : Nullable.<string>;
+	var webkitPaddingBefore : Nullable.<string>;
+	var webkitPaddingEnd : Nullable.<string>;
+	var webkitPaddingStart : Nullable.<string>;
+	var webkitPerspective : Nullable.<string>;
+	var webkitPerspectiveOrigin : Nullable.<string>;
+	var webkitPerspectiveOriginX : Nullable.<string>;
+	var webkitPerspectiveOriginY : Nullable.<string>;
+	var webkitPrintColorAdjust : Nullable.<string>;
+	var webkitRegionBreakAfter : Nullable.<string>;
+	var webkitRegionBreakBefore : Nullable.<string>;
+	var webkitRegionBreakInside : Nullable.<string>;
+	var webkitRegionOverflow : Nullable.<string>;
+	var webkitRtlOrdering : Nullable.<string>;
+	var webkitSvgShadow : Nullable.<string>;
+	var webkitTapHighlightColor : Nullable.<string>;
+	var webkitTextCombine : Nullable.<string>;
+	var webkitTextDecorationsInEffect : Nullable.<string>;
+	var webkitTextEmphasis : Nullable.<string>;
+	var webkitTextEmphasisColor : Nullable.<string>;
+	var webkitTextEmphasisPosition : Nullable.<string>;
+	var webkitTextEmphasisStyle : Nullable.<string>;
+	var webkitTextFillColor : Nullable.<string>;
+	var webkitTextOrientation : Nullable.<string>;
+	var webkitTextSecurity : Nullable.<string>;
+	var webkitTextSizeAdjust : Nullable.<string>;
+	var webkitTextStroke : Nullable.<string>;
+	var webkitTextStrokeColor : Nullable.<string>;
+	var webkitTextStrokeWidth : Nullable.<string>;
+	var webkitTransform : Nullable.<string>;
+	var webkitTransformOrigin : Nullable.<string>;
+	var webkitTransformOriginX : Nullable.<string>;
+	var webkitTransformOriginY : Nullable.<string>;
+	var webkitTransformOriginZ : Nullable.<string>;
+	var webkitTransformStyle : Nullable.<string>;
+	var webkitTransition : Nullable.<string>;
+	var webkitTransitionDelay : Nullable.<string>;
+	var webkitTransitionDuration : Nullable.<string>;
+	var webkitTransitionProperty : Nullable.<string>;
+	var webkitTransitionTimingFunction : Nullable.<string>;
+	var webkitUserDrag : Nullable.<string>;
+	var webkitUserModify : Nullable.<string>;
+	var webkitUserSelect : Nullable.<string>;
+	var webkitWrap : Nullable.<string>;
+	var webkitWrapFlow : Nullable.<string>;
+	var webkitWrapMargin : Nullable.<string>;
+	var webkitWrapPadding : Nullable.<string>;
+	var webkitWrapShapeInside : Nullable.<string>;
+	var webkitWrapShapeOutside : Nullable.<string>;
+	var webkitWrapThrough : Nullable.<string>;
+	var webkitWritingMode : Nullable.<string>;
+	var wordBreak : Nullable.<string>;
+	var wordWrap : Nullable.<string>;
+	var writingMode : Nullable.<string>;
+	var zoom : Nullable.<string>;
 
-	var MozAnimation : MayBeUndefined.<string>;
-	var MozAnimationDelay : MayBeUndefined.<string>;
-	var MozAnimationDirection : MayBeUndefined.<string>;
-	var MozAnimationDuration : MayBeUndefined.<string>;
-	var MozAnimationFillMode : MayBeUndefined.<string>;
-	var MozAnimationIterationCount : MayBeUndefined.<string>;
-	var MozAnimationName : MayBeUndefined.<string>;
-	var MozAnimationPlayState : MayBeUndefined.<string>;
-	var MozAnimationTimingFunction : MayBeUndefined.<string>;
-	var MozAppearance : MayBeUndefined.<string>;
-	var MozBackfaceVisibility : MayBeUndefined.<string>;
-	var MozBackgroundInlinePolicy : MayBeUndefined.<string>;
-	var MozBinding : MayBeUndefined.<string>;
-	var MozBorderBottomColors : MayBeUndefined.<string>;
-	var MozBorderEnd : MayBeUndefined.<string>;
-	var MozBorderEndColor : MayBeUndefined.<string>;
-	var MozBorderEndStyle : MayBeUndefined.<string>;
-	var MozBorderEndWidth : MayBeUndefined.<string>;
-	var MozBorderImage : MayBeUndefined.<string>;
-	var MozBorderLeftColors : MayBeUndefined.<string>;
-	var MozBorderRightColors : MayBeUndefined.<string>;
-	var MozBorderStart : MayBeUndefined.<string>;
-	var MozBorderStartColor : MayBeUndefined.<string>;
-	var MozBorderStartStyle : MayBeUndefined.<string>;
-	var MozBorderStartWidth : MayBeUndefined.<string>;
-	var MozBorderTopColors : MayBeUndefined.<string>;
-	var MozBoxAlign : MayBeUndefined.<string>;
-	var MozBoxDirection : MayBeUndefined.<string>;
-	var MozBoxFlex : MayBeUndefined.<string>;
-	var MozBoxOrdinalGroup : MayBeUndefined.<string>;
-	var MozBoxOrient : MayBeUndefined.<string>;
-	var MozBoxPack : MayBeUndefined.<string>;
-	var MozBoxSizing : MayBeUndefined.<string>;
-	var MozColumnCount : MayBeUndefined.<string>;
-	var MozColumnGap : MayBeUndefined.<string>;
-	var MozColumnRule : MayBeUndefined.<string>;
-	var MozColumnRuleColor : MayBeUndefined.<string>;
-	var MozColumnRuleStyle : MayBeUndefined.<string>;
-	var MozColumnRuleWidth : MayBeUndefined.<string>;
-	var MozColumnWidth : MayBeUndefined.<string>;
-	var MozColumns : MayBeUndefined.<string>;
-	var MozFloatEdge : MayBeUndefined.<string>;
-	var MozFontFeatureSettings : MayBeUndefined.<string>;
-	var MozFontLanguageOverride : MayBeUndefined.<string>;
-	var MozForceBrokenImageIcon : MayBeUndefined.<string>;
-	var MozHyphens : MayBeUndefined.<string>;
-	var MozImageRegion : MayBeUndefined.<string>;
-	var MozMarginEnd : MayBeUndefined.<string>;
-	var MozMarginStart : MayBeUndefined.<string>;
-	var MozOpacity : MayBeUndefined.<string>;
-	var MozOrient : MayBeUndefined.<string>;
-	var MozOutline : MayBeUndefined.<string>;
-	var MozOutlineColor : MayBeUndefined.<string>;
-	var MozOutlineOffset : MayBeUndefined.<string>;
-	var MozOutlineRadius : MayBeUndefined.<string>;
-	var MozOutlineRadiusBottomleft : MayBeUndefined.<string>;
-	var MozOutlineRadiusBottomright : MayBeUndefined.<string>;
-	var MozOutlineRadiusTopleft : MayBeUndefined.<string>;
-	var MozOutlineRadiusTopright : MayBeUndefined.<string>;
-	var MozOutlineStyle : MayBeUndefined.<string>;
-	var MozOutlineWidth : MayBeUndefined.<string>;
-	var MozPaddingEnd : MayBeUndefined.<string>;
-	var MozPaddingStart : MayBeUndefined.<string>;
-	var MozPerspective : MayBeUndefined.<string>;
-	var MozPerspectiveOrigin : MayBeUndefined.<string>;
-	var MozStackSizing : MayBeUndefined.<string>;
-	var MozTabSize : MayBeUndefined.<string>;
-	var MozTextAlignLast : MayBeUndefined.<string>;
-	var MozTextBlink : MayBeUndefined.<string>;
-	var MozTextDecorationColor : MayBeUndefined.<string>;
-	var MozTextDecorationLine : MayBeUndefined.<string>;
-	var MozTextDecorationStyle : MayBeUndefined.<string>;
-	var MozTextSizeAdjust : MayBeUndefined.<string>;
-	var MozTransform : MayBeUndefined.<string>;
-	var MozTransformOrigin : MayBeUndefined.<string>;
-	var MozTransformStyle : MayBeUndefined.<string>;
-	var MozTransition : MayBeUndefined.<string>;
-	var MozTransitionDelay : MayBeUndefined.<string>;
-	var MozTransitionDuration : MayBeUndefined.<string>;
-	var MozTransitionProperty : MayBeUndefined.<string>;
-	var MozTransitionTimingFunction : MayBeUndefined.<string>;
-	var MozUserFocus : MayBeUndefined.<string>;
-	var MozUserInput : MayBeUndefined.<string>;
-	var MozUserModify : MayBeUndefined.<string>;
-	var MozUserSelect : MayBeUndefined.<string>;
-	var MozWindowShadow : MayBeUndefined.<string>;
-	var imeMode : MayBeUndefined.<string>;
+	var MozAnimation : Nullable.<string>;
+	var MozAnimationDelay : Nullable.<string>;
+	var MozAnimationDirection : Nullable.<string>;
+	var MozAnimationDuration : Nullable.<string>;
+	var MozAnimationFillMode : Nullable.<string>;
+	var MozAnimationIterationCount : Nullable.<string>;
+	var MozAnimationName : Nullable.<string>;
+	var MozAnimationPlayState : Nullable.<string>;
+	var MozAnimationTimingFunction : Nullable.<string>;
+	var MozAppearance : Nullable.<string>;
+	var MozBackfaceVisibility : Nullable.<string>;
+	var MozBackgroundInlinePolicy : Nullable.<string>;
+	var MozBinding : Nullable.<string>;
+	var MozBorderBottomColors : Nullable.<string>;
+	var MozBorderEnd : Nullable.<string>;
+	var MozBorderEndColor : Nullable.<string>;
+	var MozBorderEndStyle : Nullable.<string>;
+	var MozBorderEndWidth : Nullable.<string>;
+	var MozBorderImage : Nullable.<string>;
+	var MozBorderLeftColors : Nullable.<string>;
+	var MozBorderRightColors : Nullable.<string>;
+	var MozBorderStart : Nullable.<string>;
+	var MozBorderStartColor : Nullable.<string>;
+	var MozBorderStartStyle : Nullable.<string>;
+	var MozBorderStartWidth : Nullable.<string>;
+	var MozBorderTopColors : Nullable.<string>;
+	var MozBoxAlign : Nullable.<string>;
+	var MozBoxDirection : Nullable.<string>;
+	var MozBoxFlex : Nullable.<string>;
+	var MozBoxOrdinalGroup : Nullable.<string>;
+	var MozBoxOrient : Nullable.<string>;
+	var MozBoxPack : Nullable.<string>;
+	var MozBoxSizing : Nullable.<string>;
+	var MozColumnCount : Nullable.<string>;
+	var MozColumnGap : Nullable.<string>;
+	var MozColumnRule : Nullable.<string>;
+	var MozColumnRuleColor : Nullable.<string>;
+	var MozColumnRuleStyle : Nullable.<string>;
+	var MozColumnRuleWidth : Nullable.<string>;
+	var MozColumnWidth : Nullable.<string>;
+	var MozColumns : Nullable.<string>;
+	var MozFloatEdge : Nullable.<string>;
+	var MozFontFeatureSettings : Nullable.<string>;
+	var MozFontLanguageOverride : Nullable.<string>;
+	var MozForceBrokenImageIcon : Nullable.<string>;
+	var MozHyphens : Nullable.<string>;
+	var MozImageRegion : Nullable.<string>;
+	var MozMarginEnd : Nullable.<string>;
+	var MozMarginStart : Nullable.<string>;
+	var MozOpacity : Nullable.<string>;
+	var MozOrient : Nullable.<string>;
+	var MozOutline : Nullable.<string>;
+	var MozOutlineColor : Nullable.<string>;
+	var MozOutlineOffset : Nullable.<string>;
+	var MozOutlineRadius : Nullable.<string>;
+	var MozOutlineRadiusBottomleft : Nullable.<string>;
+	var MozOutlineRadiusBottomright : Nullable.<string>;
+	var MozOutlineRadiusTopleft : Nullable.<string>;
+	var MozOutlineRadiusTopright : Nullable.<string>;
+	var MozOutlineStyle : Nullable.<string>;
+	var MozOutlineWidth : Nullable.<string>;
+	var MozPaddingEnd : Nullable.<string>;
+	var MozPaddingStart : Nullable.<string>;
+	var MozPerspective : Nullable.<string>;
+	var MozPerspectiveOrigin : Nullable.<string>;
+	var MozStackSizing : Nullable.<string>;
+	var MozTabSize : Nullable.<string>;
+	var MozTextAlignLast : Nullable.<string>;
+	var MozTextBlink : Nullable.<string>;
+	var MozTextDecorationColor : Nullable.<string>;
+	var MozTextDecorationLine : Nullable.<string>;
+	var MozTextDecorationStyle : Nullable.<string>;
+	var MozTextSizeAdjust : Nullable.<string>;
+	var MozTransform : Nullable.<string>;
+	var MozTransformOrigin : Nullable.<string>;
+	var MozTransformStyle : Nullable.<string>;
+	var MozTransition : Nullable.<string>;
+	var MozTransitionDelay : Nullable.<string>;
+	var MozTransitionDuration : Nullable.<string>;
+	var MozTransitionProperty : Nullable.<string>;
+	var MozTransitionTimingFunction : Nullable.<string>;
+	var MozUserFocus : Nullable.<string>;
+	var MozUserInput : Nullable.<string>;
+	var MozUserModify : Nullable.<string>;
+	var MozUserSelect : Nullable.<string>;
+	var MozWindowShadow : Nullable.<string>;
+	var imeMode : Nullable.<string>;
 
 } // end of CSSStyleDeclaration
 
-native __fake__ class ElementCSSInlineStyle {
+/** @see http://dev.w3.org/csswg/cssom/ */
+native final __fake__ class ElementCSSInlineStyle {
 
 	__readonly__ var style : CSSStyleDeclaration;
 
 } // end of ElementCSSInlineStyle
 
-native __fake__ class Window extends EventTarget {
+/** @see http://www.w3.org/TR/html5/single-page.html */
+native final __fake__ class Window extends EventTarget {
 
+	/** @see http://dev.w3.org/csswg/cssom/ */
 	function getComputedStyle(elt : Element) : CSSStyleDeclaration;
+	/** @see http://dev.w3.org/csswg/cssom/ */
 	function getComputedStyle(
 		elt : Element,
 		pseudoElt : string/*DOMString*/
 	) : CSSStyleDeclaration;
 
+	/** @see http://dev.w3.org/csswg/cssom-view/ */
 	function matchMedia(
 		media_query_list : string/*DOMString*/
 	) : MediaQueryList;
+	/** @see http://dev.w3.org/csswg/cssom-view/ */
 	__readonly__ var screen : Screen;
 	// viewport
+	/** @see http://dev.w3.org/csswg/cssom-view/ */
 	__readonly__ var innerWidth : int/*long*/;
+	/** @see http://dev.w3.org/csswg/cssom-view/ */
 	__readonly__ var innerHeight : int/*long*/;
 	// viewport scrolling
+	/** @see http://dev.w3.org/csswg/cssom-view/ */
 	__readonly__ var scrollX : int/*long*/;
+	/** @see http://dev.w3.org/csswg/cssom-view/ */
 	__readonly__ var pageXOffset : int/*long*/;
+	/** @see http://dev.w3.org/csswg/cssom-view/ */
 	__readonly__ var scrollY : int/*long*/;
+	/** @see http://dev.w3.org/csswg/cssom-view/ */
 	__readonly__ var pageYOffset : int/*long*/;
+	/** @see http://dev.w3.org/csswg/cssom-view/ */
 	function scroll(x : int/*long*/, y : int/*long*/) : void;
+	/** @see http://dev.w3.org/csswg/cssom-view/ */
 	function scrollTo(x : int/*long*/, y : int/*long*/) : void;
+	/** @see http://dev.w3.org/csswg/cssom-view/ */
 	function scrollBy(x : int/*long*/, y : int/*long*/) : void;
 	// client
+	/** @see http://dev.w3.org/csswg/cssom-view/ */
 	__readonly__ var screenX : int/*long*/;
+	/** @see http://dev.w3.org/csswg/cssom-view/ */
 	__readonly__ var screenY : int/*long*/;
+	/** @see http://dev.w3.org/csswg/cssom-view/ */
 	__readonly__ var outerWidth : int/*long*/;
+	/** @see http://dev.w3.org/csswg/cssom-view/ */
 	__readonly__ var outerHeight : int/*long*/;
 
 	// the current browsing context
@@ -2023,10 +2207,10 @@ native __fake__ class Window extends EventTarget {
 	) : Window/*WindowProxy*/;
 	function __native_index_operator__(
 		index : int/*unsigned long*/
-	) : MayBeUndefined.<Window/*WindowProxy*/>;
+	) : Window/*WindowProxy*/;
 	function __native_index_operator__(
 		name : string/*DOMString*/
-	) : MayBeUndefined.<Object/*object*/>;
+	) : Object/*object*/;
 	// the user agent
 	__readonly__ var navigator : Navigator;
 	__readonly__ var external : External;
@@ -2036,11 +2220,11 @@ native __fake__ class Window extends EventTarget {
 	function confirm(message : string/*DOMString*/) : boolean;
 	function prompt(
 		message : string/*DOMString*/
-	) : string/*DOMString?*/;
+	) : Nullable.<string>/*DOMString?*/;
 	function prompt(
 		message : string/*DOMString*/,
 		default : string/*DOMString*/
-	) : string/*DOMString?*/;
+	) : Nullable.<string>/*DOMString?*/;
 	function print() : void;
 	function showModalDialog(
 		url : string/*DOMString*/
@@ -2124,10 +2308,12 @@ native __fake__ class Window extends EventTarget {
 
 	// implements WindowSessionStorage
 
+	/** @see http://dev.w3.org/html5/webstorage/ */
 	__readonly__ var sessionStorage : Storage;
 
 	// implements WindowLocalStorage
 
+	/** @see http://dev.w3.org/html5/webstorage/ */
 	__readonly__ var localStorage : Storage;
 
 	function setTimeout(
@@ -2150,22 +2336,23 @@ native __fake__ class Window extends EventTarget {
 	// implements WindowAnimationTiming
 
 	function requestAnimationFrame(
-		callback : function(:number):void/*FrameRequestCallback*/
+		callback : function(time:number/*DOMTimeStamp*/):void/*FrameRequestCallback*/
 	) : int/*long*/;
 	function cancelAnimationFrame(handle : int/*long*/) : void;
 	// vender's extension
 	function webkitRequestAnimationFrame(
-		callback : function(:number):void/*FrameRequestCallback*/
+		callback : function(time:number/*DOMTimeStamp*/):void/*FrameRequestCallback*/
 	) : int/*long*/;
 	function webkitCancelAnimationFrame(handle : int/*long*/) : void;
 	function mozRequestAnimationFrame(
-		callback : function(:number):void/*FrameRequestCallback*/
+		callback : function(time:number/*DOMTimeStamp*/):void/*FrameRequestCallback*/
 	) : int/*long*/;
 	function mozCancelAnimationFrame(handle : int/*long*/) : void;
 
 } // end of Window
 
-native class MediaQueryList {
+/** @see http://dev.w3.org/csswg/cssom-view/ */
+native final class MediaQueryList {
 
 	__readonly__ var media : string/*DOMString*/;
 	__readonly__ var matches : boolean;
@@ -2178,7 +2365,10 @@ native class MediaQueryList {
 
 } // end of MediaQueryList
 
-native class Screen {
+// alias MediaQueryListListener = function(mql:MediaQueryList):void
+
+/** @see http://dev.w3.org/csswg/cssom-view/ */
+native final class Screen {
 
 	__readonly__ var availWidth : int/*unsigned long*/;
 	__readonly__ var availHeight : int/*unsigned long*/;
@@ -2189,19 +2379,26 @@ native class Screen {
 
 } // end of Screen
 
-native class CaretPosition {
+/** @see http://dev.w3.org/csswg/cssom-view/ */
+native final class CaretPosition {
 
 	__readonly__ var offsetNode : Node;
 	__readonly__ var offset : int/*unsigned long*/;
 
 } // end of CaretPosition
 
+/** @see http://www.w3.org/TR/html5/single-page.html */
 native class HTMLElement extends Element {
 
+	/** @see http://dev.w3.org/csswg/cssom-view/ */
 	__readonly__ var offsetParent : Element;
+	/** @see http://dev.w3.org/csswg/cssom-view/ */
 	__readonly__ var offsetTop : int/*long*/;
+	/** @see http://dev.w3.org/csswg/cssom-view/ */
 	__readonly__ var offsetLeft : int/*long*/;
+	/** @see http://dev.w3.org/csswg/cssom-view/ */
 	__readonly__ var offsetWidth : int/*long*/;
+	/** @see http://dev.w3.org/csswg/cssom-view/ */
 	__readonly__ var offsetHeight : int/*long*/;
 
 	// metadata attributes
@@ -2227,12 +2424,12 @@ native class HTMLElement extends Element {
 	var contextMenu : HTMLMenuElement;
 	var spellcheck : boolean;
 	// command API
-	__readonly__ var commandType : string/*DOMString?*/;
-	__readonly__ var commandLabel : string/*DOMString?*/;
-	__readonly__ var commandIcon : string/*DOMString?*/;
-	__readonly__ var commandHidden : boolean;
-	__readonly__ var commandDisabled : boolean;
-	__readonly__ var commandChecked : boolean;
+	__readonly__ var commandType : Nullable.<string>/*DOMString?*/;
+	__readonly__ var commandLabel : Nullable.<string>/*DOMString?*/;
+	__readonly__ var commandIcon : Nullable.<string>/*DOMString?*/;
+	__readonly__ var commandHidden : Nullable.<boolean>;
+	__readonly__ var commandDisabled : Nullable.<boolean>;
+	__readonly__ var commandChecked : Nullable.<boolean>;
 	// styling
 	__readonly__ var style : CSSStyleDeclaration;
 	// event handler IDL attributes
@@ -2292,20 +2489,20 @@ native class HTMLElement extends Element {
 
 } // end of HTMLElement
 
-native class ClientRectList {
+/** @see http://dev.w3.org/csswg/cssom-view/ */
+native final class ClientRectList {
 
 	__readonly__ var length : int/*unsigned long*/;
 	function __native_index_operator__(
 		index : int/*unsigned long*/
-	) : MayBeUndefined.<ClientRect>;
+	) : ClientRect;
 	/* getter */
-	function item(
-		index : int/*unsigned long*/
-	) : MayBeUndefined.<ClientRect>;
+	function item(index : int/*unsigned long*/) : ClientRect;
 
 } // end of ClientRectList
 
-native class ClientRect {
+/** @see http://dev.w3.org/csswg/cssom-view/ */
+native final class ClientRect {
 
 	__readonly__ var top : number/*float*/;
 	__readonly__ var right : number/*float*/;
@@ -2316,42 +2513,46 @@ native class ClientRect {
 
 } // end of ClientRect
 
-native class HTMLAllCollection extends HTMLCollection {
+/** @see http://www.w3.org/TR/html5/single-page.html */
+native final class HTMLAllCollection extends HTMLCollection {
 
 	// inherits length and item(unsigned long index)
 	function item(name : string/*DOMString*/) : Object/*object?*/;
-	// inherits function __native_index_operator__(name : string/*DOMString*/) : MayBeUndefined.<Object/*object?*/>;
+	// inherits function __native_index_operator__(name : string/*DOMString*/) : Object/*object?*/;
 	/* legacycaller getter */
-	// inherits function namedItem(name : string/*DOMString*/) : MayBeUndefined.<Object/*object?*/>;
+	// inherits function namedItem(name : string/*DOMString*/) : Object/*object?*/;
 	// overrides inherited namedItem()
 	function tags(tagName : string/*DOMString*/) : HTMLAllCollection;
 
 } // end of HTMLAllCollection
 
-native class HTMLFormControlsCollection extends HTMLCollection {
+/** @see http://www.w3.org/TR/html5/single-page.html */
+native final class HTMLFormControlsCollection extends HTMLCollection {
 
 	// inherits length and item()
-	// inherits function __native_index_operator__(name : string/*DOMString*/) : MayBeUndefined.<Object/*object?*/>;
+	// inherits function __native_index_operator__(name : string/*DOMString*/) : Object/*object?*/;
 	/* legacycaller getter */
-	// inherits function namedItem(name : string/*DOMString*/) : MayBeUndefined.<Object/*object?*/>;
+	// inherits function namedItem(name : string/*DOMString*/) : Object/*object?*/;
 	// overrides inherited namedItem()
 
 } // end of HTMLFormControlsCollection
 
-native class RadioNodeList extends NodeList {
+/** @see http://www.w3.org/TR/html5/single-page.html */
+native final class RadioNodeList extends NodeList {
 
 	var value : string/*DOMString*/;
 
 } // end of RadioNodeList
 
-native class HTMLOptionsCollection extends HTMLCollection {
+/** @see http://www.w3.org/TR/html5/single-page.html */
+native final class HTMLOptionsCollection extends HTMLCollection {
 
 	// inherits item()
 	// inherits var length : int/*unsigned long*/;
 	// overrides inherited length
-	// inherits function __native_index_operator__(name : string/*DOMString*/) : MayBeUndefined.<Object/*object?*/>;
+	// inherits function __native_index_operator__(name : string/*DOMString*/) : Object/*object?*/;
 	/* legacycaller getter */
-	// inherits function namedItem(name : string/*DOMString*/) : MayBeUndefined.<Object/*object?*/>;
+	// inherits function namedItem(name : string/*DOMString*/) : Object/*object?*/;
 	// overrides inherited namedItem()
 	function add(element : HTMLOptionElement) : void;
 	function add(
@@ -2376,18 +2577,21 @@ native class HTMLOptionsCollection extends HTMLCollection {
 
 } // end of HTMLOptionsCollection
 
-native class DOMStringMap {
+/** @see http://www.w3.org/TR/html5/single-page.html */
+native final class DOMStringMap {
 
 	function __native_index_operator__(
 		name : string/*DOMString*/
-	) : MayBeUndefined.<string/*DOMString*/>;
+	) : Nullable.<string>/*DOMString*/;
 
 } // end of DOMStringMap
 
+/** @see http://www.w3.org/TR/html5/single-page.html */
 native __fake__ class Transferable {
 }
 
-native class HTMLDocument extends Document {
+/** @see http://www.w3.org/TR/html5/single-page.html */
+native final class HTMLDocument extends Document {
 
 	// resource metadata management
 	__readonly__ var location : Location;
@@ -2400,7 +2604,7 @@ native class HTMLDocument extends Document {
 	// DOM tree accessors
 	function __native_index_operator__(
 		name : string/*DOMString*/
-	) : MayBeUndefined.<Object/*object*/>;
+	) : Object/*object*/;
 	var title : string/*DOMString*/;
 	var dir : string/*DOMString*/;
 	var body : HTMLElement;
@@ -2435,10 +2639,8 @@ native class HTMLDocument extends Document {
 		replace : boolean
 	) : Window/*WindowProxy*/;
 	function close() : void;
-	function write() : void;
-	function write(text : string/*DOMString...*/) : void;
-	function writeln() : void;
-	function writeln(text : string/*DOMString...*/) : void;
+	function write(...text : string/*DOMString...*/) : void;
+	function writeln(...text : string/*DOMString...*/) : void;
 	// user interaction
 	__readonly__ var defaultView : Window/*WindowProxy?*/;
 	__readonly__ var activeElement : Element;
@@ -2539,32 +2741,38 @@ native class HTMLDocument extends Document {
 
 } // end of HTMLDocument
 
-native class HTMLUnknownElement extends HTMLElement {
+/** @see http://www.w3.org/TR/html5/single-page.html */
+native final class HTMLUnknownElement extends HTMLElement {
 }
 
-native class HTMLHtmlElement extends HTMLElement {
+/** @see http://www.w3.org/TR/html5/single-page.html */
+native final class HTMLHtmlElement extends HTMLElement {
 
 	var version : string/*DOMString*/;
 
 } // end of HTMLHtmlElement
 
-native class HTMLHeadElement extends HTMLElement {
+/** @see http://www.w3.org/TR/html5/single-page.html */
+native final class HTMLHeadElement extends HTMLElement {
 }
 
-native class HTMLTitleElement extends HTMLElement {
+/** @see http://www.w3.org/TR/html5/single-page.html */
+native final class HTMLTitleElement extends HTMLElement {
 
 	var text : string/*DOMString*/;
 
 } // end of HTMLTitleElement
 
-native class HTMLBaseElement extends HTMLElement {
+/** @see http://www.w3.org/TR/html5/single-page.html */
+native final class HTMLBaseElement extends HTMLElement {
 
 	var href : string/*DOMString*/;
 	var target : string/*DOMString*/;
 
 } // end of HTMLBaseElement
 
-native class HTMLLinkElement extends HTMLElement {
+/** @see http://www.w3.org/TR/html5/single-page.html */
+native final class HTMLLinkElement extends HTMLElement {
 
 	var disabled : boolean;
 	var href : string/*DOMString*/;
@@ -2581,11 +2789,13 @@ native class HTMLLinkElement extends HTMLElement {
 
 	// implements LinkStyle
 
+	/** @see http://dev.w3.org/csswg/cssom/ */
 	__readonly__ var sheet : StyleSheet;
 
 } // end of HTMLLinkElement
 
-native class HTMLMetaElement extends HTMLElement {
+/** @see http://www.w3.org/TR/html5/single-page.html */
+native final class HTMLMetaElement extends HTMLElement {
 
 	var name : string/*DOMString*/;
 	var httpEquiv : string/*DOMString*/;
@@ -2595,7 +2805,8 @@ native class HTMLMetaElement extends HTMLElement {
 
 } // end of HTMLMetaElement
 
-native class HTMLStyleElement extends HTMLElement {
+/** @see http://www.w3.org/TR/html5/single-page.html */
+native final class HTMLStyleElement extends HTMLElement {
 
 	var disabled : boolean;
 	var media : string/*DOMString*/;
@@ -2604,11 +2815,13 @@ native class HTMLStyleElement extends HTMLElement {
 
 	// implements LinkStyle
 
+	/** @see http://dev.w3.org/csswg/cssom/ */
 	__readonly__ var sheet : StyleSheet;
 
 } // end of HTMLStyleElement
 
-native class HTMLScriptElement extends HTMLElement {
+/** @see http://www.w3.org/TR/html5/single-page.html */
+native final class HTMLScriptElement extends HTMLElement {
 
 	var src : string/*DOMString*/;
 	var async : boolean;
@@ -2622,7 +2835,8 @@ native class HTMLScriptElement extends HTMLElement {
 
 } // end of HTMLScriptElement
 
-native class HTMLBodyElement extends HTMLElement {
+/** @see http://www.w3.org/TR/html5/single-page.html */
+native final class HTMLBodyElement extends HTMLElement {
 
 	var onafterprint : function(:Event):void/*Function?*/;
 	var onbeforeprint : function(:Event):void/*Function?*/;
@@ -2652,19 +2866,22 @@ native class HTMLBodyElement extends HTMLElement {
 
 } // end of HTMLBodyElement
 
-native class HTMLHeadingElement extends HTMLElement {
+/** @see http://www.w3.org/TR/html5/single-page.html */
+native final class HTMLHeadingElement extends HTMLElement {
 
 	var align : string/*DOMString*/;
 
 } // end of HTMLHeadingElement
 
-native class HTMLParagraphElement extends HTMLElement {
+/** @see http://www.w3.org/TR/html5/single-page.html */
+native final class HTMLParagraphElement extends HTMLElement {
 
 	var align : string/*DOMString*/;
 
 } // end of HTMLParagraphElement
 
-native class HTMLHRElement extends HTMLElement {
+/** @see http://www.w3.org/TR/html5/single-page.html */
+native final class HTMLHRElement extends HTMLElement {
 
 	var align : string/*DOMString*/;
 	var color : string/*DOMString*/;
@@ -2674,19 +2891,22 @@ native class HTMLHRElement extends HTMLElement {
 
 } // end of HTMLHRElement
 
-native class HTMLPreElement extends HTMLElement {
+/** @see http://www.w3.org/TR/html5/single-page.html */
+native final class HTMLPreElement extends HTMLElement {
 
 	var width : int/*long*/;
 
 } // end of HTMLPreElement
 
-native class HTMLQuoteElement extends HTMLElement {
+/** @see http://www.w3.org/TR/html5/single-page.html */
+native final class HTMLQuoteElement extends HTMLElement {
 
 	var cite : string/*DOMString*/;
 
 } // end of HTMLQuoteElement
 
-native class HTMLOListElement extends HTMLElement {
+/** @see http://www.w3.org/TR/html5/single-page.html */
+native final class HTMLOListElement extends HTMLElement {
 
 	var reversed : boolean;
 	var start : int/*long*/;
@@ -2696,14 +2916,16 @@ native class HTMLOListElement extends HTMLElement {
 
 } // end of HTMLOListElement
 
-native class HTMLUListElement extends HTMLElement {
+/** @see http://www.w3.org/TR/html5/single-page.html */
+native final class HTMLUListElement extends HTMLElement {
 
 	var compact : boolean;
 	var type : string/*DOMString*/;
 
 } // end of HTMLUListElement
 
-native class HTMLLIElement extends HTMLElement {
+/** @see http://www.w3.org/TR/html5/single-page.html */
+native final class HTMLLIElement extends HTMLElement {
 
 	var value : int/*long*/;
 
@@ -2711,19 +2933,22 @@ native class HTMLLIElement extends HTMLElement {
 
 } // end of HTMLLIElement
 
-native class HTMLDListElement extends HTMLElement {
+/** @see http://www.w3.org/TR/html5/single-page.html */
+native final class HTMLDListElement extends HTMLElement {
 
 	var compact : boolean;
 
 } // end of HTMLDListElement
 
-native class HTMLDivElement extends HTMLElement {
+/** @see http://www.w3.org/TR/html5/single-page.html */
+native final class HTMLDivElement extends HTMLElement {
 
 	var align : string/*DOMString*/;
 
 } // end of HTMLDivElement
 
-native class HTMLAnchorElement extends HTMLElement {
+/** @see http://www.w3.org/TR/html5/single-page.html */
+native final class HTMLAnchorElement extends HTMLElement {
 
 	var href : string/*DOMString*/;
 	var target : string/*DOMString*/;
@@ -2750,29 +2975,34 @@ native class HTMLAnchorElement extends HTMLElement {
 
 } // end of HTMLAnchorElement
 
-native class HTMLTimeElement extends HTMLElement {
+/** @see http://www.w3.org/TR/html5/single-page.html */
+native final class HTMLTimeElement extends HTMLElement {
 
 	var datetime : string/*DOMString*/;
 
 } // end of HTMLTimeElement
 
-native class HTMLSpanElement extends HTMLElement {
+/** @see http://www.w3.org/TR/html5/single-page.html */
+native final class HTMLSpanElement extends HTMLElement {
 }
 
-native class HTMLBRElement extends HTMLElement {
+/** @see http://www.w3.org/TR/html5/single-page.html */
+native final class HTMLBRElement extends HTMLElement {
 
 	var clear : string/*DOMString*/;
 
 } // end of HTMLBRElement
 
-native class HTMLModElement extends HTMLElement {
+/** @see http://www.w3.org/TR/html5/single-page.html */
+native final class HTMLModElement extends HTMLElement {
 
 	var cite : string/*DOMString*/;
 	var dateTime : string/*DOMString*/;
 
 } // end of HTMLModElement
 
-native class HTMLImageElement extends HTMLElement {
+/** @see http://www.w3.org/TR/html5/single-page.html */
+native final class HTMLImageElement extends HTMLElement {
 
 	var alt : string/*DOMString*/;
 	var src : string/*DOMString*/;
@@ -2794,7 +3024,8 @@ native class HTMLImageElement extends HTMLElement {
 
 } // end of HTMLImageElement
 
-native class HTMLIFrameElement extends HTMLElement {
+/** @see http://www.w3.org/TR/html5/single-page.html */
+native final class HTMLIFrameElement extends HTMLElement {
 
 	var src : string/*DOMString*/;
 	var srcdoc : string/*DOMString*/;
@@ -2815,7 +3046,8 @@ native class HTMLIFrameElement extends HTMLElement {
 
 } // end of HTMLIFrameElement
 
-native class HTMLEmbedElement extends HTMLElement {
+/** @see http://www.w3.org/TR/html5/single-page.html */
+native final class HTMLEmbedElement extends HTMLElement {
 
 	var src : string/*DOMString*/;
 	var type : string/*DOMString*/;
@@ -2827,7 +3059,8 @@ native class HTMLEmbedElement extends HTMLElement {
 
 } // end of HTMLEmbedElement
 
-native class HTMLObjectElement extends HTMLElement {
+/** @see http://www.w3.org/TR/html5/single-page.html */
+native final class HTMLObjectElement extends HTMLElement {
 
 	var data : string/*DOMString*/;
 	var type : string/*DOMString*/;
@@ -2858,7 +3091,8 @@ native class HTMLObjectElement extends HTMLElement {
 
 } // end of HTMLObjectElement
 
-native class HTMLParamElement extends HTMLElement {
+/** @see http://www.w3.org/TR/html5/single-page.html */
+native final class HTMLParamElement extends HTMLElement {
 
 	var name : string/*DOMString*/;
 	var value : string/*DOMString*/;
@@ -2868,7 +3102,8 @@ native class HTMLParamElement extends HTMLElement {
 
 } // end of HTMLParamElement
 
-native class HTMLVideoElement extends HTMLMediaElement {
+/** @see http://www.w3.org/TR/html5/single-page.html */
+native final class HTMLVideoElement extends HTMLMediaElement {
 
 	var width : int/*unsigned long*/;
 	var height : int/*unsigned long*/;
@@ -2878,10 +3113,12 @@ native class HTMLVideoElement extends HTMLMediaElement {
 
 } // end of HTMLVideoElement
 
-native class HTMLAudioElement extends HTMLMediaElement {
+/** @see http://www.w3.org/TR/html5/single-page.html */
+native final class HTMLAudioElement extends HTMLMediaElement {
 }
 
-native class HTMLSourceElement extends HTMLElement {
+/** @see http://www.w3.org/TR/html5/single-page.html */
+native final class HTMLSourceElement extends HTMLElement {
 
 	var src : string/*DOMString*/;
 	var type : string/*DOMString*/;
@@ -2889,7 +3126,8 @@ native class HTMLSourceElement extends HTMLElement {
 
 } // end of HTMLSourceElement
 
-native class HTMLTrackElement extends HTMLElement {
+/** @see http://www.w3.org/TR/html5/single-page.html */
+native final class HTMLTrackElement extends HTMLElement {
 
 	var kind : string/*DOMString*/;
 	var src : string/*DOMString*/;
@@ -2909,6 +3147,7 @@ native class HTMLTrackElement extends HTMLElement {
 
 } // end of HTMLTrackElement
 
+/** @see http://www.w3.org/TR/html5/single-page.html */
 native class HTMLMediaElement extends HTMLElement {
 
 	// error state
@@ -2985,7 +3224,8 @@ native class HTMLMediaElement extends HTMLElement {
 
 } // end of HTMLMediaElement
 
-native class MediaError {
+/** @see http://www.w3.org/TR/html5/single-page.html */
+native final class MediaError {
 
 	static __readonly__ var MEDIA_ERR_ABORTED : int/*unsigned short*/;
 	       __readonly__ var MEDIA_ERR_ABORTED : int/*unsigned short*/;
@@ -2999,19 +3239,21 @@ native class MediaError {
 
 } // end of MediaError
 
-native class AudioTrackList extends EventTarget {
+/** @see http://www.w3.org/TR/html5/single-page.html */
+native final class AudioTrackList extends EventTarget {
 
 	__readonly__ var length : int/*unsigned long*/;
 	function __native_index_operator__(
 		index : int/*unsigned long*/
-	) : MayBeUndefined.<AudioTrack>;
+	) : AudioTrack;
 	function getTrackById(id : string/*DOMString*/) : AudioTrack;
 	var onchange : function(:Event):void/*Function?*/;
 	var onaddtrack : function(:Event):void/*Function?*/;
 
 } // end of AudioTrackList
 
-native class AudioTrack {
+/** @see http://www.w3.org/TR/html5/single-page.html */
+native final class AudioTrack {
 
 	__readonly__ var id : string/*DOMString*/;
 	__readonly__ var kind : string/*DOMString*/;
@@ -3021,12 +3263,13 @@ native class AudioTrack {
 
 } // end of AudioTrack
 
-native class VideoTrackList extends EventTarget {
+/** @see http://www.w3.org/TR/html5/single-page.html */
+native final class VideoTrackList extends EventTarget {
 
 	__readonly__ var length : int/*unsigned long*/;
 	function __native_index_operator__(
 		index : int/*unsigned long*/
-	) : MayBeUndefined.<VideoTrack>;
+	) : VideoTrack;
 	function getTrackById(id : string/*DOMString*/) : VideoTrack;
 	__readonly__ var selectedIndex : int/*long*/;
 	var onchange : function(:Event):void/*Function?*/;
@@ -3034,7 +3277,8 @@ native class VideoTrackList extends EventTarget {
 
 } // end of VideoTrackList
 
-native class VideoTrack {
+/** @see http://www.w3.org/TR/html5/single-page.html */
+native final class VideoTrack {
 
 	__readonly__ var id : string/*DOMString*/;
 	__readonly__ var kind : string/*DOMString*/;
@@ -3044,7 +3288,8 @@ native class VideoTrack {
 
 } // end of VideoTrack
 
-native class MediaController {
+/** @see http://www.w3.org/TR/html5/single-page.html */
+native final class MediaController {
 
 	function constructor();
 
@@ -3077,17 +3322,19 @@ native class MediaController {
 
 } // end of MediaController
 
-native class TextTrackList extends EventTarget {
+/** @see http://www.w3.org/TR/html5/single-page.html */
+native final class TextTrackList extends EventTarget {
 
 	__readonly__ var length : int/*unsigned long*/;
 	function __native_index_operator__(
 		index : int/*unsigned long*/
-	) : MayBeUndefined.<TextTrack>;
+	) : TextTrack;
 	var onaddtrack : function(:Event):void/*Function?*/;
 
 } // end of TextTrackList
 
-native class TextTrack extends EventTarget {
+/** @see http://www.w3.org/TR/html5/single-page.html */
+native final class TextTrack extends EventTarget {
 
 	__readonly__ var kind : string/*DOMString*/;
 	__readonly__ var label : string/*DOMString*/;
@@ -3107,17 +3354,19 @@ native class TextTrack extends EventTarget {
 
 } // end of TextTrack
 
-native class TextTrackCueList {
+/** @see http://www.w3.org/TR/html5/single-page.html */
+native final class TextTrackCueList {
 
 	__readonly__ var length : int/*unsigned long*/;
 	function __native_index_operator__(
 		index : int/*unsigned long*/
-	) : MayBeUndefined.<TextTrackCue>;
+	) : TextTrackCue;
 	function getCueById(id : string/*DOMString*/) : TextTrackCue;
 
 } // end of TextTrackCueList
 
-native class TextTrackCue extends EventTarget {
+/** @see http://www.w3.org/TR/html5/single-page.html */
+native final class TextTrackCue extends EventTarget {
 
 	function constructor(
 		id : string/*DOMString*/,
@@ -3159,7 +3408,8 @@ native class TextTrackCue extends EventTarget {
 
 } // end of TextTrackCue
 
-native class TimeRanges {
+/** @see http://www.w3.org/TR/html5/single-page.html */
+native final class TimeRanges {
 
 	__readonly__ var length : int/*unsigned long*/;
 	function start(index : int/*unsigned long*/) : number/*double*/;
@@ -3167,7 +3417,8 @@ native class TimeRanges {
 
 } // end of TimeRanges
 
-native class TrackEvent extends Event {
+/** @see http://www.w3.org/TR/html5/single-page.html */
+native final class TrackEvent extends Event {
 
 	function constructor(type : string/*DOMString*/);
 	function constructor(
@@ -3179,47 +3430,36 @@ native class TrackEvent extends Event {
 
 } // end of TrackEvent
 
-native class TrackEventInit extends EventInit {
+/** @see http://www.w3.org/TR/html5/single-page.html */
+native final class TrackEventInit extends EventInit {
 
 	var track : Object/*object?*/;
 
 } // end of TrackEventInit
 
-native class HTMLCanvasElement extends HTMLElement {
+/** @see http://www.w3.org/TR/html5/single-page.html */
+native final class HTMLCanvasElement extends HTMLElement {
 
 	var width : int/*unsigned long*/;
 	var height : int/*unsigned long*/;
-	function toDataURL() : string/*DOMString*/;
-	function toDataURL(
-		type : string/*DOMString*/
-	) : string/*DOMString*/;
 	function toDataURL(
 		type : string/*DOMString*/,
-		args : variant/*any...*/
+		...args : variant/*any...*/
 	) : string/*DOMString*/;
-	function toBlob(
-		_callback : function(:File):void/*FileCallback?*/
-	) : void;
-	function toBlob(
-		_callback : function(:File):void/*FileCallback?*/,
-		type : string/*DOMString*/
-	) : void;
 	function toBlob(
 		_callback : function(:File):void/*FileCallback?*/,
 		type : string/*DOMString*/,
-		args : variant/*any...*/
+		...args : variant/*any...*/
 	) : void;
-	function getContext(
-		contextId : string/*DOMString*/
-	) : Object/*object?*/;
 	function getContext(
 		contextId : string/*DOMString*/,
-		args : variant/*any...*/
+		...args : variant/*any...*/
 	) : Object/*object?*/;
 
 } // end of HTMLCanvasElement
 
-native class HTMLMapElement extends HTMLElement {
+/** @see http://www.w3.org/TR/html5/single-page.html */
+native final class HTMLMapElement extends HTMLElement {
 
 	var name : string/*DOMString*/;
 	__readonly__ var areas : HTMLCollection;
@@ -3227,7 +3467,8 @@ native class HTMLMapElement extends HTMLElement {
 
 } // end of HTMLMapElement
 
-native class HTMLAreaElement extends HTMLElement {
+/** @see http://www.w3.org/TR/html5/single-page.html */
+native final class HTMLAreaElement extends HTMLElement {
 
 	var alt : string/*DOMString*/;
 	var coords : string/*DOMString*/;
@@ -3252,7 +3493,8 @@ native class HTMLAreaElement extends HTMLElement {
 
 } // end of HTMLAreaElement
 
-native class HTMLTableElement extends HTMLElement {
+/** @see http://www.w3.org/TR/html5/single-page.html */
+native final class HTMLTableElement extends HTMLElement {
 
 	var caption : HTMLTableCaptionElement;
 	function createCaption() : HTMLElement;
@@ -3282,13 +3524,15 @@ native class HTMLTableElement extends HTMLElement {
 
 } // end of HTMLTableElement
 
-native class HTMLTableCaptionElement extends HTMLElement {
+/** @see http://www.w3.org/TR/html5/single-page.html */
+native final class HTMLTableCaptionElement extends HTMLElement {
 
 	var align : string/*DOMString*/;
 
 } // end of HTMLTableCaptionElement
 
-native class HTMLTableColElement extends HTMLElement {
+/** @see http://www.w3.org/TR/html5/single-page.html */
+native final class HTMLTableColElement extends HTMLElement {
 
 	var span : int/*unsigned long*/;
 
@@ -3300,7 +3544,8 @@ native class HTMLTableColElement extends HTMLElement {
 
 } // end of HTMLTableColElement
 
-native class HTMLTableSectionElement extends HTMLElement {
+/** @see http://www.w3.org/TR/html5/single-page.html */
+native final class HTMLTableSectionElement extends HTMLElement {
 
 	__readonly__ var rows : HTMLCollection;
 	function insertRow() : HTMLElement;
@@ -3314,7 +3559,8 @@ native class HTMLTableSectionElement extends HTMLElement {
 
 } // end of HTMLTableSectionElement
 
-native class HTMLTableRowElement extends HTMLElement {
+/** @see http://www.w3.org/TR/html5/single-page.html */
+native final class HTMLTableRowElement extends HTMLElement {
 
 	__readonly__ var rowIndex : int/*long*/;
 	__readonly__ var sectionRowIndex : int/*long*/;
@@ -3331,15 +3577,18 @@ native class HTMLTableRowElement extends HTMLElement {
 
 } // end of HTMLTableRowElement
 
-native class HTMLTableDataCellElement extends HTMLTableCellElement {
+/** @see http://www.w3.org/TR/html5/single-page.html */
+native final class HTMLTableDataCellElement extends HTMLTableCellElement {
 }
 
-native class HTMLTableHeaderCellElement extends HTMLTableCellElement {
+/** @see http://www.w3.org/TR/html5/single-page.html */
+native final class HTMLTableHeaderCellElement extends HTMLTableCellElement {
 
 	var scope : string/*DOMString*/;
 
 } // end of HTMLTableHeaderCellElement
 
+/** @see http://www.w3.org/TR/html5/single-page.html */
 native class HTMLTableCellElement extends HTMLElement {
 
 	var colSpan : int/*unsigned long*/;
@@ -3360,7 +3609,8 @@ native class HTMLTableCellElement extends HTMLElement {
 
 } // end of HTMLTableCellElement
 
-native class HTMLFormElement extends HTMLElement {
+/** @see http://www.w3.org/TR/html5/single-page.html */
+native final class HTMLFormElement extends HTMLElement {
 
 	var acceptCharset : string/*DOMString*/;
 	var action : string/*DOMString*/;
@@ -3375,17 +3625,18 @@ native class HTMLFormElement extends HTMLElement {
 	__readonly__ var length : int/*long*/;
 	function __native_index_operator__(
 		index : int/*unsigned long*/
-	) : MayBeUndefined.<Element>;
+	) : Element;
 	function __native_index_operator__(
 		name : string/*DOMString*/
-	) : MayBeUndefined.<Object/*object*/>;
+	) : Object/*object*/;
 	function submit() : void;
 	function reset() : void;
 	function checkValidity() : boolean;
 
 } // end of HTMLFormElement
 
-native class HTMLFieldSetElement extends HTMLElement {
+/** @see http://www.w3.org/TR/html5/single-page.html */
+native final class HTMLFieldSetElement extends HTMLElement {
 
 	var disabled : boolean;
 	__readonly__ var form : HTMLFormElement;
@@ -3400,7 +3651,8 @@ native class HTMLFieldSetElement extends HTMLElement {
 
 } // end of HTMLFieldSetElement
 
-native class HTMLLegendElement extends HTMLElement {
+/** @see http://www.w3.org/TR/html5/single-page.html */
+native final class HTMLLegendElement extends HTMLElement {
 
 	__readonly__ var form : HTMLFormElement;
 
@@ -3408,7 +3660,8 @@ native class HTMLLegendElement extends HTMLElement {
 
 } // end of HTMLLegendElement
 
-native class HTMLLabelElement extends HTMLElement {
+/** @see http://www.w3.org/TR/html5/single-page.html */
+native final class HTMLLabelElement extends HTMLElement {
 
 	__readonly__ var form : HTMLFormElement;
 	var htmlFor : string/*DOMString*/;
@@ -3416,7 +3669,8 @@ native class HTMLLabelElement extends HTMLElement {
 
 } // end of HTMLLabelElement
 
-native class HTMLInputElement extends HTMLElement {
+/** @see http://www.w3.org/TR/html5/single-page.html */
+native final class HTMLInputElement extends HTMLElement {
 
 	var accept : string/*DOMString*/;
 	var alt : string/*DOMString*/;
@@ -3483,7 +3737,8 @@ native class HTMLInputElement extends HTMLElement {
 
 } // end of HTMLInputElement
 
-native class HTMLButtonElement extends HTMLElement {
+/** @see http://www.w3.org/TR/html5/single-page.html */
+native final class HTMLButtonElement extends HTMLElement {
 
 	var autofocus : boolean;
 	var disabled : boolean;
@@ -3505,7 +3760,8 @@ native class HTMLButtonElement extends HTMLElement {
 
 } // end of HTMLButtonElement
 
-native class HTMLSelectElement extends HTMLElement {
+/** @see http://www.w3.org/TR/html5/single-page.html */
+native final class HTMLSelectElement extends HTMLElement {
 
 	var autofocus : boolean;
 	var disabled : boolean;
@@ -3519,11 +3775,9 @@ native class HTMLSelectElement extends HTMLElement {
 	var length : int/*unsigned long*/;
 	function __native_index_operator__(
 		index : int/*unsigned long*/
-	) : MayBeUndefined.<Element>;
+	) : Element;
 	/* getter */
-	function item(
-		index : int/*unsigned long*/
-	) : MayBeUndefined.<Element>;
+	function item(index : int/*unsigned long*/) : Element;
 	function namedItem(name : string/*DOMString*/) : Object/*object*/;
 	function add(element : HTMLOptionElement) : void;
 	function add(
@@ -3556,20 +3810,23 @@ native class HTMLSelectElement extends HTMLElement {
 
 } // end of HTMLSelectElement
 
-native class HTMLDataListElement extends HTMLElement {
+/** @see http://www.w3.org/TR/html5/single-page.html */
+native final class HTMLDataListElement extends HTMLElement {
 
 	__readonly__ var options : HTMLCollection;
 
 } // end of HTMLDataListElement
 
-native class HTMLOptGroupElement extends HTMLElement {
+/** @see http://www.w3.org/TR/html5/single-page.html */
+native final class HTMLOptGroupElement extends HTMLElement {
 
 	var disabled : boolean;
 	var label : string/*DOMString*/;
 
 } // end of HTMLOptGroupElement
 
-native class HTMLOptionElement extends HTMLElement {
+/** @see http://www.w3.org/TR/html5/single-page.html */
+native final class HTMLOptionElement extends HTMLElement {
 
 	var disabled : boolean;
 	__readonly__ var form : HTMLFormElement;
@@ -3582,7 +3839,8 @@ native class HTMLOptionElement extends HTMLElement {
 
 } // end of HTMLOptionElement
 
-native class HTMLTextAreaElement extends HTMLElement {
+/** @see http://www.w3.org/TR/html5/single-page.html */
+native final class HTMLTextAreaElement extends HTMLElement {
 
 	var autofocus : boolean;
 	var cols : int/*unsigned long*/;
@@ -3622,7 +3880,8 @@ native class HTMLTextAreaElement extends HTMLElement {
 
 } // end of HTMLTextAreaElement
 
-native class HTMLKeygenElement extends HTMLElement {
+/** @see http://www.w3.org/TR/html5/single-page.html */
+native final class HTMLKeygenElement extends HTMLElement {
 
 	var autofocus : boolean;
 	var challenge : string/*DOMString*/;
@@ -3640,7 +3899,8 @@ native class HTMLKeygenElement extends HTMLElement {
 
 } // end of HTMLKeygenElement
 
-native class HTMLOutputElement extends HTMLElement {
+/** @see http://www.w3.org/TR/html5/single-page.html */
+native final class HTMLOutputElement extends HTMLElement {
 
 	__readonly__ var htmlFor : DOMSettableTokenList;
 	__readonly__ var form : HTMLFormElement;
@@ -3657,7 +3917,8 @@ native class HTMLOutputElement extends HTMLElement {
 
 } // end of HTMLOutputElement
 
-native class HTMLProgressElement extends HTMLElement {
+/** @see http://www.w3.org/TR/html5/single-page.html */
+native final class HTMLProgressElement extends HTMLElement {
 
 	var value : number/*double*/;
 	var max : number/*double*/;
@@ -3666,7 +3927,8 @@ native class HTMLProgressElement extends HTMLElement {
 
 } // end of HTMLProgressElement
 
-native class HTMLMeterElement extends HTMLElement {
+/** @see http://www.w3.org/TR/html5/single-page.html */
+native final class HTMLMeterElement extends HTMLElement {
 
 	var value : number/*double*/;
 	var min : number/*double*/;
@@ -3678,7 +3940,8 @@ native class HTMLMeterElement extends HTMLElement {
 
 } // end of HTMLMeterElement
 
-native class ValidityState {
+/** @see http://www.w3.org/TR/html5/single-page.html */
+native final class ValidityState {
 
 	__readonly__ var valueMissing : boolean;
 	__readonly__ var typeMismatch : boolean;
@@ -3692,13 +3955,15 @@ native class ValidityState {
 
 } // end of ValidityState
 
-native class HTMLDetailsElement extends HTMLElement {
+/** @see http://www.w3.org/TR/html5/single-page.html */
+native final class HTMLDetailsElement extends HTMLElement {
 
 	var open : boolean;
 
 } // end of HTMLDetailsElement
 
-native class HTMLCommandElement extends HTMLElement {
+/** @see http://www.w3.org/TR/html5/single-page.html */
+native final class HTMLCommandElement extends HTMLElement {
 
 	var type : string/*DOMString*/;
 	var label : string/*DOMString*/;
@@ -3710,7 +3975,8 @@ native class HTMLCommandElement extends HTMLElement {
 
 } // end of HTMLCommandElement
 
-native class HTMLMenuElement extends HTMLElement {
+/** @see http://www.w3.org/TR/html5/single-page.html */
+native final class HTMLMenuElement extends HTMLElement {
 
 	var type : string/*DOMString*/;
 	var label : string/*DOMString*/;
@@ -3719,13 +3985,15 @@ native class HTMLMenuElement extends HTMLElement {
 
 } // end of HTMLMenuElement
 
-native class BarProp {
+/** @see http://www.w3.org/TR/html5/single-page.html */
+native final class BarProp {
 
 	var visible : boolean;
 
 } // end of BarProp
 
-native class History {
+/** @see http://www.w3.org/TR/html5/single-page.html */
+native final class History {
 
 	__readonly__ var length : int/*long*/;
 	__readonly__ var state : variant/*any*/;
@@ -3754,7 +4022,8 @@ native class History {
 
 } // end of History
 
-native class Location {
+/** @see http://www.w3.org/TR/html5/single-page.html */
+native final class Location {
 
 	var href : string/*DOMString*/;
 	function assign(url : string/*DOMString*/) : void;
@@ -3771,7 +4040,8 @@ native class Location {
 
 } // end of Location
 
-native class PopStateEvent extends Event {
+/** @see http://www.w3.org/TR/html5/single-page.html */
+native final class PopStateEvent extends Event {
 
 	function constructor(type : string/*DOMString*/);
 	function constructor(
@@ -3783,13 +4053,15 @@ native class PopStateEvent extends Event {
 
 } // end of PopStateEvent
 
-native class PopStateEventInit extends EventInit {
+/** @see http://www.w3.org/TR/html5/single-page.html */
+native final class PopStateEventInit extends EventInit {
 
 	var state : variant/*any*/;
 
 } // end of PopStateEventInit
 
-native class HashChangeEvent extends Event {
+/** @see http://www.w3.org/TR/html5/single-page.html */
+native final class HashChangeEvent extends Event {
 
 	function constructor(type : string/*DOMString*/);
 	function constructor(
@@ -3802,14 +4074,16 @@ native class HashChangeEvent extends Event {
 
 } // end of HashChangeEvent
 
-native class HashChangeEventInit extends EventInit {
+/** @see http://www.w3.org/TR/html5/single-page.html */
+native final class HashChangeEventInit extends EventInit {
 
 	var oldURL : string/*DOMString*/;
 	var newURL : string/*DOMString*/;
 
 } // end of HashChangeEventInit
 
-native class PageTransitionEvent extends Event {
+/** @see http://www.w3.org/TR/html5/single-page.html */
+native final class PageTransitionEvent extends Event {
 
 	function constructor(type : string/*DOMString*/);
 	function constructor(
@@ -3821,19 +4095,22 @@ native class PageTransitionEvent extends Event {
 
 } // end of PageTransitionEvent
 
-native class PageTransitionEventInit extends EventInit {
+/** @see http://www.w3.org/TR/html5/single-page.html */
+native final class PageTransitionEventInit extends EventInit {
 
 	var persisted : boolean;
 
 } // end of PageTransitionEventInit
 
-native class BeforeUnloadEvent extends Event {
+/** @see http://www.w3.org/TR/html5/single-page.html */
+native final class BeforeUnloadEvent extends Event {
 
 	var returnValue : string/*DOMString*/;
 
 } // end of BeforeUnloadEvent
 
-native class ApplicationCache extends EventTarget {
+/** @see http://www.w3.org/TR/html5/single-page.html */
+native final class ApplicationCache extends EventTarget {
 
 	// update status
 	static __readonly__ var UNCACHED : int/*unsigned short*/;
@@ -3865,12 +4142,16 @@ native class ApplicationCache extends EventTarget {
 
 } // end of ApplicationCache
 
+/** @see http://www.w3.org/TR/html5/single-page.html */
 native __fake__ class NavigatorOnLine {
 
 	__readonly__ var onLine : boolean;
 
 } // end of NavigatorOnLine
 
+// alias Function = function(arguments:variant/*any...*/):variant/*any*/
+
+/** @see http://www.w3.org/TR/html5/single-page.html */
 native __fake__ class WindowBase64 {
 
 	function btoa(btoa : string/*DOMString*/) : string/*DOMString*/;
@@ -3878,23 +4159,18 @@ native __fake__ class WindowBase64 {
 
 } // end of WindowBase64
 
-native __fake__ class WindowModal {
+/** @see http://www.w3.org/TR/html5/single-page.html */
+native final __fake__ class WindowModal {
 
 	__readonly__ var dialogArguments : variant/*any*/;
 	var returnValue : string/*DOMString*/;
 
 } // end of WindowModal
 
-native class Navigator {
+/** @see http://www.w3.org/TR/html5/single-page.html */
+native final class Navigator extends NavigatorID {
 
 	// objects implementing this interface also implement the interfaces given below
-
-	// implements NavigatorID
-
-	__readonly__ var appName : string/*DOMString*/;
-	__readonly__ var appVersion : string/*DOMString*/;
-	__readonly__ var platform : string/*DOMString*/;
-	__readonly__ var userAgent : string/*DOMString*/;
 
 	// implements NavigatorOnLine
 
@@ -3936,10 +4212,12 @@ native class Navigator {
 
 	// implements NavigatorGeolocation
 
+	/** @see http://dev.w3.org/geo/api/spec-source.html */
 	__readonly__ var geolocation : Geolocation;
 
 } // end of Navigator
 
+/** @see http://www.w3.org/TR/html5/single-page.html */
 native __fake__ class NavigatorID {
 
 	__readonly__ var appName : string/*DOMString*/;
@@ -3949,6 +4227,7 @@ native __fake__ class NavigatorID {
 
 } // end of NavigatorID
 
+/** @see http://www.w3.org/TR/html5/single-page.html */
 native __fake__ class NavigatorContentUtils {
 
 	// content handler registration
@@ -3981,13 +4260,15 @@ native __fake__ class NavigatorContentUtils {
 
 } // end of NavigatorContentUtils
 
+/** @see http://www.w3.org/TR/html5/single-page.html */
 native __fake__ class NavigatorStorageUtils {
 
 	function yieldForStorageUpdates() : void;
 
 } // end of NavigatorStorageUtils
 
-native class External {
+/** @see http://www.w3.org/TR/html5/single-page.html */
+native final class External {
 
 	function AddSearchProvider(engineURL : string/*DOMString*/) : void;
 	function IsSearchProviderInstalled(
@@ -3996,7 +4277,8 @@ native class External {
 
 } // end of External
 
-native class DataTransfer {
+/** @see http://www.w3.org/TR/html5/single-page.html */
+native final class DataTransfer {
 
 	var dropEffect : string/*DOMString*/;
 	var effectAllowed : string/*DOMString*/;
@@ -4022,12 +4304,13 @@ native class DataTransfer {
 
 } // end of DataTransfer
 
-native class DataTransferItemList {
+/** @see http://www.w3.org/TR/html5/single-page.html */
+native final class DataTransferItemList {
 
 	__readonly__ var length : int/*unsigned long*/;
 	function __native_index_operator__(
 		index : int/*unsigned long*/
-	) : MayBeUndefined.<DataTransferItem>;
+	) : DataTransferItem;
 	function clear() : void;
 	function add(
 		data : string/*DOMString*/,
@@ -4037,22 +4320,22 @@ native class DataTransferItemList {
 
 } // end of DataTransferItemList
 
-native class DataTransferItem {
+/** @see http://www.w3.org/TR/html5/single-page.html */
+native final class DataTransferItem {
 
 	__readonly__ var kind : string/*DOMString*/;
 	__readonly__ var type : string/*DOMString*/;
-	function getAsString(_callback : FunctionStringCallback) : void;
+	function getAsString(
+		_callback : function(:string):void/*FunctionStringCallback?*/
+	) : void;
 	function getAsFile() : File;
 
 } // end of DataTransferItem
 
-native __fake__ class FunctionStringCallback {
+// alias FunctionStringCallback = function(data:string/*DOMString*/):void
 
-	function handleEvent(data : string/*DOMString*/) : void;
-
-} // end of FunctionStringCallback
-
-native class DragEvent extends MouseEvent {
+/** @see http://www.w3.org/TR/html5/single-page.html */
+native final class DragEvent extends MouseEvent {
 
 	function constructor(type : string/*DOMString*/);
 	function constructor(
@@ -4064,13 +4347,15 @@ native class DragEvent extends MouseEvent {
 
 } // end of DragEvent
 
-native class DragEventInit extends MouseEventInit {
+/** @see http://www.w3.org/TR/html5/single-page.html */
+native final class DragEventInit extends MouseEventInit {
 
 	var dataTransfer : DataTransfer;
 
 } // end of DragEventInit
 
-native class HTMLAppletElement extends HTMLElement {
+/** @see http://www.w3.org/TR/html5/single-page.html */
+native final class HTMLAppletElement extends HTMLElement {
 
 	var align : string/*DOMString*/;
 	var alt : string/*DOMString*/;
@@ -4087,7 +4372,8 @@ native class HTMLAppletElement extends HTMLElement {
 
 } // end of HTMLAppletElement
 
-native class HTMLMarqueeElement extends HTMLElement {
+/** @see http://www.w3.org/TR/html5/single-page.html */
+native final class HTMLMarqueeElement extends HTMLElement {
 
 	var behavior : string/*DOMString*/;
 	var bgColor : string/*DOMString*/;
@@ -4108,7 +4394,8 @@ native class HTMLMarqueeElement extends HTMLElement {
 
 } // end of HTMLMarqueeElement
 
-native class HTMLFrameSetElement extends HTMLElement {
+/** @see http://www.w3.org/TR/html5/single-page.html */
+native final class HTMLFrameSetElement extends HTMLElement {
 
 	var cols : string/*DOMString*/;
 	var rows : string/*DOMString*/;
@@ -4133,7 +4420,8 @@ native class HTMLFrameSetElement extends HTMLElement {
 
 } // end of HTMLFrameSetElement
 
-native class HTMLFrameElement extends HTMLElement {
+/** @see http://www.w3.org/TR/html5/single-page.html */
+native final class HTMLFrameElement extends HTMLElement {
 
 	var name : string/*DOMString*/;
 	var scrolling : string/*DOMString*/;
@@ -4148,7 +4436,8 @@ native class HTMLFrameElement extends HTMLElement {
 
 } // end of HTMLFrameElement
 
-native class HTMLBaseFontElement extends HTMLElement {
+/** @see http://www.w3.org/TR/html5/single-page.html */
+native final class HTMLBaseFontElement extends HTMLElement {
 
 	var color : string/*DOMString*/;
 	var face : string/*DOMString*/;
@@ -4156,13 +4445,15 @@ native class HTMLBaseFontElement extends HTMLElement {
 
 } // end of HTMLBaseFontElement
 
-native class HTMLDirectoryElement extends HTMLElement {
+/** @see http://www.w3.org/TR/html5/single-page.html */
+native final class HTMLDirectoryElement extends HTMLElement {
 
 	var compact : boolean;
 
 } // end of HTMLDirectoryElement
 
-native class HTMLFontElement extends HTMLElement {
+/** @see http://www.w3.org/TR/html5/single-page.html */
+native final class HTMLFontElement extends HTMLElement {
 
 	var color : string/*DOMString*/;
 	var face : string/*DOMString*/;
@@ -4170,17 +4461,19 @@ native class HTMLFontElement extends HTMLElement {
 
 } // end of HTMLFontElement
 
-native class FileList {
+/** @see http://www.w3.org/TR/FileAPI/ */
+native final class FileList {
 
 	function __native_index_operator__(
 		index : int/*unsigned long*/
-	) : MayBeUndefined.<File>;
+	) : File;
 	/* getter */
-	function item(index : int/*unsigned long*/) : MayBeUndefined.<File>;
+	function item(index : int/*unsigned long*/) : File;
 	__readonly__ var length : int/*unsigned long*/;
 
 } // end of FileList
 
+/** @see http://www.w3.org/TR/FileAPI/ */
 native class Blob {
 
 	__readonly__ var size : number/*unsigned long long*/;
@@ -4201,14 +4494,16 @@ native class Blob {
 
 } // end of Blob
 
-native class File extends Blob {
+/** @see http://www.w3.org/TR/FileAPI/ */
+native final class File extends Blob {
 
 	__readonly__ var name : string/*DOMString*/;
 	__readonly__ var lastModifiedDate : Date;
 
 } // end of File
 
-native class FileReader extends EventTarget {
+/** @see http://www.w3.org/TR/FileAPI/ */
+native final class FileReader extends EventTarget {
 
 	function constructor();
 
@@ -4243,7 +4538,8 @@ native class FileReader extends EventTarget {
 
 } // end of FileReader
 
-native class FileReaderSync {
+/** @see http://www.w3.org/TR/FileAPI/ */
+native final class FileReaderSync {
 
 	function constructor();
 
@@ -4262,15 +4558,18 @@ native class FileReaderSync {
 
 native class URL {
 
+	/** @see http://www.w3.org/TR/FileAPI/ */
 	static function createObjectURL(blob : Blob) : string/*DOMString*/;
+	/** @see http://www.w3.org/TR/FileAPI/ */
 	static function revokeObjectURL(url : string/*DOMString*/) : void;
 
 } // end of URL
 
-native class webkitURL extends URL {
+native final class webkitURL extends URL {
 }
 
-native class Touch {
+/** @see http://www.w3.org/TR/touch-events/ */
+native final class Touch {
 
 	__readonly__ var identifier : int/*long*/;
 	__readonly__ var target : EventTarget;
@@ -4283,21 +4582,21 @@ native class Touch {
 
 } // end of Touch
 
-native class TouchList {
+/** @see http://www.w3.org/TR/touch-events/ */
+native final class TouchList {
 
 	__readonly__ var length : int/*unsigned long*/;
 	function __native_index_operator__(
 		index : int/*unsigned long*/
-	) : MayBeUndefined.<Touch>;
+	) : Touch;
 	/* getter */
-	function item(
-		index : int/*unsigned long*/
-	) : MayBeUndefined.<Touch>;
+	function item(index : int/*unsigned long*/) : Touch;
 	function identifiedTouch(identifier : int/*long*/) : Touch;
 
 } // end of TouchList
 
-native class TouchEvent extends UIEvent {
+/** @see http://www.w3.org/TR/touch-events/ */
+native final class TouchEvent extends UIEvent {
 
 	__readonly__ var touches : TouchList;
 	__readonly__ var targetTouches : TouchList;
@@ -4309,7 +4608,8 @@ native class TouchEvent extends UIEvent {
 
 } // end of TouchEvent
 
-native class WebSocket extends EventTarget {
+/** @see http://www.w3.org/TR/websockets/ */
+native final class WebSocket extends EventTarget {
 
 	function constructor(url : string/*DOMString*/);
 	function constructor(
@@ -4354,7 +4654,8 @@ native class WebSocket extends EventTarget {
 
 } // end of WebSocket
 
-native class CloseEvent extends Event {
+/** @see http://www.w3.org/TR/websockets/ */
+native final class CloseEvent extends Event {
 
 	function constructor(type : string/*DOMString*/);
 	function constructor(
@@ -4368,7 +4669,8 @@ native class CloseEvent extends Event {
 
 } // end of CloseEvent
 
-native class CloseEventInit extends EventInit {
+/** @see http://www.w3.org/TR/websockets/ */
+native final class CloseEventInit extends EventInit {
 
 	var wasClean : boolean;
 	var code : int/*unsigned short*/;
@@ -4376,99 +4678,80 @@ native class CloseEventInit extends EventInit {
 
 } // end of CloseEventInit
 
+// alias PositionCallback = function(position:Position):void
+
+// alias PositionErrorCallback = function(positionError:PositionError):void
+
+/** @see http://dev.w3.org/geo/api/spec-source.html */
 native __fake__ class NavigatorGeolocation {
 
 	__readonly__ var geolocation : Geolocation;
 
 } // end of NavigatorGeolocation
 
-native __fake__ class Geolocation {
+/** @see http://dev.w3.org/geo/api/spec-source.html */
+native final __fake__ class Geolocation {
 
 	function getCurrentPosition(
-		successCallback : PositionCallback
+		successCallback : function(position:Position):void/*PositionCallback*/
 	) : void;
 	function getCurrentPosition(
-		successCallback : PositionCallback,
-		errorCallback : PositionErrorCallback
+		successCallback : function(position:Position):void/*PositionCallback*/,
+		errorCallback : function(positionError:PositionError):void/*PositionErrorCallback*/
 	) : void;
 	function getCurrentPosition(
-		successCallback : PositionCallback,
-		errorCallback : PositionErrorCallback,
+		successCallback : function(position:Position):void/*PositionCallback*/,
+		errorCallback : function(positionError:PositionError):void/*PositionErrorCallback*/,
 		options : PositionOptions
 	) : void;
 	function watchPosition(
-		successCallback : PositionCallback
+		successCallback : function(position:Position):void/*PositionCallback*/
 	) : int/*long*/;
 	function watchPosition(
-		successCallback : PositionCallback,
-		errorCallback : PositionErrorCallback
+		successCallback : function(position:Position):void/*PositionCallback*/,
+		errorCallback : function(positionError:PositionError):void/*PositionErrorCallback*/
 	) : int/*long*/;
 	function watchPosition(
-		successCallback : PositionCallback,
-		errorCallback : PositionErrorCallback,
+		successCallback : function(position:Position):void/*PositionCallback*/,
+		errorCallback : function(positionError:PositionError):void/*PositionErrorCallback*/,
 		options : PositionOptions
 	) : int/*long*/;
 	function clearWatch(watchId : int/*long*/) : void;
 
 } // end of Geolocation
 
-native __fake__ class PositionCallback {
-
-	function handleEvent(position : Position) : void;
-
-} // end of PositionCallback
-
-native __fake__ class PositionErrorCallback {
-
-	function handleEvent(error : PositionError) : void;
-
-} // end of PositionErrorCallback
-
-native __fake__ class PositionOptions {
+/** @see http://dev.w3.org/geo/api/spec-source.html */
+native final __fake__ class PositionOptions {
 
 	var enableHighAccuracy : boolean;
 	var timeout : int/*long*/;
 	var maximumAge : int/*long*/;
-	var requireCoords : boolean;
-	var requestAddress : boolean;
 
 } // end of PositionOptions
 
-native __fake__ class Position {
+/** @see http://dev.w3.org/geo/api/spec-source.html */
+native final __fake__ class Position {
 
 	__readonly__ var coords : Coordinates;
-	__readonly__ var address : Address;
 	__readonly__ var timestamp : number/*DOMTimeStamp*/;
 
 } // end of Position
 
-native __fake__ class Coordinates {
+/** @see http://dev.w3.org/geo/api/spec-source.html */
+native final __fake__ class Coordinates {
 
-	__readonly__ var latitude : number/*double?*/;
-	__readonly__ var longitude : number/*double?*/;
-	__readonly__ var altitude : number/*double?*/;
-	__readonly__ var accuracy : number/*double?*/;
-	__readonly__ var altitudeAccuracy : number/*double?*/;
-	__readonly__ var heading : number/*double?*/;
-	__readonly__ var speed : number/*double?*/;
-	__readonly__ var verticalSpeed : number/*double?*/;
+	__readonly__ var latitude : number/*double*/;
+	__readonly__ var longitude : number/*double*/;
+	__readonly__ var altitude : Nullable.<number>/*double?*/;
+	__readonly__ var accuracy : number/*double*/;
+	__readonly__ var altitudeAccuracy : Nullable.<number>/*double?*/;
+	__readonly__ var heading : Nullable.<number>/*double?*/;
+	__readonly__ var speed : Nullable.<number>/*double?*/;
 
 } // end of Coordinates
 
-native __fake__ class Address {
-
-	__readonly__ var country : string/*DOMString?*/;
-	__readonly__ var region : string/*DOMString?*/;
-	__readonly__ var county : string/*DOMString?*/;
-	__readonly__ var city : string/*DOMString?*/;
-	__readonly__ var street : string/*DOMString?*/;
-	__readonly__ var streetNumber : string/*DOMString?*/;
-	__readonly__ var premises : string/*DOMString?*/;
-	__readonly__ var postalCode : string/*DOMString?*/;
-
-} // end of Address
-
-native __fake__ class PositionError {
+/** @see http://dev.w3.org/geo/api/spec-source.html */
+native final __fake__ class PositionError {
 
 	static __readonly__ var PERMISSION_DENIED : int/*unsigned short*/;
 	       __readonly__ var PERMISSION_DENIED : int/*unsigned short*/;
@@ -4481,17 +4764,20 @@ native __fake__ class PositionError {
 
 } // end of PositionError
 
-native class Storage {
+/** @see http://dev.w3.org/html5/webstorage/ */
+native final class Storage {
 
 	__readonly__ var length : int/*unsigned long*/;
-	function key(index : int/*unsigned long*/) : string/*DOMString?*/;
+	function key(
+		index : int/*unsigned long*/
+	) : Nullable.<string>/*DOMString?*/;
 	function __native_index_operator__(
 		key : string/*DOMString*/
-	) : MayBeUndefined.<string/*DOMString*/>;
+	) : Nullable.<string>/*DOMString*/;
 	/* getter */
 	function getItem(
 		key : string/*DOMString*/
-	) : MayBeUndefined.<string/*DOMString*/>;
+	) : Nullable.<string>/*DOMString*/;
 	/* setter creator */
 	function setItem(
 		key : string/*DOMString*/,
@@ -4503,19 +4789,22 @@ native class Storage {
 
 } // end of Storage
 
+/** @see http://dev.w3.org/html5/webstorage/ */
 native __fake__ class WindowSessionStorage {
 
 	__readonly__ var sessionStorage : Storage;
 
 } // end of WindowSessionStorage
 
+/** @see http://dev.w3.org/html5/webstorage/ */
 native __fake__ class WindowLocalStorage {
 
 	__readonly__ var localStorage : Storage;
 
 } // end of WindowLocalStorage
 
-native class StorageEvent extends Event {
+/** @see http://dev.w3.org/html5/webstorage/ */
+native final class StorageEvent extends Event {
 
 	function constructor(type : string/*DOMString*/);
 	function constructor(
@@ -4523,34 +4812,27 @@ native class StorageEvent extends Event {
 		eventInitDict : StorageEventInit
 	);
 
-	__readonly__ var key : string/*DOMString?*/;
-	__readonly__ var oldValue : string/*DOMString?*/;
-	__readonly__ var newValue : string/*DOMString?*/;
+	__readonly__ var key : Nullable.<string>/*DOMString?*/;
+	__readonly__ var oldValue : Nullable.<string>/*DOMString?*/;
+	__readonly__ var newValue : Nullable.<string>/*DOMString?*/;
 	__readonly__ var url : string/*DOMString*/;
 	__readonly__ var storageArea : Storage;
 
 } // end of StorageEvent
 
-native class StorageEventInit extends EventInit {
+/** @see http://dev.w3.org/html5/webstorage/ */
+native final class StorageEventInit extends EventInit {
 
-	var key : string/*DOMString?*/;
-	var oldValue : string/*DOMString?*/;
-	var newValue : string/*DOMString?*/;
+	var key : Nullable.<string>/*DOMString?*/;
+	var oldValue : Nullable.<string>/*DOMString?*/;
+	var newValue : Nullable.<string>/*DOMString?*/;
 	var url : string/*DOMString*/;
 	var storageArea : Storage;
 
 } // end of StorageEventInit
 
-native __fake__ class NodeSelector {
-
-	function querySelector(selectors : string/*DOMString*/) : Element;
-	function querySelectorAll(
-		selectors : string/*DOMString*/
-	) : NodeList;
-
-} // end of NodeSelector
-
-native class MessageEvent extends Event {
+/** @see http://www.w3.org/TR/webmessaging/ */
+native final class MessageEvent extends Event {
 
 	function constructor(type : string/*DOMString*/);
 	function constructor(
@@ -4566,7 +4848,8 @@ native class MessageEvent extends Event {
 
 } // end of MessageEvent
 
-native class MessageEventInit extends EventInit {
+/** @see http://www.w3.org/TR/webmessaging/ */
+native final class MessageEventInit extends EventInit {
 
 	var data : variant/*any*/;
 	var origin : string/*DOMString*/;
@@ -4576,7 +4859,8 @@ native class MessageEventInit extends EventInit {
 
 } // end of MessageEventInit
 
-native class MessageChannel {
+/** @see http://www.w3.org/TR/webmessaging/ */
+native final class MessageChannel {
 
 	function constructor();
 
@@ -4585,7 +4869,8 @@ native class MessageChannel {
 
 } // end of MessageChannel
 
-native class MessagePort extends EventTarget {
+/** @see http://www.w3.org/TR/webmessaging/ */
+native final class MessagePort extends EventTarget {
 
 	function postMessage(message : variant/*any*/) : void;
 	function postMessage(
@@ -4601,6 +4886,7 @@ native class MessagePort extends EventTarget {
 
 } // end of MessagePort
 
+/** @see http://www.w3.org/TR/workers/ */
 native class WorkerGlobalScope extends EventTarget {
 
 	__readonly__ var self : WorkerGlobalScope;
@@ -4612,13 +4898,13 @@ native class WorkerGlobalScope extends EventTarget {
 
 	// implements WorkerUtils
 
-	function importScripts() : void;
-	function importScripts(urls : string/*DOMString...*/) : void;
+	function importScripts(...urls : string/*DOMString...*/) : void;
 	__readonly__ var navigator : WorkerNavigator;
 
 } // end of WorkerGlobalScope
 
-native class DedicatedWorkerGlobalScope extends WorkerGlobalScope {
+/** @see http://www.w3.org/TR/workers/ */
+native final class DedicatedWorkerGlobalScope extends WorkerGlobalScope {
 
 	function postMessage(message : variant/*any*/) : void;
 	function postMessage(
@@ -4629,7 +4915,8 @@ native class DedicatedWorkerGlobalScope extends WorkerGlobalScope {
 
 } // end of DedicatedWorkerGlobalScope
 
-native class SharedWorkerGlobalScope extends WorkerGlobalScope {
+/** @see http://www.w3.org/TR/workers/ */
+native final class SharedWorkerGlobalScope extends WorkerGlobalScope {
 
 	__readonly__ var name : string/*DOMString*/;
 	__readonly__ var applicationCache : ApplicationCache;
@@ -4637,7 +4924,8 @@ native class SharedWorkerGlobalScope extends WorkerGlobalScope {
 
 } // end of SharedWorkerGlobalScope
 
-native class ErrorEvent extends Event {
+/** @see http://www.w3.org/TR/workers/ */
+native final class ErrorEvent extends Event {
 
 	function constructor(type : string/*DOMString*/);
 	function constructor(
@@ -4651,7 +4939,8 @@ native class ErrorEvent extends Event {
 
 } // end of ErrorEvent
 
-native class ErrorEventInit extends EventInit {
+/** @see http://www.w3.org/TR/workers/ */
+native final class ErrorEventInit extends EventInit {
 
 	var message : string/*DOMString*/;
 	var filename : string/*DOMString*/;
@@ -4659,13 +4948,15 @@ native class ErrorEventInit extends EventInit {
 
 } // end of ErrorEventInit
 
+/** @see http://www.w3.org/TR/workers/ */
 native __fake__ class AbstractWorker {
 
 	var onerror : function(:Event):void/*Function?*/;
 
 } // end of AbstractWorker
 
-native class Worker extends EventTarget {
+/** @see http://www.w3.org/TR/workers/ */
+native final class Worker extends EventTarget {
 
 	function constructor(scriptURL : string/*DOMString*/);
 
@@ -4683,7 +4974,8 @@ native class Worker extends EventTarget {
 
 } // end of Worker
 
-native class SharedWorker extends EventTarget {
+/** @see http://www.w3.org/TR/workers/ */
+native final class SharedWorker extends EventTarget {
 
 	function constructor(scriptURL : string/*DOMString*/);
 	function constructor(
@@ -4699,35 +4991,26 @@ native class SharedWorker extends EventTarget {
 
 } // end of SharedWorker
 
-native __fake__ class WorkerUtils {
+/** @see http://www.w3.org/TR/workers/ */
+native __fake__ class WorkerUtils extends WindowBase64 {
 
-	function importScripts() : void;
-	function importScripts(urls : string/*DOMString...*/) : void;
+	function importScripts(...urls : string/*DOMString...*/) : void;
 	__readonly__ var navigator : WorkerNavigator;
-
-	// implements WindowBase64
-
-	function btoa(btoa : string/*DOMString*/) : string/*DOMString*/;
-	function atob(atob : string/*DOMString*/) : string/*DOMString*/;
 
 } // end of WorkerUtils
 
-native class WorkerNavigator {
-
-	// implements NavigatorID
-
-	__readonly__ var appName : string/*DOMString*/;
-	__readonly__ var appVersion : string/*DOMString*/;
-	__readonly__ var platform : string/*DOMString*/;
-	__readonly__ var userAgent : string/*DOMString*/;
+/** @see http://www.w3.org/TR/workers/ */
+native final class WorkerNavigator extends NavigatorID {
 
 	// implements NavigatorOnLine
 
+	/** @see http://www.w3.org/TR/html5/single-page.html */
 	__readonly__ var onLine : boolean;
 
 } // end of WorkerNavigator
 
-native class WorkerLocation {
+/** @see http://www.w3.org/TR/workers/ */
+native final class WorkerLocation {
 
 	// URL decomposition IDL attributes
 	__readonly__ var href : string/*DOMString*/;
@@ -4741,18 +5024,54 @@ native class WorkerLocation {
 
 } // end of WorkerLocation
 
-native class DOMParser {
+/** @see http://www.w3.org/TR/eventsource/ */
+native final class EventSource extends EventTarget {
+
+	function constructor(url : string/*DOMString*/);
+	function constructor(
+		url : string/*DOMString*/,
+		eventSourceInitDict : EventSourceInit
+	);
+
+	__readonly__ var url : string/*DOMString*/;
+	__readonly__ var withCredentials : boolean;
+	// ready state
+	static __readonly__ var CONNECTING : int/*unsigned short*/;
+	       __readonly__ var CONNECTING : int/*unsigned short*/;
+	static __readonly__ var OPEN : int/*unsigned short*/;
+	       __readonly__ var OPEN : int/*unsigned short*/;
+	static __readonly__ var CLOSED : int/*unsigned short*/;
+	       __readonly__ var CLOSED : int/*unsigned short*/;
+	__readonly__ var readyState : int/*unsigned short*/;
+	// networking
+	var onopen : function(:Event):void/*Function?*/;
+	var onmessage : function(:Event):void/*Function?*/;
+	var onerror : function(:Event):void/*Function?*/;
+	function close() : void;
+
+} // end of EventSource
+
+/** @see http://www.w3.org/TR/eventsource/ */
+native final class EventSourceInit {
+
+	var withCredentials : boolean;
+
+} // end of EventSourceInit
+
+/** @see http://html5.org/specs/dom-parsing.html */
+native final class DOMParser {
 
 	function constructor();
 
 	function parseFromString(
 		str : string/*DOMString*/,
 		type : string/*SupportedType*/
-	) : HTMLDocument/*Document*/;
+	) : Document;
 
 } // end of DOMParser
 
-native class XMLSerializer {
+/** @see http://html5.org/specs/dom-parsing.html */
+native final class XMLSerializer {
 
 	function constructor();
 
@@ -4760,7 +5079,8 @@ native class XMLSerializer {
 
 } // end of XMLSerializer
 
-native class ArrayBuffer {
+/** @see https://www.khronos.org/registry/typedarray/specs/latest/typedarray.idl */
+native final class ArrayBuffer extends Transferable {
 
 	function constructor(length : int/*unsigned long*/);
 
@@ -4771,11 +5091,10 @@ native class ArrayBuffer {
 		end : int/*long*/
 	) : ArrayBuffer;
 
-	// implements Transferable
-
 } // end of ArrayBuffer
 
-native class ArrayBufferView {
+/** @see https://www.khronos.org/registry/typedarray/specs/latest/typedarray.idl */
+native __fake__ class ArrayBufferView {
 
 	__readonly__ var buffer : ArrayBuffer;
 	__readonly__ var byteOffset : int/*unsigned long*/;
@@ -4783,7 +5102,8 @@ native class ArrayBufferView {
 
 } // end of ArrayBufferView
 
-native class Int8Array extends ArrayBufferView {
+/** @see https://www.khronos.org/registry/typedarray/specs/latest/typedarray.idl */
+native final class Int8Array extends ArrayBufferView {
 
 	function constructor(length : int/*unsigned long*/);
 	function constructor(array : Int8Array);
@@ -4805,11 +5125,9 @@ native class Int8Array extends ArrayBufferView {
 	__readonly__ var length : int/*unsigned long*/;
 	function __native_index_operator__(
 		index : int/*unsigned long*/
-	) : MayBeUndefined.<int/*byte*/>;
+	) : Nullable.<int>/*byte*/;
 	/* getter */
-	function get(
-		index : int/*unsigned long*/
-	) : MayBeUndefined.<int/*byte*/>;
+	function get(index : int/*unsigned long*/) : Nullable.<int>/*byte*/;
 	/* setter */
 	function set(
 		index : int/*unsigned long*/,
@@ -4837,6 +5155,7 @@ native class Int8Array extends ArrayBufferView {
 
 } // end of Int8Array
 
+/** @see https://www.khronos.org/registry/typedarray/specs/latest/typedarray.idl */
 native class Uint8Array extends ArrayBufferView {
 
 	function constructor(length : int/*unsigned long*/);
@@ -4859,11 +5178,11 @@ native class Uint8Array extends ArrayBufferView {
 	__readonly__ var length : int/*unsigned long*/;
 	function __native_index_operator__(
 		index : int/*unsigned long*/
-	) : MayBeUndefined.<int/*octet*/>;
+	) : Nullable.<int>/*octet*/;
 	/* getter */
 	function get(
 		index : int/*unsigned long*/
-	) : MayBeUndefined.<int/*octet*/>;
+	) : Nullable.<int>/*octet*/;
 	/* setter */
 	function set(
 		index : int/*unsigned long*/,
@@ -4891,7 +5210,8 @@ native class Uint8Array extends ArrayBufferView {
 
 } // end of Uint8Array
 
-native class Uint8ClampedArray extends Uint8Array {
+/** @see https://www.khronos.org/registry/typedarray/specs/latest/typedarray.idl */
+native final class Uint8ClampedArray extends Uint8Array {
 
 	function constructor(length : int/*unsigned long*/);
 	function constructor(array : Uint8ClampedArray);
@@ -4927,7 +5247,8 @@ native class Uint8ClampedArray extends Uint8Array {
 
 } // end of Uint8ClampedArray
 
-native class Int16Array extends ArrayBufferView {
+/** @see https://www.khronos.org/registry/typedarray/specs/latest/typedarray.idl */
+native final class Int16Array extends ArrayBufferView {
 
 	function constructor(length : int/*unsigned long*/);
 	function constructor(array : Int16Array);
@@ -4949,11 +5270,11 @@ native class Int16Array extends ArrayBufferView {
 	__readonly__ var length : int/*unsigned long*/;
 	function __native_index_operator__(
 		index : int/*unsigned long*/
-	) : MayBeUndefined.<int/*short*/>;
+	) : Nullable.<int>/*short*/;
 	/* getter */
 	function get(
 		index : int/*unsigned long*/
-	) : MayBeUndefined.<int/*short*/>;
+	) : Nullable.<int>/*short*/;
 	/* setter */
 	function set(
 		index : int/*unsigned long*/,
@@ -4981,7 +5302,8 @@ native class Int16Array extends ArrayBufferView {
 
 } // end of Int16Array
 
-native class Uint16Array extends ArrayBufferView {
+/** @see https://www.khronos.org/registry/typedarray/specs/latest/typedarray.idl */
+native final class Uint16Array extends ArrayBufferView {
 
 	function constructor(length : int/*unsigned long*/);
 	function constructor(array : Uint16Array);
@@ -5003,11 +5325,11 @@ native class Uint16Array extends ArrayBufferView {
 	__readonly__ var length : int/*unsigned long*/;
 	function __native_index_operator__(
 		index : int/*unsigned long*/
-	) : MayBeUndefined.<int/*unsigned short*/>;
+	) : Nullable.<int>/*unsigned short*/;
 	/* getter */
 	function get(
 		index : int/*unsigned long*/
-	) : MayBeUndefined.<int/*unsigned short*/>;
+	) : Nullable.<int>/*unsigned short*/;
 	/* setter */
 	function set(
 		index : int/*unsigned long*/,
@@ -5035,7 +5357,8 @@ native class Uint16Array extends ArrayBufferView {
 
 } // end of Uint16Array
 
-native class Int32Array extends ArrayBufferView {
+/** @see https://www.khronos.org/registry/typedarray/specs/latest/typedarray.idl */
+native final class Int32Array extends ArrayBufferView {
 
 	function constructor(length : int/*unsigned long*/);
 	function constructor(array : Int32Array);
@@ -5057,11 +5380,9 @@ native class Int32Array extends ArrayBufferView {
 	__readonly__ var length : int/*unsigned long*/;
 	function __native_index_operator__(
 		index : int/*unsigned long*/
-	) : MayBeUndefined.<int/*long*/>;
+	) : Nullable.<int>/*long*/;
 	/* getter */
-	function get(
-		index : int/*unsigned long*/
-	) : MayBeUndefined.<int/*long*/>;
+	function get(index : int/*unsigned long*/) : Nullable.<int>/*long*/;
 	/* setter */
 	function set(
 		index : int/*unsigned long*/,
@@ -5089,7 +5410,8 @@ native class Int32Array extends ArrayBufferView {
 
 } // end of Int32Array
 
-native class Uint32Array extends ArrayBufferView {
+/** @see https://www.khronos.org/registry/typedarray/specs/latest/typedarray.idl */
+native final class Uint32Array extends ArrayBufferView {
 
 	function constructor(length : int/*unsigned long*/);
 	function constructor(array : Uint32Array);
@@ -5111,11 +5433,11 @@ native class Uint32Array extends ArrayBufferView {
 	__readonly__ var length : int/*unsigned long*/;
 	function __native_index_operator__(
 		index : int/*unsigned long*/
-	) : MayBeUndefined.<int/*unsigned long*/>;
+	) : Nullable.<int>/*unsigned long*/;
 	/* getter */
 	function get(
 		index : int/*unsigned long*/
-	) : MayBeUndefined.<int/*unsigned long*/>;
+	) : Nullable.<int>/*unsigned long*/;
 	/* setter */
 	function set(
 		index : int/*unsigned long*/,
@@ -5143,7 +5465,8 @@ native class Uint32Array extends ArrayBufferView {
 
 } // end of Uint32Array
 
-native class Float32Array extends ArrayBufferView {
+/** @see https://www.khronos.org/registry/typedarray/specs/latest/typedarray.idl */
+native final class Float32Array extends ArrayBufferView {
 
 	function constructor(length : int/*unsigned long*/);
 	function constructor(array : Float32Array);
@@ -5164,11 +5487,11 @@ native class Float32Array extends ArrayBufferView {
 	__readonly__ var length : int/*unsigned long*/;
 	function __native_index_operator__(
 		index : int/*unsigned long*/
-	) : MayBeUndefined.<number/*float*/>;
+	) : Nullable.<number>/*float*/;
 	/* getter */
 	function get(
 		index : int/*unsigned long*/
-	) : MayBeUndefined.<number/*float*/>;
+	) : Nullable.<number>/*float*/;
 	/* setter */
 	function set(
 		index : int/*unsigned long*/,
@@ -5191,7 +5514,8 @@ native class Float32Array extends ArrayBufferView {
 
 } // end of Float32Array
 
-native class Float64Array extends ArrayBufferView {
+/** @see https://www.khronos.org/registry/typedarray/specs/latest/typedarray.idl */
+native final class Float64Array extends ArrayBufferView {
 
 	function constructor(length : int/*unsigned long*/);
 	function constructor(array : Float64Array);
@@ -5212,11 +5536,11 @@ native class Float64Array extends ArrayBufferView {
 	__readonly__ var length : int/*unsigned long*/;
 	function __native_index_operator__(
 		index : int/*unsigned long*/
-	) : MayBeUndefined.<number/*double*/>;
+	) : Nullable.<number>/*double*/;
 	/* getter */
 	function get(
 		index : int/*unsigned long*/
-	) : MayBeUndefined.<number/*double*/>;
+	) : Nullable.<number>/*double*/;
 	/* setter */
 	function set(
 		index : int/*unsigned long*/,
@@ -5239,7 +5563,8 @@ native class Float64Array extends ArrayBufferView {
 
 } // end of Float64Array
 
-native class DataView extends ArrayBufferView {
+/** @see https://www.khronos.org/registry/typedarray/specs/latest/typedarray.idl */
+native final class DataView extends ArrayBufferView {
 
 	function constructor(buffer : ArrayBuffer);
 	function constructor(
@@ -5378,7 +5703,8 @@ native class DataView extends ArrayBufferView {
 
 } // end of DataView
 
-native class CanvasRenderingContext2D {
+/** @see http://dev.w3.org/html5/2dcontext/ */
+native final class CanvasRenderingContext2D extends CanvasTransformation {
 
 	// back-reference to the canvas
 	__readonly__ var canvas : HTMLCanvasElement;
@@ -5587,32 +5913,6 @@ native class CanvasRenderingContext2D {
 		dirtyHeight : number/*double*/
 	) : void;
 
-	// implements CanvasTransformation
-
-	// transformations (default transform is the identity matrix)
-	function scale(x : number/*double*/, y : number/*double*/) : void;
-	function rotate(angle : number/*double*/) : void;
-	function translate(
-		x : number/*double*/,
-		y : number/*double*/
-	) : void;
-	function transform(
-		a : number/*double*/,
-		b : number/*double*/,
-		c : number/*double*/,
-		d : number/*double*/,
-		e : number/*double*/,
-		f : number/*double*/
-	) : void;
-	function setTransform(
-		a : number/*double*/,
-		b : number/*double*/,
-		c : number/*double*/,
-		d : number/*double*/,
-		e : number/*double*/,
-		f : number/*double*/
-	) : void;
-
 	// implements CanvasLineStyles
 
 	// line caps/joins
@@ -5686,6 +5986,7 @@ native class CanvasRenderingContext2D {
 
 } // end of CanvasRenderingContext2D
 
+/** @see http://dev.w3.org/html5/2dcontext/ */
 native __fake__ class CanvasTransformation {
 
 	// transformations (default transform is the identity matrix)
@@ -5714,6 +6015,7 @@ native __fake__ class CanvasTransformation {
 
 } // end of CanvasTransformation
 
+/** @see http://dev.w3.org/html5/2dcontext/ */
 native __fake__ class CanvasLineStyles {
 
 	// line caps/joins
@@ -5728,6 +6030,7 @@ native __fake__ class CanvasLineStyles {
 
 } // end of CanvasLineStyles
 
+/** @see http://dev.w3.org/html5/2dcontext/ */
 native __fake__ class CanvasText {
 
 	// text
@@ -5740,6 +6043,7 @@ native __fake__ class CanvasText {
 
 } // end of CanvasText
 
+/** @see http://dev.w3.org/html5/2dcontext/ */
 native __fake__ class CanvasPathMethods {
 
 	// shared path API methods
@@ -5791,7 +6095,8 @@ native __fake__ class CanvasPathMethods {
 
 } // end of CanvasPathMethods
 
-native class CanvasGradient {
+/** @see http://dev.w3.org/html5/2dcontext/ */
+native final class CanvasGradient {
 
 	// opaque object
 	function addColorStop(
@@ -5801,19 +6106,22 @@ native class CanvasGradient {
 
 } // end of CanvasGradient
 
-native class CanvasPattern {
+/** @see http://dev.w3.org/html5/2dcontext/ */
+native final class CanvasPattern {
 
 	// opaque object
 
 } // end of CanvasPattern
 
-native class TextMetrics {
+/** @see http://dev.w3.org/html5/2dcontext/ */
+native final class TextMetrics {
 
 	__readonly__ var width : number/*double*/;
 
 } // end of TextMetrics
 
-native class ImageData {
+/** @see http://dev.w3.org/html5/2dcontext/ */
+native final class ImageData {
 
 	__readonly__ var width : int/*unsigned long*/;
 	__readonly__ var height : int/*unsigned long*/;
@@ -5821,7 +6129,8 @@ native class ImageData {
 
 } // end of ImageData
 
-native class WebGLContextAttributes {
+/** @see https://www.khronos.org/registry/webgl/specs/latest/webgl.idl */
+native final class WebGLContextAttributes {
 
 	var alpha : boolean;
 	var depth : boolean;
@@ -5832,31 +6141,40 @@ native class WebGLContextAttributes {
 
 } // end of WebGLContextAttributes
 
+/** @see https://www.khronos.org/registry/webgl/specs/latest/webgl.idl */
 native class WebGLObject {
 }
 
-native class WebGLBuffer extends WebGLObject {
+/** @see https://www.khronos.org/registry/webgl/specs/latest/webgl.idl */
+native final class WebGLBuffer extends WebGLObject {
 }
 
-native class WebGLFramebuffer extends WebGLObject {
+/** @see https://www.khronos.org/registry/webgl/specs/latest/webgl.idl */
+native final class WebGLFramebuffer extends WebGLObject {
 }
 
-native class WebGLProgram extends WebGLObject {
+/** @see https://www.khronos.org/registry/webgl/specs/latest/webgl.idl */
+native final class WebGLProgram extends WebGLObject {
 }
 
-native class WebGLRenderbuffer extends WebGLObject {
+/** @see https://www.khronos.org/registry/webgl/specs/latest/webgl.idl */
+native final class WebGLRenderbuffer extends WebGLObject {
 }
 
-native class WebGLShader extends WebGLObject {
+/** @see https://www.khronos.org/registry/webgl/specs/latest/webgl.idl */
+native final class WebGLShader extends WebGLObject {
 }
 
-native class WebGLTexture extends WebGLObject {
+/** @see https://www.khronos.org/registry/webgl/specs/latest/webgl.idl */
+native final class WebGLTexture extends WebGLObject {
 }
 
-native class WebGLUniformLocation {
+/** @see https://www.khronos.org/registry/webgl/specs/latest/webgl.idl */
+native final class WebGLUniformLocation {
 }
 
-native class WebGLActiveInfo {
+/** @see https://www.khronos.org/registry/webgl/specs/latest/webgl.idl */
+native final class WebGLActiveInfo {
 
 	__readonly__ var size : int/*GLint*/;
 	__readonly__ var type : int/*GLenum*/;
@@ -5864,7 +6182,8 @@ native class WebGLActiveInfo {
 
 } // end of WebGLActiveInfo
 
-native class WebGLShaderPrecisionFormat {
+/** @see https://www.khronos.org/registry/webgl/specs/latest/webgl.idl */
+native final class WebGLShaderPrecisionFormat {
 
 	__readonly__ var rangeMin : int/*GLint*/;
 	__readonly__ var rangeMax : int/*GLint*/;
@@ -5872,7 +6191,8 @@ native class WebGLShaderPrecisionFormat {
 
 } // end of WebGLShaderPrecisionFormat
 
-native class WebGLRenderingContext {
+/** @see https://www.khronos.org/registry/webgl/specs/latest/webgl.idl */
+native final class WebGLRenderingContext {
 
 	/* ClearBufferMask */
 	static __readonly__ var DEPTH_BUFFER_BIT : int/*GLenum*/;
@@ -6765,7 +7085,7 @@ native class WebGLRenderingContext {
 	) : variant/*any*/;
 	function getProgramInfoLog(
 		program : WebGLProgram
-	) : string/*DOMString?*/;
+	) : Nullable.<string>/*DOMString?*/;
 	function getRenderbufferParameter(
 		target : int/*GLenum*/,
 		pname : int/*GLenum*/
@@ -6780,10 +7100,10 @@ native class WebGLRenderingContext {
 	) : WebGLShaderPrecisionFormat;
 	function getShaderInfoLog(
 		shader : WebGLShader
-	) : string/*DOMString?*/;
+	) : Nullable.<string>/*DOMString?*/;
 	function getShaderSource(
 		shader : WebGLShader
-	) : string/*DOMString?*/;
+	) : Nullable.<string>/*DOMString?*/;
 	function getTexParameter(
 		target : int/*GLenum*/,
 		pname : int/*GLenum*/
@@ -7217,7 +7537,8 @@ native class WebGLRenderingContext {
 
 } // end of WebGLRenderingContext
 
-native class WebGLContextEvent extends Event {
+/** @see https://www.khronos.org/registry/webgl/specs/latest/webgl.idl */
+native final class WebGLContextEvent extends Event {
 
 	function constructor(type : string/*DOMString*/);
 	function constructor(
@@ -7229,66 +7550,42 @@ native class WebGLContextEvent extends Event {
 
 } // end of WebGLContextEvent
 
-native class WebGLContextEventInit extends EventInit {
+/** @see https://www.khronos.org/registry/webgl/specs/latest/webgl.idl */
+native final class WebGLContextEventInit extends EventInit {
 
 	var statusMessage : string/*DOMString*/;
 
 } // end of WebGLContextEventInit
 
+// alias TimerHandler = function():void
+
+// alias FrameRequestCallback = function(time:number/*DOMTimeStamp*/):void
+
 native __fake__ class WindowAnimationTiming {
 
 	function requestAnimationFrame(
-		callback : function(:number):void/*FrameRequestCallback*/
+		callback : function(time:number/*DOMTimeStamp*/):void/*FrameRequestCallback*/
 	) : int/*long*/;
 	function cancelAnimationFrame(handle : int/*long*/) : void;
 	// vender's extension
 	function webkitRequestAnimationFrame(
-		callback : function(:number):void/*FrameRequestCallback*/
+		callback : function(time:number/*DOMTimeStamp*/):void/*FrameRequestCallback*/
 	) : int/*long*/;
 	function webkitCancelAnimationFrame(handle : int/*long*/) : void;
 	function mozRequestAnimationFrame(
-		callback : function(:number):void/*FrameRequestCallback*/
+		callback : function(time:number/*DOMTimeStamp*/):void/*FrameRequestCallback*/
 	) : int/*long*/;
 	function mozCancelAnimationFrame(handle : int/*long*/) : void;
 
 } // end of WindowAnimationTiming
 
-native __fake__ class CanvasPixelArray {
+native final __fake__ class CanvasPixelArray {
 
 	__readonly__ var length : int/*unsigned long*/;
 	function __native_index_operator__(
 		index : int/*unsigned long*/
-	) : MayBeUndefined.<int/*octet*/>;
+	) : Nullable.<int>/*octet*/;
 
 } // end of CanvasPixelArray
 
-/*
-end of generated files from:
-	http://www.w3.org/TR/dom/
-	http://www.w3.org/TR/DOM-Level-2-Views/idl/views.idl
-	http://www.w3.org/TR/DOM-Level-3-Events/
-	idl2jsx/extra/events.idl
-	http://www.w3.org/TR/XMLHttpRequest/
-	http://dev.w3.org/csswg/cssom/
-	http://dev.w3.org/csswg/cssom-view/
-	idl2jsx/extra/chrome.idl
-	idl2jsx/extra/firefox.idl
-	http://www.w3.org/TR/html5/single-page.html
-	http://www.w3.org/TR/FileAPI/
-	idl2jsx/extra/file.idl
-	http://www.w3.org/TR/touch-events/
-	http://dev.w3.org/html5/websockets/
-	http://dev.w3.org/geo/api/spec-source-v2.html
-	http://dev.w3.org/html5/webstorage/
-	http://www.w3.org/TR/selectors-api/
-	http://www.w3.org/TR/webmessaging/
-	http://www.w3.org/TR/workers/
-	http://html5.org/specs/dom-parsing.html
-	https://www.khronos.org/registry/typedarray/specs/latest/typedarray.idl
-	http://dev.w3.org/html5/2dcontext/
-	https://www.khronos.org/registry/webgl/specs/latest/webgl.idl
-	idl2jsx/extra/timers.idl
-	idl2jsx/extra/animation-timing.idl
-	idl2jsx/extra/legacy.idl
-*/
 

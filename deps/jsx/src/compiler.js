@@ -30,15 +30,77 @@ eval(Class.$import("./util"));
 
 "use strict";
 
+var CompletionRequest = exports.CompletionRequest = Class.extend({
+
+	constructor: function (lineNumber, columnOffset) {
+		this._lineNumber = lineNumber;
+		this._columnOffest = columnOffset;
+		this._candidates = [];
+	},
+
+	getLineNumber: function () {
+		return this._lineNumber;
+	},
+
+	getColumnOffset: function () {
+		return this._columnOffest;
+	},
+
+	isInRange: function (lineNumber, columnOffset, length) {
+		if (lineNumber != this._lineNumber)
+			return -1;
+		if (columnOffset <= this._columnOffest && this._columnOffest <= columnOffset + length) {
+			return this._columnOffest - columnOffset;
+		}
+		return -1;
+	},
+
+	pushCandidates: function (candidates) {
+		this._candidates.push(candidates);
+	},
+
+	getCandidates: function () {
+		var results = [];
+		// fetch the list
+		this._candidates.forEach(function (candidates) {
+			var rawCandidates = [];
+			candidates.getCandidates(rawCandidates);
+			var prefix = candidates.getPrefix();
+			rawCandidates.forEach(function (s) {
+				if (prefix == "" && s.substring(0, 2) == "__" && s != "__noconvert__") {
+					// skip hidden keywords
+				} else if (s.substring(0, prefix.length) == prefix) {
+					var left = s.substring(prefix.length);
+					if (left.length != 0) {
+						results.push(left);
+					}
+				}
+			});
+		});
+		// sort, and unique
+		results = results.sort();
+		for (var i = 1; i < results.length;) {
+			if (results[i - 1] == results[i])
+				results.splice(i - 1, 1);
+			else
+				++i;
+		}
+		return results;
+	}
+
+});
+
 var Compiler = exports.Compiler = Class.extend({
 
 	$MODE_COMPILE: 0,
 	$MODE_PARSE: 1,
+	$MODE_COMPLETE: 2,
 
 	constructor: function (platform) {
 		this._platform = platform;
 		this._mode = Compiler.MODE_COMPILE;
 		this._optimizer = null;
+		this._warningFilters = [];
 		this._parsers = [];
 		this._fileCache = {};
 		this._searchPaths = [ this._platform.getRoot() + "/lib/common" ];
@@ -72,14 +134,14 @@ var Compiler = exports.Compiler = Class.extend({
 		this._optimizer = optimizer;
 	},
 
-	setEnableInlining: function (mode) {
-		this._enableInlining = mode;
+	getWarningFilters: function () {
+		return this._warningFilters;
 	},
 
-	addSourceFile: function (token, path) {
+	addSourceFile: function (token, path, completionRequest) {
 		var parser;
 		if ((parser = this.findParser(path)) == null) {
-			parser = new Parser(token, path);
+			parser = new Parser(token, path, completionRequest);
 			this._parsers.push(parser);
 		}
 		return parser;
@@ -97,8 +159,8 @@ var Compiler = exports.Compiler = Class.extend({
 		// parse all files
 		for (var i = 0; i < this._parsers.length; ++i) {
 			if (! this.parseFile(errors, this._parsers[i])) {
-				this._printErrors(errors);
-				return false;
+				if (! this._handleErrors(errors))
+					return false;
 			}
 		}
 		switch (this._mode) {
@@ -107,37 +169,29 @@ var Compiler = exports.Compiler = Class.extend({
 		}
 		// resolve imports
 		this._resolveImports(errors);
-		if (errors.length != 0) {
-			this._printErrors(errors);
+		if (! this._handleErrors(errors))
 			return false;
-		}
 		// register backing class for primitives
 		var builtins = this.findParser(this._platform.getRoot() + "/lib/built-in.jsx");
 		BooleanType._classDef = builtins.lookup(errors, null, "Boolean");
 		NumberType._classDef = builtins.lookup(errors, null, "Number");
 		StringType._classDef = builtins.lookup(errors, null, "String");
 		FunctionType._classDef = builtins.lookup(errors, null, "Function");
-		if (errors.length != 0) {
-			this._printErrors(errors);
+		if (! this._handleErrors(errors))
 			return false;
-		}
 		// template instantiation
 		this._instantiateTemplates(errors);
-		if (errors.length != 0) {
-			this._printErrors(errors);
+		if (! this._handleErrors(errors))
 			return false;
-		}
 		// semantic analysis
 		this._resolveTypes(errors);
-		if (errors.length != 0) {
-			this._printErrors(errors);
+		if (! this._handleErrors(errors))
 			return false;
-		}
 		this._analyze(errors);
-		if (errors.length != 0) {
-			this._printErrors(errors);
+		if (! this._handleErrors(errors))
 			return false;
-		}
+		if(this._mode == Compiler.MODE_COMPLETE)
+			return true;
 		// optimization
 		this._optimize();
 		// TODO peep-hole and dead store optimizations, etc.
@@ -172,8 +226,6 @@ var Compiler = exports.Compiler = Class.extend({
 			return false;
 		// parse
 		parser.parse(content, errors);
-		if (errors.length != 0)
-			return false;
 		// register imported files
 		if (this._mode != Compiler.MODE_PARSE) {
 			var imports = parser.getImports();
@@ -202,7 +254,7 @@ var Compiler = exports.Compiler = Class.extend({
 					&& files[i].substring(files[i].length - imprt.getSuffix().length) == imprt.getSuffix()) {
 					var path = resolvedDir + "/" + files[i];
 					if (path != parser.getPath()) {
-						var parser = this.addSourceFile(imprt.getFilenameToken(), resolvedDir + "/" + files[i]);
+						var parser = this.addSourceFile(imprt.getFilenameToken(), resolvedDir + "/" + files[i], null);
 						imprt.addSource(parser);
 						found = true;
 					}
@@ -219,7 +271,7 @@ var Compiler = exports.Compiler = Class.extend({
 				errors.push(new CompileError(imprt.getFilenameToken(), "cannot import itself"));
 				return false;
 			}
-			var parser = this.addSourceFile(imprt.getFilenameToken(), path);
+			var parser = this.addSourceFile(imprt.getFilenameToken(), path, null);
 			imprt.addSource(parser);
 		}
 		return true;
@@ -283,6 +335,11 @@ var Compiler = exports.Compiler = Class.extend({
 					(function (errors, request) {
 						return this._instantiateTemplate(errors, request, true);
 					}).bind(this)));
+		}
+		// nested instantiation
+		var requests = request.getInstantiationRequests();
+		for (var i = 0; i < requests.length; ++i) {
+			this._instantiateTemplate(errors, parser, requests[i], resolveImmmediately);
 		}
 		// return
 		return classDef;
@@ -354,9 +411,9 @@ var Compiler = exports.Compiler = Class.extend({
 			throw new Error("logic error, could not find class definition of '" + deps[0].className() + "'");
 		};
 		for (var i = 0; i < classDefs.length;) {
-			var deps = classDefs[i].implementClassDefs().concat([]);
-			if (classDefs[i].extendClassDef() != null)
-				deps.unshift(classDefs[i].extendClassDef());
+			var deps = classDefs[i].implementTypes().map(function (t) { return t.getClassDef(); }).concat([]);
+			if (classDefs[i].extendType() != null)
+				deps.unshift(classDefs[i].extendType().getClassDef());
 			var maxIndexOfClasses = getMaxIndexOfClasses(deps);
 			if (maxIndexOfClasses > i) {
 				classDefs.splice(maxIndexOfClasses + 1, 0, classDefs[i]);
@@ -376,9 +433,44 @@ var Compiler = exports.Compiler = Class.extend({
 				classDefs[i].setOutputClassName(className);
 			}
 		}
+		// escape the instantiated class names
+		for (var i = 0; i < classDefs.length; ++i) {
+			if ((classDefs[i].flags() & ClassDefinition.IS_NATIVE) == 0
+				&& classDefs[i] instanceof InstantiatedClassDefinition) {
+				classDefs[i].setOutputClassName(
+					classDefs[i].getOutputClassName().replace(/\.</g, "$$").replace(/>/g, "$E").replace(/,\s*/g,"$"));
+			}
+		}
 		// emit
 		this._emitter.emit(classDefs);
-		this._output = this._emitter.getOutput();
+	},
+
+	_handleErrors: function (errors) {
+		// ignore all messages
+		if (this._mode == Compiler.MODE_COMPLETE) {
+			errors.splice(0, errors.length);
+			return true;
+		}
+		// print issues
+		var isFatal = false;
+		errors.forEach(function (error) {
+			if (error instanceof CompileWarning) {
+				var doWarn = null;
+				for (var i = 0; i < this._warningFilters.length; ++i) {
+					if ((doWarn = this._warningFilters[i](error)) !== null)
+						break;
+				}
+				if (doWarn !== false) {
+					this._platform.error(error.format(this));
+				}
+			} else {
+				this._platform.error(error.format(this));
+				isFatal = true;
+			}
+		}.bind(this));
+		// clear all errors
+		errors.splice(0, errors.length);
+		return ! isFatal;
 	},
 
 	_printErrors: function (errors) {

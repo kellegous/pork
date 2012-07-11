@@ -1,10 +1,10 @@
 /*EXPECTED
 undefined
-detected misuse of 'undefined' as type 'number'
+null access
 */
 
 class Test {
-	static function f(n : MayBeUndefined.<number>) : void {
+	static function f(n : Nullable.<number>) : void {
 		log n;
 	}
 	static function g(n : number) : void {

@@ -29,7 +29,7 @@ native class Object {
 // 15.2
 native final class Map.<T> {
 
-	function __native_index_operator__(key : string) : MayBeUndefined.<T>;
+	function __native_index_operator__(key : string) : Nullable.<T>;
 
 	// 15.2.4
 	function hasOwnProperty(key : string) : boolean;
@@ -47,53 +47,54 @@ native final class Array.<T> {
 	function constructor();
 	function constructor(length : number);
 
-	function __native_index_operator__(n : number) : MayBeUndefined.<T>;
+	function __native_index_operator__(n : number) : Nullable.<T>;
 
 	// 15.4.4
 	override function toString() : string;
 	function toLocaleString() : string;
-	function concat(a : Array.<T>) : Array.<T>; // FIXME more arguments
+	function concat(...a : Array.<T>) : Array.<T>;
 	function join() : string;
 	function join(separator : string) : string;
-	function pop() : MayBeUndefined.<T>;
-	function push(item : T) : int; // FIXME more arguments
+	function pop() : Nullable.<T>;
+	function push(...item : T) : int;
 	function reverse() : Array.<T>;
-	function shift() : MayBeUndefined.<T>;
+	function shift() : Nullable.<T>;
 	function slice(start : int) : Array.<T>;
 	function slice(start : int, end : int) : Array.<T>;
 	function sort() : Array.<T>;
-	function sort(comparefn : function (x : MayBeUndefined.<T>, y : MayBeUndefined.<T>) : int) : Array.<T>;
-	function sort(comparefn : function (x : MayBeUndefined.<T>, y : MayBeUndefined.<T>) : number) : Array.<T>;
-	// FIXME splice(start, deleteCount, items...)
-	function splice(start : int, deleteCount : int) : Array.<T>;
-	function splice(start : int, deleteCount : int, item : T) : Array.<T>;
-	function unshift(item : T) : int; // FIXME more arguments
+	function sort(comparefn : function (x : Nullable.<T>, y : Nullable.<T>) : int) : Array.<T>;
+	function splice(start : int, deleteCount : int, ...item : T) : Array.<T>;
+	function unshift(...item : T) : int;
 
 	// 15.4.4 (ES5)
-	function indexOf(value : MayBeUndefined.<T>) : number;
-	function indexOf(value : MayBeUndefined.<T>, fromIndex : number) : number;
-	function lastIndexOf(value : MayBeUndefined.<T>) : number;
-	function lastIndexOf(value : MayBeUndefined.<T>, fromIndex : number) : number;
-	function every(callbackfn : function(value : MayBeUndefined.<T>) : boolean) : boolean;
-	function every(callbackfn : function(value : MayBeUndefined.<T>, index : number) : boolean) : boolean;
-	function every(callbackfn : function(value : MayBeUndefined.<T>, index : number, array : Array.<T>) : boolean) : boolean;
-	function some(callbackfn : function(value : MayBeUndefined.<T>) : boolean) : boolean;
-	function some(callbackfn : function(value : MayBeUndefined.<T>, index : number) : boolean) : boolean;
-	function some(callbackfn : function(value : MayBeUndefined.<T>, index : number, array : Array.<T>) : boolean) : boolean;
-	function forEach(callbackfn : function(value : MayBeUndefined.<T>) : void) : void;
-	function forEach(callbackfn : function(value : MayBeUndefined.<T>, index : number) : void) : void;
-	function forEach(callbackfn : function(value : MayBeUndefined.<T>, index : number, array : Array.<T>) : void) : void;
-	function map(callbackfn : function(value : MayBeUndefined.<T>) : MayBeUndefined.<T>) : Array.<T>;
-	function map(callbackfn : function(value : MayBeUndefined.<T>, index : number) : MayBeUndefined.<T>) : Array.<T>;
-	function map(callbackfn : function(value : MayBeUndefined.<T>, index : number, array : Array.<T>) : MayBeUndefined.<T>) : Array.<T>;
-	function filter(callbackfn : function(value : MayBeUndefined.<T>) : boolean) : Array.<T>;
-	function filter(callbackfn : function(value : MayBeUndefined.<T>, index : number) : boolean) : Array.<T>;
-	function filter(callbackfn : function(value : MayBeUndefined.<T>, index : number, array : Array.<T>) : boolean) : Array.<T>;
+	function indexOf(value : Nullable.<T>) : number;
+	function indexOf(value : Nullable.<T>, fromIndex : number) : number;
+	function lastIndexOf(value : Nullable.<T>) : number;
+	function lastIndexOf(value : Nullable.<T>, fromIndex : number) : number;
+	function every(callbackfn : function(value : Nullable.<T>) : boolean) : boolean;
+	function every(callbackfn : function(value : Nullable.<T>, index : number) : boolean) : boolean;
+	function every(callbackfn : function(value : Nullable.<T>, index : number, array : Array.<T>) : boolean) : boolean;
+	function some(callbackfn : function(value : Nullable.<T>) : boolean) : boolean;
+	function some(callbackfn : function(value : Nullable.<T>, index : number) : boolean) : boolean;
+	function some(callbackfn : function(value : Nullable.<T>, index : number, array : Array.<T>) : boolean) : boolean;
+	inline function forEach(callbackfn : function(value : Nullable.<T>) : void) : void {
+		for (var i in this) {
+			callbackfn(this[i]);
+		}
+	}
+	function forEach(callbackfn : function(value : Nullable.<T>, index : number) : void) : void;
+	function forEach(callbackfn : function(value : Nullable.<T>, index : number, array : Array.<T>) : void) : void;
+	function map(callbackfn : function(value : Nullable.<T>) : Nullable.<T>) : Array.<T>;
+	function map(callbackfn : function(value : Nullable.<T>, index : number) : Nullable.<T>) : Array.<T>;
+	function map(callbackfn : function(value : Nullable.<T>, index : number, array : Array.<T>) : Nullable.<T>) : Array.<T>;
+	function filter(callbackfn : function(value : Nullable.<T>) : boolean) : Array.<T>;
+	function filter(callbackfn : function(value : Nullable.<T>, index : number) : boolean) : Array.<T>;
+	function filter(callbackfn : function(value : Nullable.<T>, index : number, array : Array.<T>) : boolean) : Array.<T>;
 
-	function reduce(callbackfn : function(previousValue : MayBeUndefined.<T>, currentValue : MayBeUndefined.<T>) : MayBeUndefined.<T>) : Array.<T>;
-	function reduce(callbackfn : function(previousValue : MayBeUndefined.<T>, currentValue : MayBeUndefined.<T>) : MayBeUndefined.<T>, initialValue : T) : Array.<T>;
-	function reduceRight(callbackfn : function(previousValue : MayBeUndefined.<T>, currentValue : MayBeUndefined.<T>) : MayBeUndefined.<T>) : Array.<T>;
-	function reduceRight(callbackfn : function(previousValue : MayBeUndefined.<T>, currentValue : MayBeUndefined.<T>) : MayBeUndefined.<T>, initialValue : T) : Array.<T>;
+	function reduce(callbackfn : function(previousValue : Nullable.<T>, currentValue : Nullable.<T>) : Nullable.<T>) : Array.<T>;
+	function reduce(callbackfn : function(previousValue : Nullable.<T>, currentValue : Nullable.<T>) : Nullable.<T>, initialValue : T) : Array.<T>;
+	function reduceRight(callbackfn : function(previousValue : Nullable.<T>, currentValue : Nullable.<T>) : Nullable.<T>) : Array.<T>;
+	function reduceRight(callbackfn : function(previousValue : Nullable.<T>, currentValue : Nullable.<T>) : Nullable.<T>, initialValue : T) : Array.<T>;
 
 	// 15.4.5
 	var length : int;
@@ -108,14 +109,14 @@ native final class String {
 	function constructor(s : String);
 
 	// 15.5.3
-	static function fromCharCode(char0 : int) : string; // FIXME support vararg
+	static function fromCharCode(...charN : int) : string;
 
 	// 15.5.4
 	override function toString() : string;
 	function valueOf() : string;
 	function charAt(pos : int) : string;
-	function charCodeAt(pos : int) : int;
-	function concat(string1 : String) : string; // FIXME support vararg
+	function charCodeAt(pos : int) : number;
+	function concat(...stringN : String) : string;
 	function indexOf(searchString : string) : int;
 	function indexOf(searchString : string, position : int) : int;
 	function lastIndexOf(searchString : string) : int;
@@ -150,6 +151,13 @@ native final class String {
 	// removed: use substring() instead
 	// function substr(start : int) : string;
 	// function substr(start : int, length : int) : string;
+
+	// 15.1.3 URI Handling Function Properties
+	static function encodeURIComponent(str : string) : string;
+	static function decodeURIComponent(str : string) : string;
+	static function encodeURI(str : string) : string;
+	static function decodeURI(str : string) : string;
+
 }
 
 // 15.6
@@ -213,7 +221,9 @@ native final class Math {
 	static const SQRT2 = 1.4142135623730951;
 
 	// 15.8.2
-	static function abs(x :number) :number;
+	static function abs(x :number) :number {
+		return x >= 0 ? x : -x;
+	}
 	static function acos(x :number) :number;
 	static function asin(x :number) :number;
 	static function atan(x :number) :number;
@@ -223,13 +233,10 @@ native final class Math {
 	static function exp(x :number) :number;
 	static function floor(x :number) :number;
 	static function log(x :number) :number;
-	// FIXME: ECMA-262's max() and min() take zero or more arguments
-	static function max(value1 :number, value2 :number) :number {
-		return value1 >= value2 ? value1 : value2;
-	}
-	static function min(value1 :number, value2 :number) :number {
-		return value1 <= value2 ? value1 : value2;
-	}
+	static function max(value1 : number, value2 : number, value3 : number, ...valueN : number) : number;
+	static function max(value1 : number) : number;
+	static function min(value1 : number, value2 : number, value3 : number, ...valueN : number) : number;
+	static function min(value1 : number) : number;
 	static function pow(x :number, y :number) :number;
 	static function random() :number;
 	static function round(x :number) :number;
@@ -237,6 +244,13 @@ native final class Math {
 	static function sqrt(x :number) :number;
 	static function tan(x :number) :number;
 
+	// optimized (inlined) version for two-arg min/max
+	static function max(value1 :number, value2 :number) :number {
+		return value1 >= value2 ? value1 : value2;
+	}
+	static function min(value1 :number, value2 :number) :number {
+		return value1 <= value2 ? value1 : value2;
+	}
 }
 
 // 15.9
@@ -302,6 +316,8 @@ native final class Date {
 	function getUTCMonth() :number;
 	function getDate() :number;
 	function getUTCDate() :number;
+	function getDay() :number;
+	function getUTCDay() :number;
 	function getHours() :number;
 	function getUTCHours() :number;
 	function getMinutes() :number;
@@ -371,23 +387,33 @@ native class Error {
 }
 
 native class EvalError extends Error {
+	function constructor();
+	function constructor(message : string);
 }
 
 native class RangeError extends Error {
+	function constructor();
+	function constructor(message : string);
 }
 
 native class ReferenceError extends Error {
+	function constructor();
+	function constructor(message : string);
 }
 
 native class SyntaxError extends Error {
+	function constructor();
+	function constructor(message : string);
 }
 
 native class TypeError extends Error {
+	function constructor();
+	function constructor(message : string);
 }
 
 // 5.12
 
-native class JSON {
+native final class JSON {
 
 	static function parse(text : string) : variant;
 	static function parse(text : string, reviver : function(key:string, value:variant):variant) : variant;
@@ -396,6 +422,12 @@ native class JSON {
 	static function stringify(value : variant, replacer : function(key:string,value:variant):variant) : string;
 	static function stringify(value : variant, replacer : function(key:string,value:variant):variant, space : int) : string;
 
+}
+
+native final class JSX {
+	static function profilerIsRunning() : boolean;
+	static function getProfileResults() : variant;
+	static function postProfileResults(url : string) : void;
 }
 
 // vim: set noexpandtab:

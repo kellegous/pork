@@ -113,6 +113,8 @@ var Optimizer = exports.Optimizer = Class.extend({
 				this._commands.push(new _InlineOptimizeCommand());
 			} else if (cmd == "return-if") {
 				this._commands.push(new _ReturnIfOptimizeCommand());
+			} else if (cmd == "array-length") {
+				this._commands.push(new _ArrayLengthOptimizeCommand());
 			} else if (cmd == "dump-logs") {
 				this._dumpLogs = true;
 			} else {
@@ -205,6 +207,22 @@ var _OptimizeCommand = exports._OptimizeCommand = Class.extend({
 		throw new Error("if you are going to use the stash, you need to override this function");
 	},
 
+	createVar: function (funcDef, type, baseName) {
+		var locals = funcDef.getLocals();
+		var nameExists = function (n) {
+			for (var i = 0; i < locals.length; ++i)
+				if (locals[i].getName().getValue() == n)
+					return true;
+			return false;
+		}
+		for (var i = 0; nameExists(baseName + "$" + i); ++i)
+			;
+		var newLocal = new LocalVariable(new Token(baseName + "$" + i, true), type);
+		locals.push(newLocal);
+		this.log("rewriting " + baseName + " to " + newLocal.getName().getValue());
+		return newLocal;
+	},
+
 	log: function (message) {
 		this._optimizer.log("[" + this._identifier + "] " + message);
 	},
@@ -247,6 +265,18 @@ var _FunctionOptimizeCommand = exports._FunctionOptimizeCommand = _OptimizeComma
 
 });
 
+var _LinkTimeOptimizationCommandStash = exports._LinkTimeOptimizationCommandStash = Class.extend({
+
+	constructor: function () {
+		this.extendedBy = [];
+	},
+
+	clone: function () {
+		throw new Error("not supported");
+	}
+
+});
+
 var _LinkTimeOptimizationCommand = exports._LinkTimeOptimizationCommand = _OptimizeCommand.extend({
 
 	$IDENTIFIER: "lto",
@@ -256,18 +286,16 @@ var _LinkTimeOptimizationCommand = exports._LinkTimeOptimizationCommand = _Optim
 	},
 
 	_createStash: function () {
-		return {
-			extendedBy: []
-		};
+		return new _LinkTimeOptimizationCommandStash();
 	},
 
 	performOptimization: function () {
 		// set extendedBy for every class
 		this.getCompiler().forEachClassDef(function (parser, classDef) {
-			if (classDef.extendClassDef() != null)
-				this.getStash(classDef.extendClassDef()).extendedBy.push(classDef);
-			for (var i = 0; i < classDef.implementClassDefs().length; ++i)
-				this.getStash(classDef.implementClassDefs()[i]).extendedBy.push(classDef);
+			if (classDef.extendType() != null)
+				this.getStash(classDef.extendType().getClassDef()).extendedBy.push(classDef);
+			for (var i = 0; i < classDef.implementTypes().length; ++i)
+				this.getStash(classDef.implementTypes()[i].getClassDef()).extendedBy.push(classDef);
 			return true;
 		}.bind(this));
 		// mark classes / functions that are not derived / overridden as final
@@ -295,7 +323,7 @@ var _LinkTimeOptimizationCommand = exports._LinkTimeOptimizationCommand = _Optim
 						// mark functions that are not being overridden as final
 						if (funcDef.getStatements() == null)
 							throw new Error("a non-native, non-abstract function with out function body?");
-						var overrides = this._getOverrides(this.getStash(classDef).extendedBy, funcDef.name(), funcDef.getArgumentTypes());
+						var overrides = this._getOverrides(classDef, this.getStash(classDef).extendedBy, funcDef.name(), funcDef.getArgumentTypes());
 						if (overrides.length == 0) {
 							this.log("marking function as final: " + classDef.className() + "#" + funcDef.name());
 							funcDef.setFlags(funcDef.flags() | ClassDefinition.IS_FINAL);
@@ -318,16 +346,16 @@ var _LinkTimeOptimizationCommand = exports._LinkTimeOptimizationCommand = _Optim
 		}.bind(this));
 	},
 
-	_getOverrides: function (classDefs, name, argTypes) {
+	_getOverrides: function (srcClassDef, classDefs, name, argTypes) {
 		var overrides = [];
 		for (var i = 0; i < classDefs.length; ++i)
-			overrides = overrides.concat(this._getOverridesByClass(classDefs[i], name, argTypes));
+			overrides = overrides.concat(this._getOverridesByClass(srcClassDef, classDefs[i], name, argTypes));
 		return overrides;
 	},
 
-	_getOverridesByClass: function (classDef, name, argTypes) {
-		var overrides = this._getOverrides(this.getStash(classDef).extendedBy, name, argTypes);
-		classDef.forEachMemberFunction(function (funcDef) {
+	_getOverridesByClass: function (srcClassDef, classDef, name, argTypes) {
+		var overrides = this._getOverrides(srcClassDef, this.getStash(classDef).extendedBy, name, argTypes);
+		var addOverride = function (funcDef) {
 			if (funcDef.name() == name
 				&& (funcDef.flags() & ClassDefinition.IS_ABSTRACT) == 0
 				&& Util.typesAreEqual(funcDef.getArgumentTypes(), argTypes)) {
@@ -335,7 +363,16 @@ var _LinkTimeOptimizationCommand = exports._LinkTimeOptimizationCommand = _Optim
 				return false; // finish looking into the class
 			}
 			return true;
-		}.bind(this));
+		}.bind(this);
+		classDef.forEachMemberFunction(addOverride);
+		var implementClassDefs = classDef.implementTypes().map(function (type) { return type.getClassDef(); });
+		for (var i = 0; i < implementClassDefs.length; ++i) {
+			if (srcClassDef != implementClassDefs[i]) {
+				implementClassDefs[i].forEachClassToBase(function (classDef) {
+					return classDef.forEachMemberFunction(addOverride);
+				});
+			}
+		}
 		return overrides;
 	}
 
@@ -387,6 +424,18 @@ var _NoLogCommand = exports._NoAssertCommand = _FunctionOptimizeCommand.extend({
 
 });
 
+var _DetermineCalleeCommandStash = exports._DetermineCalleeCommandStash = Class.extend({
+
+	constructor: function (that /* optional */) {
+		this.callingFuncDef = that ? that.callingFuncDef : null;
+	},
+
+	clone: function () {
+		return new _DetermineCalleeCommandStash(this);
+	}
+
+});
+
 var _DetermineCalleeCommand = exports._DetermineCalleeCommand = _FunctionOptimizeCommand.extend({
 
 	$IDENTIFIER: "determine-callee",
@@ -396,9 +445,7 @@ var _DetermineCalleeCommand = exports._DetermineCalleeCommand = _FunctionOptimiz
 	},
 
 	_createStash: function () {
-		return {
-			callingFuncDef: null
-		};
+		return new _DetermineCalleeCommandStash();
 	},
 
 	optimizeFunction: function (funcDef) {
@@ -427,7 +474,7 @@ var _DetermineCalleeCommand = exports._DetermineCalleeCommand = _FunctionOptimiz
 								holderType.getClassDef(),
 								calleeExpr.getIdentifierToken().getValue(),
 								calleeExpr.getType().getArgumentTypes(),
-								holderType instanceof ClassDefType);
+								calleeExpr.getExpr() instanceof ClassExpression);
 						this._setCallingFuncDef(expr, callingFuncDef);
 					} else if (calleeExpr instanceof FunctionExpression) {
 						this._setCallingFuncDef(expr, calleeExpr.getFuncDef());
@@ -491,6 +538,19 @@ var _DetermineCalleeCommand = exports._DetermineCalleeCommand = _FunctionOptimiz
 });
 
 // propagates constants
+
+var _FoldConstantCommandStash = exports._FoldConstantCommandStash = Class.extend({
+
+	constructor: function (that /* optional */) {
+		this.isOptimized = that ? that.isOptimized : false; // boolean
+	},
+
+	clone: function () {
+		return new _FoldConstantCommandStash(this);
+	}
+
+});
+
 var _FoldConstantCommand = exports._FoldConstantCommand = _FunctionOptimizeCommand.extend({
 
 	constructor: function () {
@@ -498,9 +558,7 @@ var _FoldConstantCommand = exports._FoldConstantCommand = _FunctionOptimizeComma
 	},
 
 	_createStash: function () {
-		return {
-			isOptimized: false // boolean
-		};
+		return new _FoldConstantCommandStash();
 	},
 
 	optimizeFunction: function (funcDef) {
@@ -522,7 +580,7 @@ var _FoldConstantCommand = exports._FoldConstantCommand = _FunctionOptimizeComma
 
 			// property expression
 			var holderType = expr.getHolderType();
-			if (holderType instanceof ClassDefType) {
+			if (expr.getExpr() instanceof ClassExpression) {
 				var member = null;
 				holderType.getClassDef().forEachMemberVariable(function (m) {
 					if (m instanceof MemberVariableDefinition && m.name() == expr.getIdentifierToken().getValue())
@@ -633,10 +691,10 @@ var _FoldConstantCommand = exports._FoldConstantCommand = _FunctionOptimizeComma
 		case "*": this._foldNumericBinaryExpressionAsNumeric(expr, replaceCb, function (x, y) { return x * y; }); break;
 		case "+": this._foldNumericBinaryExpressionAsNumeric(expr, replaceCb, function (x, y) { return x + y; }); break;
 		case "-": this._foldNumericBinaryExpressionAsNumeric(expr, replaceCb, function (x, y) { return x - y; }); break;
+		case "%": this._foldNumericBinaryExpressionAsNumeric(expr, replaceCb, function (x, y) { return x % y; }); break;
 
 		// expressions that always return number
 		case "/": this._foldNumericBinaryExpressionAsNumber(expr, replaceCb, function (x, y) { return x / y; }); break;
-		case "%": this._foldNumericBinaryExpressionAsNumber(expr, replaceCb, function (x, y) { return x % y; }); break;
 
 		// expressions that always return integer
 		case ">>>": this._foldNumericBinaryExpressionAsInteger(expr, replaceCb, function (x, y) { return x >>> y; }); break;
@@ -691,16 +749,14 @@ var _FoldConstantCommand = exports._FoldConstantCommand = _FunctionOptimizeComma
 	},
 
 	_toFoldedExpr: function (expr, type) {
-		if (expr instanceof UndefinedExpression) {
-			return expr;
-		} else if (expr instanceof NullExpression) {
+		if (expr instanceof NullExpression) {
 			return expr;
 		} else if (expr instanceof BooleanLiteralExpression) {
 			return expr;
 		} else if (expr instanceof IntegerLiteralExpression) {
 			return expr;
 		} else if (expr instanceof NumberLiteralExpression) {
-			if (type.resolveIfMayBeUndefined().equals(Type.integerType)) {
+			if (type.resolveIfNullable().equals(Type.integerType)) {
 				// cast to integer
 				return new IntegerLiteralExpression(new Token((expr.getToken().getValue() | 0).toString(), null));
 			}
@@ -713,6 +769,19 @@ var _FoldConstantCommand = exports._FoldConstantCommand = _FunctionOptimizeComma
 
 });
 
+var _InlineOptimizeCommandStash = exports._InlineOptimizeCommandStash = Class.extend({
+
+	constructor: function (that /* optional */) {
+		this.isOptimized = that ? that.isOptimized : false; // boolean
+		this.isInlineable = that ? that.isInlineable : null; // tri-state (null, false, true)
+	},
+
+	clone: function () {
+		return new _InlineOptimizeCommandStash(this);
+	}
+
+});
+
 var _InlineOptimizeCommand = exports._InlineOptimizeCommand = _FunctionOptimizeCommand.extend({
 
 	constructor: function () {
@@ -720,10 +789,7 @@ var _InlineOptimizeCommand = exports._InlineOptimizeCommand = _FunctionOptimizeC
 	},
 
 	_createStash: function () {
-		return {
-			isOptimized: false, // boolean
-			isInlineable: undefined, // tri-state
-		};
+		return new _InlineOptimizeCommandStash();
 	},
 
 	optimizeFunction: function (funcDef) {
@@ -736,11 +802,12 @@ var _InlineOptimizeCommand = exports._InlineOptimizeCommand = _FunctionOptimizeC
 		if (funcDef.getStatements() == null)
 			return;
 		this.log("* starting optimization of " + _Util.getFuncName(funcDef));
-		var altered = false;
 		while (true) {
-			if (! this._handleStatements(funcDef, funcDef.getStatements()))
-				break;
-			altered = true;
+			while (true) {
+				if (! this._handleStatements(funcDef, funcDef.getStatements()))
+					break;
+				this.setupCommand(new _DetermineCalleeCommand()).optimizeFunction(funcDef);
+			}
 			if (! this.setupCommand(new _ReturnIfOptimizeCommand()).optimizeFunction(funcDef))
 				break;
 		}
@@ -875,19 +942,19 @@ var _InlineOptimizeCommand = exports._InlineOptimizeCommand = _FunctionOptimizeC
 
 	_lhsHasNoSideEffects: function (lhsExpr) {
 		// FIXME may have side effects if is a native type (or extends a native type)
-		if (lhsExpr instanceof IdentifierExpression)
+		if (lhsExpr instanceof LocalExpression)
 			return true;
 		if (lhsExpr instanceof PropertyExpression) {
 			var holderExpr = lhsExpr.getExpr();
 			if (holderExpr instanceof ThisExpression)
 				return true;
-			if (holderExpr instanceof IdentifierExpression)
+			if (holderExpr instanceof LocalExpression || holderExpr instanceof ClassExpression)
 				return true;
 		} else if (lhsExpr instanceof ArrayExpression) {
-			if (lhsExpr.getFirstExpr() instanceof IdentifierExpression
+			if (lhsExpr.getFirstExpr() instanceof LocalExpression
 				&& (lhsExpr.getSecondExpr() instanceof NumberLiteralExpression
 					|| lhsExpr.getSecondExpr() instanceof StringLiteralExpression
-					|| lhsExpr.getSecondExpr() instanceof IdentifierExpression))
+					|| lhsExpr.getSecondExpr() instanceof LocalExpression))
 				return true;
 		}
 		return false;
@@ -909,7 +976,7 @@ var _InlineOptimizeCommand = exports._InlineOptimizeCommand = _FunctionOptimizeC
 			receiverExpr = calleeExpr.getExpr();
 			if (asExpression) {
 				// receiver should not have side effecets
-				if (! (receiverExpr instanceof IdentifierExpression || receiverExpr instanceof ThisExpression)) {
+				if (! (receiverExpr instanceof LocalExpression || receiverExpr instanceof ThisExpression)) {
 					return null;
 				}
 			}
@@ -925,7 +992,7 @@ var _InlineOptimizeCommand = exports._InlineOptimizeCommand = _FunctionOptimizeC
 				return null;
 			var modifiesArgs = ! Util.forEachStatement(function onStatement(statement) {
 				var onExpr = function onExpr(expr) {
-					if (expr instanceof AssignmentExpression && expr.getFirstExpr() instanceof IdentifierExpression)
+					if (expr instanceof AssignmentExpression && expr.getFirstExpr() instanceof LocalExpression)
 						return false;
 					return expr.forEachExpression(onExpr.bind(this));
 				};
@@ -967,13 +1034,13 @@ var _InlineOptimizeCommand = exports._InlineOptimizeCommand = _FunctionOptimizeC
 
 	_argIsInlineable: function (actualType, formalType) {
 		if (this._optimizer.enableRuntimeTypeCheck()) {
-			if (actualType instanceof MayBeUndefinedType && ! (formalType instanceof MayBeUndefinedType)) {
+			if (actualType instanceof NullableType && ! (formalType instanceof NullableType)) {
 				return false;
 			}
 		}
-		// strip the MayBeUndefined wrapper and continue the comparison, or return
-		actualType = actualType.resolveIfMayBeUndefined();
-		formalType = formalType.resolveIfMayBeUndefined();
+		// strip the Nullable wrapper and continue the comparison, or return
+		actualType = actualType.resolveIfNullable();
+		formalType = formalType.resolveIfNullable();
 		if (actualType instanceof ObjectType && formalType instanceof ObjectType) {
 			// if both types are object types, allow upcast
 			return actualType.isConvertibleTo(formalType);
@@ -984,35 +1051,46 @@ var _InlineOptimizeCommand = exports._InlineOptimizeCommand = _FunctionOptimizeC
 	},
 
 	_functionIsInlineable: function (funcDef) {
-		if (typeof this.getStash(funcDef).isInlineable != "boolean") {
+		if (this.getStash(funcDef).isInlineable === null) {
 			this.getStash(funcDef).isInlineable = function () {
 				// only inline function that are short, has no branches (last statement may be a return)
 				var statements = funcDef.getStatements();
 				if (statements == null)
 					return false;
-				if (_Util.numberOfStatements(statements) >= 5)
+				var requestsInline = (funcDef.flags() & ClassDefinition.IS_INLINE) != 0;
+				if (requestsInline) {
+					// ok
+				} else if (_Util.numberOfStatements(statements) >= 5) {
 					return false;
-				for (var i = 0; i < statements.length; ++i) {
-					if (! (statements[i] instanceof ExpressionStatement))
-						break;
 				}
-				if (! (i == statements.length || (i == statements.length - 1 && statements[i] instanceof ReturnStatement)))
-					return false;
-				// no function nor super expression
-				var hasNonInlineableExpr = ! Util.forEachStatement(function onStatement(statement) {
-					var onExpr = function onExpr(expr) {
+				// no return in the middle, no function expression or super invocation expression
+				return funcDef.forEachStatement(function onStatement(statement) {
+					if (statement instanceof ExpressionStatement) {
+						// ok
+					} else if (requestsInline
+						&& (statement instanceof ForStatement
+							|| statement instanceof ForInStatement
+							|| statement instanceof DoWhileStatement
+							|| statement instanceof WhileStatement
+							|| statement instanceof IfStatement
+							|| statement instanceof SwitchStatement)) {
+						// ok
+					} else if (statement instanceof ReturnStatement && statement == funcDef.getStatements()[funcDef.getStatements().length - 1]) {
+						// ok
+					} else {
+						return false;
+					}
+					if (! statement.forEachExpression(function onExpr(expr) {
 						if (expr instanceof FunctionExpression)
 							return false;
 						if (expr instanceof SuperExpression)
 							return false;
 						return expr.forEachExpression(onExpr.bind(this));
-					};
-					return statement.forEachExpression(onExpr.bind(this));
-				}.bind(this), statements);
-				if (hasNonInlineableExpr) {
-					return false;
-				}
-				return true;
+					}.bind(this))) {
+						return false;
+					}
+					return statement.forEachStatement(onStatement.bind(this));
+				}.bind(this));
 			}.call(this);
 			this.log(_Util.getFuncName(funcDef) + (this.getStash(funcDef).isInlineable ? " is" : " is not") + " inlineable");
 		}
@@ -1026,11 +1104,18 @@ var _InlineOptimizeCommand = exports._InlineOptimizeCommand = _FunctionOptimizeC
 		stmtIndex = this._createVars(callerFuncDef, statements, stmtIndex, calleeFuncDef, argsAndThisAndLocals);
 		var calleeStatements = calleeFuncDef.getStatements();
 		for (var i = 0; i < calleeStatements.length; ++i) {
-			// clone the statement
-			var statement = new ExpressionStatement(calleeStatements[i].getExpr().clone());
+			// clone the statement (while rewriting last return statement to an expression statement)
+			var statement = calleeStatements[i] instanceof ReturnStatement
+				? new ExpressionStatement(calleeStatements[i].getExpr().clone())
+				: calleeStatements[i].clone();
 			// replace the arguments with actual arguments
-			statement.forEachExpression(function onExpr(expr, replaceCb) {
+			var onExpr = function onExpr(expr, replaceCb) {
 				return this._rewriteExpression(expr, replaceCb, argsAndThisAndLocals, calleeFuncDef);
+			}.bind(this);
+			statement.forEachExpression(onExpr);
+			statement.forEachStatement(function onStatement(statement) {
+				statement.forEachStatement(onStatement.bind(this));
+				return statement.forEachExpression(onExpr);
 			}.bind(this));
 			// insert the statement
 			statements.splice(stmtIndex++, 0, statement);
@@ -1050,19 +1135,40 @@ var _InlineOptimizeCommand = exports._InlineOptimizeCommand = _FunctionOptimizeC
 		// handle other arguments
 		var formalArgs = calleeFuncDef.getArguments();
 		for (var i = 0; i < formalArgs.length; ++i) {
-			var tempVar = this._createVarForArgOrThis(callerFuncDef, statements, stmtIndex, argsAndThisAndLocals[i], formalArgs[i].getType(), formalArgs[i].getName().getValue());
-			if (tempVar != null) {
-				argsAndThisAndLocals[i] = tempVar;
-				++stmtIndex;
+			if (argsAndThisAndLocals[i] instanceof FunctionExpression && this._getNumberOfTimesArgIsUsed(calleeFuncDef, formalArgs[i]) <= 1) {
+				// if the argument is a function expression that is referred only once, directly spill the function into the inlined function
+				// of if it is never referred to, the function expression will disappear
+			} else {
+				var tempVar = this._createVarForArgOrThis(callerFuncDef, statements, stmtIndex, argsAndThisAndLocals[i], formalArgs[i].getType(), formalArgs[i].getName().getValue());
+				if (tempVar != null) {
+					argsAndThisAndLocals[i] = tempVar;
+					++stmtIndex;
+				}
 			}
 		}
 		// handle locals
 		var locals = calleeFuncDef.getLocals();
 		for (var i = 0; i < locals.length; ++i) {
-			var tempVar = this._createVar(callerFuncDef, locals[i].getType(), locals[i].getName().getValue());
-			argsAndThisAndLocals.push(new IdentifierExpression(tempVar));
+			var tempVar = this.createVar(callerFuncDef, locals[i].getType(), locals[i].getName().getValue());
+			argsAndThisAndLocals.push(new LocalExpression(tempVar.getName(), tempVar));
 		}
 		return stmtIndex;
+	},
+
+	_getNumberOfTimesArgIsUsed: function (funcDef, local) {
+		var count = 0;
+		funcDef.forEachStatement(function onStatement(statement) {
+			statement.forEachStatement(onStatement.bind(this));
+			statement.forEachExpression(function onExpr(expr) {
+				expr.forEachExpression(onExpr.bind(this));
+				if (expr instanceof LocalExpression && expr.getLocal() == local) {
+					++count;
+				}
+				return true;
+			}.bind(this));
+			return true;
+		}.bind(this));
+		return count;
 	},
 
 	_createVarForArgOrThis: function (callerFuncDef, statements, stmtIndex, expr, type, baseName) {
@@ -1071,37 +1177,21 @@ var _InlineOptimizeCommand = exports._InlineOptimizeCommand = _FunctionOptimizeC
 			return null;
 		}
 		// create a local variable based on the given name
-		var newLocal = this._createVar(callerFuncDef, type, baseName);
+		var newLocal = this.createVar(callerFuncDef, type, baseName);
 		// insert a statement that initializes the temporary
 		statements.splice(stmtIndex, 0,
 			new ExpressionStatement(
 				new AssignmentExpression(
 					new Token("=", false),
-					new IdentifierExpression(newLocal),
+					new LocalExpression(newLocal.getName(), newLocal),
 					expr)));
 		// return an expression referring the the local
-		return new IdentifierExpression(newLocal);
-	},
-
-	_createVar: function (callerFuncDef, type, baseName) {
-		var locals = callerFuncDef.getLocals();
-		var nameExists = function (n) {
-			for (var i = 0; i < locals.length; ++i)
-				if (locals[i].getName().getValue() == n)
-					return true;
-			return false;
-		}
-		for (var i = 0; nameExists(baseName + "$" + i); ++i)
-			;
-		var newLocal = new LocalVariable(new Token(baseName + "$" + i, true), type);
-		locals.push(newLocal);
-		this.log("rewriting " + baseName + " to " + newLocal.getName().getValue());
-		return newLocal;
+		return new LocalExpression(newLocal.getName(), newLocal);
 	},
 
 	_rewriteExpression: function (expr, replaceCb, argsAndThisAndLocals, calleeFuncDef) {
 		var formalArgs = calleeFuncDef.getArguments();
-		if (expr instanceof IdentifierExpression && expr.getLocal() != null) {
+		if (expr instanceof LocalExpression) {
 			for (var j = 0; j < formalArgs.length; ++j) {
 				if (formalArgs[j].getName().getValue() == expr.getToken().getValue())
 					break;
@@ -1115,10 +1205,18 @@ var _InlineOptimizeCommand = exports._InlineOptimizeCommand = _FunctionOptimizeC
 					if (locals[k].getName().getValue() == expr.getToken().getValue())
 						break;
 				}
-				if (j == argsAndThisAndLocals.length)
-					throw new Error("logic flaw, could not find formal parameter named " + expr.getToken().getValue());
 			}
-			replaceCb(argsAndThisAndLocals[j].clone());
+			// replace the local expression (function expression need not (and cannot) be cloned, so it is guaranteed to appear only once, in _createVars)
+			if (j != argsAndThisAndLocals.length) {
+				if (argsAndThisAndLocals[j] instanceof FunctionExpression) {
+					replaceCb(argsAndThisAndLocals[j]);
+					argsAndThisAndLocals[j] = null; // just in case
+				} else {
+					replaceCb(argsAndThisAndLocals[j].clone());
+				}
+			} else {
+				// closure referring to a local variable of outer scope
+			}
 		} else if (expr instanceof ThisExpression) {
 			replaceCb(argsAndThisAndLocals[formalArgs.length].clone());
 		}
@@ -1229,7 +1327,126 @@ var _ReturnIfOptimizeCommand = exports._ReturnIfOptimizeCommand = _FunctionOptim
 				new Token("?", false),
 				condExpr,
 				trueExpr,
-				falseExpr));
+				falseExpr,
+				falseExpr.getType()));
+	}
+
+});
+
+var _ArrayLengthOptimizeCommand = exports._ArrayLengthOptimizeCommand = _FunctionOptimizeCommand.extend({
+
+	constructor: function () {
+		_FunctionOptimizeCommand.prototype.constructor.call(this, "array-length");
+	},
+
+	optimizeFunction: function (funcDef) {
+		funcDef.forEachStatement(function onStatement(statement) {
+			statement.forEachStatement(onStatement.bind(this));
+			if (statement instanceof ForStatement) {
+				var arrayLocal = this._hasLengthExprOfLocalArray(statement.getCondExpr());
+				if (arrayLocal != null) {
+					if (this._lengthIsUnmodifiedInExpr(statement.getCondExpr())
+						&& this._lengthIsUnmodifiedInExpr(statement.getPostExpr())
+						&& statement.forEachStatement(this._lengthIsUnmodifiedInStatement.bind(this))) {
+						// optimize!
+						this.log(_Util.getFuncName(funcDef) + " optimizing .length at line " + statement.getToken().getLineNumber());
+						// create local
+						var lengthLocal = this.createVar(funcDef, Type.integerType, arrayLocal.getName().getValue() + "$len");
+						// assign to the local
+						statement.setInitExpr(
+							new CommaExpression(
+								new Token(",", false),
+								statement.getInitExpr(),
+								new AssignmentExpression(
+									new Token("=", false),
+									new LocalExpression(new Token(lengthLocal.getName(), true), lengthLocal),
+									new PropertyExpression(
+										new Token(".", false),
+										new LocalExpression(new Token(arrayLocal.getName(), true), arrayLocal),
+										new Token("length", true),
+										lengthLocal.getType()))));
+						// rewrite
+						var onExpr = function (expr, replaceCb) {
+							if (expr instanceof PropertyExpression
+								&& expr.getIdentifierToken().getValue() == "length"
+								&& expr.getExpr() instanceof LocalExpression
+								&& expr.getExpr().getLocal() == arrayLocal) {
+								replaceCb(new LocalExpression(new Token(lengthLocal.getName(), true), lengthLocal));
+							} else {
+								expr.forEachExpression(onExpr.bind(this));
+							}
+							return true;
+						}.bind(this);
+						statement.getCondExpr().forEachExpression(onExpr);
+						statement.getPostExpr().forEachExpression(onExpr);
+						statement.forEachStatement(function onStatement(statement) {
+							statement.forEachStatement(onStatement.bind(this));
+							statement.forEachExpression(onExpr);
+							return true;
+						}.bind(this));
+					}
+				}
+			}
+			return true;
+		}.bind(this));
+	},
+
+	_hasLengthExprOfLocalArray: function (expr) {
+		var local = null;
+		expr.forEachExpression(function onExpr(expr) {
+			if (expr instanceof PropertyExpression
+				&& expr.getIdentifierToken().getValue() == "length"
+				&& expr.getExpr() instanceof LocalExpression
+				&& this._typeIsArray(expr.getExpr().getType().resolveIfNullable())) {
+				local = expr.getExpr().getLocal();
+				return false;
+			}
+			return expr.forEachExpression(onExpr.bind(this));
+		}.bind(this));
+		return local;
+	},
+
+	_lengthIsUnmodifiedInStatement: function (statement) {
+		if (! statement.forEachStatement(this._lengthIsUnmodifiedInStatement.bind(this)))
+			return false;
+		return statement.forEachExpression(this._lengthIsUnmodifiedInExpr.bind(this));
+	},
+
+	_lengthIsUnmodifiedInExpr: function (expr) {
+		if (expr instanceof AssignmentExpression) {
+			if (this._lhsMayModifyLength(expr.getFirstExpr())) {
+				return false;
+			}
+		} else if (expr instanceof CallExpression || expr instanceof SuperExpression) {
+			return false;
+		} else if (expr instanceof IncrementExpression) {
+			if (this._lhsMayModifyLength(expr.getExpr())) {
+				return false;
+			}
+		}
+		return true;
+	},
+
+	_lhsMayModifyLength: function (expr) {
+		if (expr instanceof PropertyExpression && expr.getIdentifierToken().getValue() == "length")
+			return true;
+		if (expr instanceof ArrayExpression)
+			return true;
+		var exprType = expr.getType().resolveIfNullable();
+		if (exprType.equals(Type.variantType))
+			return true;
+		if (this._typeIsArray(exprType))
+			return true;
+		return false;
+	},
+
+	_typeIsArray: function (type) {
+		if (! (type instanceof ObjectType))
+			return false;
+		var classDef = type.getClassDef();
+		if (! (classDef instanceof InstantiatedClassDefinition))
+			return false;
+		return classDef.getTemplateClassName() == "Array";
 	}
 
 });

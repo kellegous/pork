@@ -8,15 +8,35 @@ use Tie::IxHash;
 use Data::Dumper;
 use File::Basename qw(dirname);
 use Storable qw(lock_retrieve lock_store);
+use LWP::UserAgent;
+use URI::Escape qw(uri_escape);
+use Time::HiRes ();
+
 use constant WIDTH => 68;
 
-# see http://dev.w3.org/2006/webapi/WebIDL/
+# see http://www.w3.org/TR/WebIDL/
 
 my $continuous = ($ARGV[0] ~~ "--continuous" && shift @ARGV);
 
-my $db = dirname(__FILE__) . '/.idl2jsx.bin';
-
 my @files = @ARGV;
+
+my $root = dirname(__FILE__);
+my $db = "$root/.idl2jsx.bin";
+mkdir "$root/.save";
+
+{
+    my $t0 = [Time::HiRes::gettimeofday()];
+    END {
+        info(sprintf "elapsed %.02f sec.", Time::HiRes::tv_interval($t0)) if $t0;
+    }
+}
+
+my %primitive = (
+    string => 1,
+    number => 1,
+    int => 1,
+    boolean => 1,
+);
 
 my %fake = (
     Window => 1,
@@ -27,6 +47,7 @@ my %fake = (
     AbstractView => 1,
     DocumentView => 1,
 
+    EventListener => 1,
     EventTarget => 1,
     XMLHttpRequestEventTarget => 1,
 );
@@ -34,8 +55,13 @@ my %fake = (
 my %skip = (
     Example => 1,
 
+    EventListener => 1,
     WindowTimers => 1, # use JSXTimers instead
 );
+
+# indicates a class has children classes
+# classes which has no child are declared "final"
+my %has_child;
 
 my %has_definition;
 
@@ -44,14 +70,6 @@ my %has_definition;
 # WebIDL says, "Note also that null is not a value of type DOMString.
 # To allow null, a nullable DOMString, written as DOMString? in IDL,
 # needs to be used."
-
-# FIXME: how to define?
-my %nullable = (
-#    string => 'String',
-#    number => 'Number',
-#    int    => 'Number',
-#    boolean => 'Boolean',
-);
 
 my %typemap = (
     'DOMObject' => 'Object',
@@ -94,28 +112,20 @@ my %typemap = (
 
 # callbacks / event listeners
 
-defineCallback('Function?' => 'function(:Event):void');
-defineCallback('Function' => 'function(:Event):void');
-defineCallback(TimerHandler => 'function():void');
-defineCallback(EventListener  => 'function(:Event):void');
-# http://www.w3.org/TR/dom/
-defineCallback(MutationCallback => 'function(:MutationRecord[],:MutationObserver):void');
-# http://www.w3.org/TR/DOM-Level-3-Core/idl-definitions.html
-defineCallback(UserDataHandler => 'function(operation:int,key:string,data:variant,src:Node,dst:Node):void');
-# http://www.w3.org/TR/cssom-view/
-defineCallback(MediaQueryListListener => 'function(:MediaQueryList):void');
-# http://dev.w3.org/2009/dap/file-system/file-dir-sys.html
-defineCallback(FileCallback => 'function(:File):void');
-# http://www.w3.org/TR/animation-timing/
-defineCallback(FrameRequestCallback => 'function(:number):void');
-# http://www.w3.org/TR/webdatabase/
-defineCallback(DatabaseCallback => 'function(:Database):void');
-defineCallback(SQLVoidCallback => 'function():void');
-defineCallback(SQLTransactionCallback => 'function(:SQLTransaction):void');
-defineCallback(SQLTransactionErrorCallback => 'function(:SQLError):void');
-defineCallback(SQLStatementCallback => 'function(:SQLTransaction,:SQLResultSet):void');
-defineCallback(SQLStatementErrorCallback => 'function(:SQLTransaction,:SQLError):void');
-defineCallback(SQLTransactionSyncCallback => 'function(:SQLTransactionSync):void');
+define_alias('Function' => 'function(:Event):void');
+
+# EventListener is written in legacy IDL
+define_alias('EventListener' => 'function(:Event):void');
+
+# TODO: type resolution process
+
+# for DataTransferItem
+define_alias('FunctionStringCallback' => 'function(:string):void');
+# for MediaQueryList
+define_alias('MediaQueryListListener' => 'function(:MediaQueryList):void');
+
+# http://www.w3.org/TR/file-system-api/
+define_alias('FileCallback' => 'function(:File):void');
 
 sub info {
     state $count = 0;
@@ -153,6 +163,7 @@ my $rx_type_modifier = qr{
         \.\.\. # vararg
     )
 }xms;
+
 my $rx_type = qr{
     (?:
         (?:
@@ -185,27 +196,42 @@ tie %classdef, 'Tie::IxHash';
 foreach my $file(@files) {
     info "parsing $file";
 
-    # XXX: spec bug?
-    my $Document_is_HTMLDocument = ($file =~ / \b html5 \b/xms);
+    # XXX: looks a bug in http://www.w3.org/TR/html5/single-page.html
+    my $Document_is_HTMLDocument = ($file =~ m{ /html5/single-page.html }xms);
 
     local $typemap{Document} = "HTMLDocument" if $Document_is_HTMLDocument;
 
-    my $content = do {
+    my $content;
+    {
         my $arg = $file;
         if($arg =~ /^https?:/) {
+            state $ua = LWP::UserAgent->new();
+            my $filename = "$root/.save/" . uri_escape($arg);
+            my $res = $ua->mirror($arg, $filename);
+
+            if($res->header("Last-Modified")) {
+                info("Last-Modified: ", $res->header("Last-Modified"));
+            }
+
             if($arg =~ /\.idl$/) {
-                $arg = "curl -L $arg 2>/dev/null |";
+                $arg = $filename;
             }
             else {
-                $arg = "w3m -dump $arg |";
+                $arg = "w3m -T text/html -dump $filename |";
             }
         }
         open my($fh), $arg; # magic open!
         local $/;
-        <$fh>;
-    };
+        $content = <$fh>;
+        close $fh;
+        if ($? != 0) {
+            die "'$arg' exited with non-zero ($?) status";
+        }
+    }
 
-    # typedef
+    my $spec_name = $file =~ /^https?:/ ? $file : "";
+
+    info 'process <typedef>';
     while($content =~ m{
             ^ \s* \b typedef \b
             \s+
@@ -215,10 +241,35 @@ foreach my $file(@files) {
             ;
         }xmsg) {
 
-        ($typemap{$+{new_type}} = to_jsx_type($+{existing_type})) =~ s/$rx_comments//xms;
+        info 'typedef:',
+        my $n = $+{new_type};
+        my $t = to_jsx_type($+{existing_type});
+        $t =~ s/$rx_comments//xms;
+        define_alias($n => $t);
     }
 
-    # class definition
+    info 'process <callback>';
+    {
+        while($content =~ m{
+                ^\s* callback
+                \s+ (?<name> \w+)
+                \s* =
+                \s* (?<ret_type> $rx_simple_type)
+                \s*
+                    \(
+                        (?<params> $rx_params)
+                    \)
+                \s* ;
+            }xmsg) {
+            my $name = $+{name};
+            info 'callback:', $name;
+
+            my $cb_type = make_function_type($+{ret_type}, $+{params});
+            define_callback($name => $cb_type);
+        }
+    }
+
+    info 'process <class>';
     while($content =~ m{
                 (?<attrs> (?: \[ (?: [^\]]+ | \[ \s* \])+ \] \s+)* )
                 (?<type> (?:partial \s+)? interface | exception | dictionary)
@@ -243,10 +294,6 @@ foreach my $file(@files) {
 
         info $type, $class, ($base ? ": $base" : ());
 
-        if($type !~ /\b partial \b/xms) {
-            $has_definition{$class} = 1;
-        }
-
 
         my $def = $classdef{$class} //= {
             attrs => $attrs,
@@ -257,7 +304,15 @@ foreach my $file(@files) {
             fake    => $fake{$class},
         };
 
-        $def->{base} //= $base if $base;
+        if($type !~ /\b partial \b/xms) {
+            $has_definition{$class} = 1;
+            $def->{spec} = $spec_name;
+        }
+
+        if($base) {
+            $def->{base} //= $base;
+            $has_child{$base}++;
+        }
 
         $def->{skip} = 1 if $skip{$class};
 
@@ -266,6 +321,8 @@ foreach my $file(@files) {
         # name to array of members; to resolve override
         my $decl_ref = $def->{decl};
 
+        my $alias = 0;
+
         if($attrs) {
             while($attrs =~ m{
                 \b Constructor \s* (?: \(
@@ -273,16 +330,24 @@ foreach my $file(@files) {
                 \) )?
             }xmsg) {
                 make_functions(
-                    $decl_ref, $members_ref,
+                    $decl_ref,
+                    $members_ref,
                     "constructor",
-                    undef, $+{params});
+                    $spec_name,
+                    undef,
+                    $+{params},
+                );
             }
 
             if($attrs =~ /\b NoInterfaceObject \b/xms) {
                 $def->{fake} = 1;
             }
+            if($attrs =~ m{\b Callback \b}xms) {
+                $alias = 1;
+            }
         }
 
+        # FIXME: Complex regular subexpression recursion limit (32766) exceeded
 
         while($members =~ m{
                 (?<comments> $rx_comments)
@@ -328,16 +393,18 @@ foreach my $file(@files) {
                 $decl_ref->{$id} //= [];
                 push @{$decl_ref->{$id}}, ($static_const, $readonly_var);
                 push @{$members_ref}, {
-                    id => $id,
-                    decl => $static_const,
-                    type => $type,
+                    id     => $id,
+                    decl   => $static_const,
+                    type   => $type,
                     static => 1,
+                    spec   => $spec_name,
                 };
                 push @{$members_ref}, {
-                    id => $id,
-                    decl => $readonly_var,
-                    type => $type,
+                    id     => $id,
+                    decl   => $readonly_var,
+                    type   => $type,
                     static => 0,
+                    spec   => $spec_name,
                 };
             }
             # member var
@@ -364,10 +431,11 @@ foreach my $file(@files) {
                 $decl_ref->{$id} //= [];
                 push @{$decl_ref->{$id}}, $decl;
                 push @{$members_ref}, {
-                    id   => $id,
-                    decl => $decl,
-                    type => $type,
+                    id     => $id,
+                    decl   => $decl,
+                    type   => $type,
                     static => 0,
+                    spec   => $spec_name,
                 };
             }
             # member function
@@ -393,17 +461,21 @@ foreach my $file(@files) {
                 my $ret_type = $+{ret_type};
                 my $params   = $+{params};
 
-                my $ret_type_may_be_undefined = 0;
+                my $ret_type_nullable = 0;
 
                 if($prop) {
                     if(index($prop, "getter") != -1) {
-                        $ret_type_may_be_undefined = 1;
+                        $ret_type_nullable = 1;
                         my $id = "__native_index_operator__";
                         make_functions(
-                                $decl_ref, $members_ref,
-                                $id,
-                                $ret_type, $params,
-                                $ret_type_may_be_undefined);
+                            $decl_ref,
+                            $members_ref,
+                            $id,
+                            $spec_name,
+                            $ret_type,
+                            $params,
+                            $ret_type_nullable,
+                        );
                     }
                     if(!$id) {
                         # no name
@@ -415,10 +487,21 @@ foreach my $file(@files) {
                     die "unexpected no name for $member.\n";
                 }
                 make_functions(
-                    $decl_ref, $members_ref,
+                    $decl_ref,
+                    $members_ref,
                     $id,
-                    $ret_type, $params,
-                    $ret_type_may_be_undefined, $static);
+                    $spec_name,
+                    $ret_type,
+                    $params,
+                    $ret_type_nullable,
+                    $static
+                );
+
+                # redefine it as a callbackdefinition
+                if($alias) {
+                    $def->{alias} = make_function_type($ret_type, $params);
+                    $def->{fake} = 1;
+                }
             }
             elsif($member =~ m{stringifier;}) {
                 # ignore
@@ -429,8 +512,7 @@ foreach my $file(@files) {
         }
     }
 
-    # implements interfaces
-    info 'process implements';
+    info 'process <implements>';
     {
         my $classes = join "|", keys %classdef;
         while($content =~ m{
@@ -446,27 +528,36 @@ foreach my $file(@files) {
 
             info "$def->{name} implements $interface->{name}";
 
-            # FIXME
-            push @{ $def->{members} },
-                "",
-                "// implements $interface->{name}",
-                @{$interface->{members}};
+            $has_child{$interface->{name}}++;
 
-            $interface->{fake} = 1;
+            if (not $def->{base}) {
+                $def->{base} = $interface->{name};
+            }
+            else {
+                # FIXME
+                push @{ $def->{members} },
+                    "",
+                    "// implements $interface->{name}",
+                    @{$interface->{members}};
+
+                $interface->{fake} = 1;
+            }
         }
     }
 }
 
 
 info 'output';
-if(@files) {
-    say "/*";
-    say "automatically generated from:";
-    say "\t", $_ for @files;
-    say "*/";
-}
 foreach my $def(values %classdef) {
     if($def->{skip} or $def->{done}) {
+        next;
+    }
+    $def->{done} = 1 if $continuous;
+
+    if($def->{alias}) { # type alias (a.k.a. typedef)
+        say "// alias $def->{name} = $def->{alias}";
+        say "";
+
         next;
     }
 
@@ -475,11 +566,12 @@ foreach my $def(values %classdef) {
         next;
     }
 
-    $def->{done} = 1 if $continuous;
-
     my %seen;
 
     my $classdecl = "native";
+    if(!$has_child{$def->{name}}) {
+        $classdecl .= " final";
+    }
     if($def->{fake}) {
         $classdecl .= " __fake__";
     }
@@ -489,6 +581,7 @@ foreach my $def(values %classdef) {
         $classdecl .= " extends $def->{base}";
     }
 
+    say sprintf '/** @see %s */', $def->{spec} if $def->{spec};
     say $classdecl, " {";
 
     my @members = @{$def->{members}};
@@ -545,6 +638,8 @@ foreach my $def(values %classdef) {
                     # skip if it is already defined
                     next if $seen{ join(";", $member->{id}, $member->{static}) }++;
                 }
+
+                say "\t", sprintf '/** @see %s */', $member->{spec} if $member->{spec} && $def->{spec} ne $member->{spec};
             }
             else { # comments, etc.
                 $s = $member;
@@ -565,12 +660,6 @@ foreach my $def(values %classdef) {
 
     say "";
 }
-if(@files) {
-    say "/*";
-    say "end of generated files from:";
-    say "\t", $_ for @files;
-    say "*/";
-}
 
 lock_store(\%classdef, $db) if $continuous;
 exit;
@@ -578,7 +667,7 @@ exit;
 sub to_jsx_type {
     my($idl_type, %attr) = @_;
 
-    my $may_be_undefined = $attr{may_be_undefined};
+    my $nullable = $attr{nullable};
 
     $idl_type = trim($idl_type);
 
@@ -591,7 +680,7 @@ sub to_jsx_type {
         $array = 1;
     }
     elsif($idl_type =~ s{\A Maybe< (.+?) >  }{$1}xms) { # defined in idl2jsx/extra/*.idl
-        $may_be_undefined = 1;
+        $nullable = 1;
     }
 
     $idl_type  =~ s{
@@ -604,64 +693,41 @@ sub to_jsx_type {
         )*
         \z
     }{}xms;
-    my $vararg   = $+{vararg} // ""; # not used yet
-    my $nullable = $+{nullable} // "";
+
+    $nullable ||= $+{nullable};
     $array //= $+{array};
 
-    my $type;
-    if(my $t = $typemap{$idl_type}) {
-        $t = $nullable{$t} if $nullable && exists $nullable{$t};
-        $type = $t;
-        if($array) {
-            $type .= "[]";
-        }
-        $type .= "/*$original*/";
-    }
-    else {
-        my $t = $idl_type;
-        $t = $nullable{$t} if $nullable && exists $nullable{$t};
-        $type = $t;
-        if($array) {
-            $type .= "[]";
+    my $alias = $typemap{$idl_type};
+    if(!$alias && exists $classdef{$idl_type}) {
+        # callback definition is regarded as aliased type
+        if(my $t = $classdef{$idl_type}{alias}) {
+            $alias = $t;
         }
     }
 
-    if($may_be_undefined && $idl_type ne 'any') {
-        return "MayBeUndefined.<$type>";
+    my $type = $alias || $idl_type;
+    if ($nullable and not $array and exists $primitive{$type}) {
+        $type = "Nullable.<$type>";
     }
-    else {
-        return $type;
+    if($array) {
+        $type .= "[]";
     }
+
+    if($alias) {
+        $type .= "/*$original*/";
+    }
+
+    return $type;
 }
 
 sub make_functions {
-    my($decl_ref, $members_ref, $name, $ret_type, $src_params, $ret_type_may_be_undefined, $static) = @_;
+    my($decl_ref, $members_ref, $name, $spec, $ret_type, $src_params, $ret_type_nullable, $static) = @_;
 
     my $ret_type_decl = defined($ret_type)
-        ? " : " . to_jsx_type($ret_type, may_be_undefined => $ret_type_may_be_undefined)
+        ? " : " . to_jsx_type($ret_type, nullable => $ret_type_nullable)
         : "";
 
-    my @unresolved_params;
-    foreach my $param(split /,/, $src_params // "") {
-        $param =~ m{
-            (?:
-                (?: \b (?: in | (?<optional> optional)) \b \s+ )*
-                (?<type> $rx_type) \s+
-                (?<ident> \w+)
-            )
-        }xms or die "Cannot parse line:  '$src_params'\n";
-
-        my %t = (
-            name => $+{ident},
-            type => $+{type},
-            optional => !!$+{optional},
-        );
-
-        # FIXME: support varargs
-        $t{optional} = 1 if $t{type} =~ /\.\.\. \z/xms;
-
-        push @unresolved_params, \%t;
-    }
+    my @unresolved_params = parse_params($src_params);
 
     my @decls;
     my @funcs;
@@ -672,7 +738,8 @@ sub make_functions {
         my @f;
         while(1) {
             my $p = join ", ", map {
-                "$_->{name} : $_->{jsx_type}"
+                my $vararg = $_->{vararg} ? "..." : "";
+                "$vararg$_->{name} : $_->{jsx_type}"
             } @{$params_ref};
 
             my $f = "function $name($p)$ret_type_decl;";
@@ -687,6 +754,7 @@ sub make_functions {
                 param_types   => [ map { $_->{jsx_type} } @{$params_ref} ],
                 ret_type_decl => $ret_type_decl,
                 static        => $static ? 1 : 0,
+                spec          => $spec,
             };
 
             my $last = pop @{$params_ref};
@@ -703,6 +771,32 @@ sub make_functions {
     push @{$members_ref},       @funcs;
 
     return;
+}
+
+sub parse_params {
+    my($src_params) = @_;
+
+    my @params;
+    foreach my $param(split /,/, $src_params // "") {
+        $param =~ m{
+            (?:
+                (?: \b (?: in | (?<optional> optional)) \b \s+ )*
+                (?<type> $rx_type) \s+
+                (?<ident> \w+)
+            )
+        }xms or die "Cannot parse line:  '$src_params'\n";
+
+        my %t = (
+            name => $+{ident},
+            type => $+{type},
+            optional => !!$+{optional},
+        );
+
+        $t{vararg} = 1 if $t{type} =~ /\.\.\. \z/xms;
+
+        push @params, \%t;
+    }
+    return @params;
 }
 
 sub resolve_overload {
@@ -731,6 +825,7 @@ sub resolve_overload {
                 jsx_type => to_jsx_type($t),
                 name     => $head->{name},
                 optional => $head->{optional},
+                vararg   => $head->{vararg},
             };
             push @o, map { [ $p, @{$_} ] } @resolved;
         }
@@ -791,8 +886,24 @@ sub trim {
     return $s;
 }
 
-sub defineCallback {
+sub make_function_type {
+    my($ret_type, $params) = @_;
+    my $callback_params = join ",", map {
+            sprintf '%s:%s', $_->{name}, to_jsx_type($_->{type})
+        } parse_params($params);
+
+    return "function($callback_params):" . to_jsx_type($ret_type);
+}
+
+sub define_alias {
     my($name, $definition) = @_;
-    $skip{$name}++;
     $typemap{$name} = $definition;
+}
+
+sub define_callback {
+    my($name, $definition) = @_;
+    my $def = $classdef{$name} ||= {};
+
+    $def->{name}  = $name;
+    $def->{alias} = $definition;
 }
