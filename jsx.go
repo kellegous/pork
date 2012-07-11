@@ -25,8 +25,10 @@ func jsxCommand(filename, jsxPath string, includes []string, level Optimization)
       "--optimize",
       "no-assert,no-log,inline,return-if")
   }
-  args = append(args, filename)
-  return &command{args, "", nil}
+  // For jsx, we execute with a difference cwd to avoid having
+  // absolute paths in the class map.
+  args = append(args, filepath.Base(filename))
+  return &command{args, filepath.Dir(filename), nil}
 }
 
 // todo: add cpp to the front-end of this.
@@ -62,7 +64,9 @@ func CompileJsx(c *Config, filename string, w io.Writer) error {
   }
 
   // this is a hack for now.
-  _, err = fmt.Fprintf(w, "JSX.require(\"%s\")._Main.main$([]);\n", filename)
+  _, err = fmt.Fprintf(w,
+    "JSX.require(\"%s\")._Main.main$([]);\n",
+    filepath.Base(filename))
   if err != nil {
     return err
   }
