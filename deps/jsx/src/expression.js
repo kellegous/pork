@@ -46,7 +46,7 @@ var Expression = exports.Expression = Class.extend({
 	clone: null,
 
 	instantiate: function (instantiationContext) {
-		(function onExpr(expr) {
+		return (function onExpr(expr) {
 			if (expr instanceof NewExpression
 				|| expr instanceof ArrayLiteralExpression
 				|| expr instanceof MapLiteralExpression
@@ -114,7 +114,11 @@ var Expression = exports.Expression = Class.extend({
 			return new StringLiteralExpression(new Parser.Token("\"\"", false));
 		else
 			return new NullExpression(new Parser.Token("null", false), type);
-	}
+	},
+
+	$instantiateTemplate: function (context, token, className, typeArguments) {
+		return context.parser.lookupTemplate(context.errors, new TemplateInstantiationRequest(token, className, typeArguments), context.postInstantiationCallback);
+	},
 
 });
 
@@ -396,13 +400,13 @@ var StringLiteralExpression = exports.StringLiteralExpression = LeafExpression.e
 
 var RegExpLiteralExpression = exports.RegExpLiteralExpression = LeafExpression.extend({
 
-	constructor: function (token) {
+	constructor: function (token, type) {
 		LeafExpression.prototype.constructor.call(this, token);
-		this._type = null;
+		this._type = type; // nullable
 	},
 
 	clone: function () {
-		return new RegExpLiteralExpression(this._token);
+		return new RegExpLiteralExpression(this._token, this._type);
 	},
 
 	serialize: function () {
@@ -475,9 +479,13 @@ var ArrayLiteralExpression = exports.ArrayLiteralExpression = Expression.extend(
 			return false;
 		// determine the type from the array members if the type was not specified
 		if (this._type != null) {
-			var classDef = this._type.getClassDef();
-			if (! (classDef instanceof InstantiatedClassDefinition && classDef.getTemplateClassName() == "Array")) {
-				context.errors.push(new CompileError(this._token, "specified type is not an array type"));
+			var classDef;
+			if (this._type instanceof ObjectType
+				&& (classDef = this._type.getClassDef()) instanceof InstantiatedClassDefinition
+				&& classDef.getTemplateClassName() == "Array") {
+				//ok
+			} else {
+				context.errors.push(new CompileError(this._token, "the type specified after ':' is not an array type"));
 				return false;
 			}
 		} else {
@@ -488,10 +496,7 @@ var ArrayLiteralExpression = exports.ArrayLiteralExpression = Expression.extend(
 				} else {
 					if (elementType.equals(Type.integerType))
 						elementType = Type.numberType;
-					var instantiatedClass = context.instantiateTemplate(context.errors, new TemplateInstantiationRequest(this._token, "Array", [ elementType ]));
-					if (instantiatedClass == null)
-						return false;
-					this._type = new ObjectType(instantiatedClass);
+					this._type = new ObjectType(Expression.instantiateTemplate(context, this._token, "Array", [ elementType ]));
 					break;
 				}
 			}
@@ -599,13 +604,18 @@ var MapLiteralExpression = exports.MapLiteralExpression = Expression.extend({
 		if (! succeeded)
 			return false;
 		// determine the type from the array members if the type was not specified
-		if (this._type != null) {
+		if (this._type != null && this._type == Type.variantType) {
+			var expectedType = null;
+		} else if (this._type != null && this._type instanceof ObjectType) {
 			var classDef = this._type.getClassDef();
 			if (! (classDef instanceof InstantiatedClassDefinition && classDef.getTemplateClassName() == "Map")) {
 				context.errors.push(new CompileError(this._token, "specified type is not a hash type"));
 				return false;
 			}
-			var expectedType = this._type.getTypeArguments()[0];
+			expectedType = this._type.getTypeArguments()[0];
+		} else if (this._type != null) {
+			context.errors.push(new CompileError(this._token, "invalid type for a map literal"));
+			return false;
 		} else {
 			for (var i = 0; i < this._elements.length; ++i) {
 				var elementType = this._elements[i].getExpr().getType();
@@ -613,10 +623,7 @@ var MapLiteralExpression = exports.MapLiteralExpression = Expression.extend({
 					if (elementType.equals(Type.integerType))
 						elementType = Type.numberType;
 					elementType = elementType.resolveIfNullable();
-					var instantiatedClass = context.instantiateTemplate(context.errors, new TemplateInstantiationRequest(this._token, "Map", [ elementType ]));
-					if (instantiatedClass == null)
-						return false;
-					this._type = new ObjectType(instantiatedClass);
+					this._type = new ObjectType(Expression.instantiateTemplate(context, this._token, "Map", [ elementType ]));
 					expectedType = elementType;
 					break;
 				}
@@ -626,12 +633,14 @@ var MapLiteralExpression = exports.MapLiteralExpression = Expression.extend({
 				return false;
 			}
 		}
-		// check type of the elements
-		for (var i = 0; i < this._elements.length; ++i) {
-			var elementType = this._elements[i].getExpr().getType();
-			if (! elementType.isConvertibleTo(expectedType)) {
-				context.errors.push(new CompileError(this._token, "cannot assign '" + elementType.toString() + "' to a map of '" + expectedType.toString() + "'"));
-				succeeded = false;
+		// check type of the elements (expect when expectedType == null, meaning that it is a variant)
+		if (expectedType != null) {
+			for (var i = 0; i < this._elements.length; ++i) {
+				var elementType = this._elements[i].getExpr().getType();
+				if (! elementType.isConvertibleTo(expectedType)) {
+					context.errors.push(new CompileError(this._token, "cannot assign '" + elementType.toString() + "' to a map of '" + expectedType.toString() + "'"));
+					succeeded = false;
+				}
 			}
 		}
 		return succeeded;
@@ -639,8 +648,13 @@ var MapLiteralExpression = exports.MapLiteralExpression = Expression.extend({
 
 	forEachExpression: function (cb) {
 		for (var i = 0; i < this._elements.length; ++i) {
-			if (! cb(this._elements[i].getExpr(), function (expr) { this._elements[i].setExpr(expr); }.bind(this)))
+			if (! cb(this._elements[i].getExpr(), function (elements, index) {
+				return function (expr) {
+					elements[index].setExpr(expr);
+				};
+			}(this._elements, i))) {
 				return false;
+			}
 		}
 		return true;
 	}
@@ -757,6 +771,10 @@ var UnaryExpression = exports.UnaryExpression = OperatorExpression.extend({
 
 	getExpr: function () {
 		return this._expr;
+	},
+
+	setExpr: function (expr) {
+		this._expr = expr;
 	},
 
 	serialize: function () {
@@ -1058,19 +1076,24 @@ var PreIncrementExpression = exports.PreIncrementExpression = IncrementExpressio
 
 var PropertyExpression = exports.PropertyExpression = UnaryExpression.extend({
 
-	constructor: function (operatorToken, expr1, identifierToken, type) {
+	constructor: function (operatorToken, expr1, identifierToken, typeArgs, type) {
 		UnaryExpression.prototype.constructor.call(this, operatorToken, expr1);
 		this._identifierToken = identifierToken;
-		// fourth parameter is optional
+		this._typeArgs = typeArgs;
+		// fifth parameter is optional
 		this._type = type !== undefined ? type : null;
 	},
 
 	clone: function () {
-		return new PropertyExpression(this._token, this._expr.clone(), this._identifierToken, this._type);
+		return new PropertyExpression(this._token, this._expr.clone(), this._identifierToken, this._typeArgs, this._type);
 	},
 
 	getIdentifierToken: function () {
 		return this._identifierToken;
+	},
+
+	getTypeArguments: function () {
+		return this._typeArgs;
 	},
 
 	serialize: function () {
@@ -1105,8 +1128,11 @@ var PropertyExpression = exports.PropertyExpression = UnaryExpression.extend({
 			return false;
 		}
 		this._type = classDef.getMemberTypeByName(
+			context.errors,
+			this._identifierToken,
 			this._identifierToken.getValue(),
 			this._expr instanceof ClassExpression,
+			this._typeArgs,
 			(this._expr instanceof ClassExpression) ? ClassDefinition.GET_MEMBER_MODE_CLASS_ONLY : ClassDefinition.GET_MEMBER_MODE_ALL);
 		if (this._type == null) {
 			context.errors.push(new CompileError(this._identifierToken, "'" + exprType.toString() + "' does not have a property named '" + this._identifierToken.getValue() + "'"));
@@ -1241,10 +1267,17 @@ var BinaryExpression = exports.BinaryExpression = OperatorExpression.extend({
 		return this._expr1;
 	},
 
+	setFirstExpr: function (expr) {
+		this._expr1 = expr;
+	},
+
 	getSecondExpr: function() {
 		return this._expr2;
 	},
 
+	setSecondExpr: function (expr) {
+		this._expr2 = expr;
+	},
 
 	serialize: function () {
 		return [
@@ -1347,26 +1380,18 @@ var ArrayExpression = exports.ArrayExpression = BinaryExpression.extend({
 	_analyzeApplicationOnObject: function (context, expr1Type) {
 		var expr1ClassDef = expr1Type.getClassDef();
 		// obtain type of operator []
-		var accessorType = expr1ClassDef.getMemberTypeByName("__native_index_operator__", false, ClassDefinition.GET_MEMBER_MODE_ALL);
-		if (accessorType == null) {
+		var funcType = expr1ClassDef.getMemberTypeByName(context.errors, this._token, "__native_index_operator__", false, [], ClassDefinition.GET_MEMBER_MODE_ALL);
+		if (funcType == null) {
 			context.errors.push(new CompileError(this._token, "cannot apply operator[] on an instance of class '" + expr1ClassDef.className() + "'"));
 			return false;
 		}
-		if (accessorType instanceof FunctionChoiceType) {
-			context.errors.push(new CompileError(this._token, "override of '__native_index_operator__' is not supported"));
-			return false;
-		}
-		if (accessorType.getArgumentTypes().length != 1) {
-			context.errors.push(new CompileError(this._token, "unexpected number of arguments taken by '__native_index_operator__'"));
-			return false;
-		}
 		// check type of expr2
-		if (! this._expr2.getType().isConvertibleTo(accessorType.getArgumentTypes()[0])) {
-			context.errors.push(new CompileError(this._token, "index type is incompatible (expected '" + accessorType.getArgumentTypes()[0].toString() + "', got '" + this._expr2.getType().toString() + "')"));
+		var deducedFuncType = funcType.deduceByArgumentTypes(context, this._token, [ this._expr2.getType() ], false);
+		if (deducedFuncType == null) {
 			return false;
 		}
 		// set type of the expression
-		this._type = accessorType.getReturnType();
+		this._type = deducedFuncType.getReturnType();
 		return true;
 	},
 
@@ -1513,7 +1538,7 @@ var BinaryNumberExpression = exports.BinaryNumberExpression = BinaryExpression.e
 			if (this.isConvertibleTo(context, this._expr1, Type.stringType, true)) {
 			  return this.assertIsConvertibleTo(context, this._expr2, Type.stringType, true);
 			}
-			context.errors.push(new CompileError(this._token, "cannot apply operator '" + this._token.getValue() + "' to type '" + expr1Type.toString() + "'"));
+			context.errors.push(new CompileError(this._token, "cannot apply operator '" + this._token.getValue() + "' to type '" + this._expr1.getType().toString() + "'"));
 			return false;
 		default:
 			var expr1Type = this._expr1.getType().resolveIfNullable();
@@ -1831,7 +1856,7 @@ var CallExpression = exports.CallExpression = OperatorExpression.extend({
 			context, this._args, this,
 			exprType.getExpectedCallbackTypes(
 				this._args.length,
-				this._expr instanceof PropertyExpression && ! exprType.isAssignable() && this._expr.getExpr() instanceof ClassExpression));
+				! (this._expr instanceof PropertyExpression && ! exprType.isAssignable() && ! (this._expr.getExpr() instanceof ClassExpression))));
 		if (argTypes == null)
 			return false;
 		if (this._expr instanceof PropertyExpression && ! exprType.isAssignable()) {
@@ -1918,7 +1943,7 @@ var SuperExpression = exports.SuperExpression = OperatorExpression.extend({
 		var classDef = context.funcDef.getClassDef();
 		// lookup function
 		var funcType = null;
-		if ((funcType = classDef.getMemberTypeByName(this._name.getValue(), false, ClassDefinition.GET_MEMBER_MODE_SUPER)) == null) {
+		if ((funcType = classDef.getMemberTypeByName(context.errors, this._token, this._name.getValue(), false, [], ClassDefinition.GET_MEMBER_MODE_SUPER)) == null) {
 			context.errors.push(new CompileError(this._token, "could not find a member function with given name in super classes of class '" + classDef.className() + "'"));
 			return false;
 		}
@@ -1950,17 +1975,23 @@ var SuperExpression = exports.SuperExpression = OperatorExpression.extend({
 
 var NewExpression = exports.NewExpression = OperatorExpression.extend({
 
-	constructor: function (operatorToken, type, args) {
-		OperatorExpression.prototype.constructor.call(this, operatorToken);
-		this._type = type;
-		this._args = args;
-		this._constructor = null;
+	constructor: function (tokenOrThat, type, args) {
+		if (tokenOrThat instanceof NewExpression) {
+			var that = tokenOrThat;
+			OperatorExpression.prototype.constructor.call(this, that);
+			this._type = that._type;
+			this._args = Util.cloneArray(that._args);
+			this._constructor = that._constructor;
+		} else {
+			OperatorExpression.prototype.constructor.call(this, tokenOrThat);
+			this._type = type;
+			this._args = args;
+			this._constructor = null;
+		}
 	},
 
 	clone: function () {
-		var ret = new NewExpression(this._token, this._type, Util.cloneArray(this._args));
-		ret._constructor = this._constructor;
-		return ret;
+		return new NewExpression(this);
 	},
 
 	getQualifiedName: function () {
@@ -1997,7 +2028,12 @@ var NewExpression = exports.NewExpression = OperatorExpression.extend({
 			context.errors.push(new CompileError(this._token, "cannot instantiate an abstract class"));
 			return false;
 		}
-		var ctors = classDef.getMemberTypeByName("constructor", false, ClassDefinition.GET_MEMBER_MODE_CLASS_ONLY);
+		var ctors = classDef.getMemberTypeByName(context.errors, this._token, "constructor", false, [], ClassDefinition.GET_MEMBER_MODE_CLASS_ONLY);
+		if (ctors == null) {
+			// classes will always have at least one constructor unless the default constructor is marked "delete"
+			context.errors.push(new CompileError(this._token, "the class cannot be instantiated"));
+			return false;
+		}
 		var argTypes = Util.analyzeArgs(
 			context, this._args, this,
 			ctors.getExpectedCallbackTypes(this._args.length, false));

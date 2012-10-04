@@ -27,6 +27,8 @@ var path = require("path");
 
 var Class = require("../src/Class");
 eval(Class.$import("../src/compiler"));
+eval(Class.$import("../src/completion"));
+eval(Class.$import("../src/doc"));
 eval(Class.$import("../src/platform"));
 eval(Class.$import("../src/jsemitter"));
 eval(Class.$import("../src/optimizer"));
@@ -38,15 +40,20 @@ var NodePlatform = Platform.extend({
 	constructor: function() {
 		var root = path.dirname(__dirname);
 		this._root = root.replace(/\\/g, "/");
+		this._virtualFile = Object.create(null);
 	},
 
 	getRoot: function () {
 		return this._root;
 	},
 
-	fileExists: function (path) {
+	fileExists: function (name) {
+		name = path.normalize(name);
+		if (name in this._virtualFile) {
+			return true;
+		}
 		try {
-			fs.statSync(path);
+			fs.statSync(name);
 			return true;
 		} catch (e) {
 			return false;
@@ -57,8 +64,16 @@ var NodePlatform = Platform.extend({
 		return fs.readdirSync(path);
 	},
 
-	load: function (path) {
-		if (path === "-") {
+	setFileContent: function (name, content) {
+		this._virtualFile[name] = content;
+	},
+
+	load: function (name) {
+		name = path.normalize(name);
+		if (name in this._virtualFile) {
+			return this._virtualFile[name];
+		}
+		else if (name === "-") {
 			var fd = process.stdin.fd;
 
 			var content = "";
@@ -72,7 +87,7 @@ var NodePlatform = Platform.extend({
 			return content;
 		}
 		else {
-			return fs.readFileSync(path).toString();
+			return fs.readFileSync(name).toString();
 		}
 	},
 
@@ -85,12 +100,27 @@ var NodePlatform = Platform.extend({
 		}
 	},
 
+	mkpath: function (path) {
+		try {
+			fs.statSync(path);
+		} catch (e) {
+			var dirOfPath = path.replace(/\/[^/]*$/, "");
+			if (dirOfPath != path) {
+				this.mkpath(dirOfPath);
+			}
+			fs.mkdirSync(path);
+		}
+	},
+
 	// called from JavaScriptEmitter
 	addLauncher: function (emitter, sourceFile, targetCode, entryPoint, executableFor) {
 		if(emitter instanceof JavaScriptEmitter) {
 			targetCode += this.load(this.getRoot() + "/src/js/launcher.js");
 
-			var args = (executableFor === "node" ? "process.argv.slice(2)" : "[]");
+			var args =
+				( executableFor === "node"     ? "process.argv.slice(2)"
+				: executableFor === "commonjs" ? "require('system').args.slice(1)"
+				: "[]" );
 			switch(entryPoint) {
 			case "_Main":
 				launcher = "runMain";
@@ -146,8 +176,20 @@ var JSX = Class.extend({
 			fs.unlinkSync(jsFile);
 		});
 
-		process.argv = [null, null].concat(args);
-		require(jsFile); // evaluate it in this process
+		if (process.env.JSX_RUNJS) {
+			var child = require("child_process").spawn(process.env.JSX_RUNJS, [jsFile].concat(args));
+			child.stdin.end();
+			child.stdout.on("data", function (data) {
+				process.stdout.write(data);
+			});
+			child.stderr.on("data", function (data) {
+				process.stderr.write(data);
+			});
+		}
+		else {
+			process.argv = [process.argv[0], jsFile].concat(args);
+			require(jsFile); // evaluate it in this process
+		}
 	},
 
 	$printHelp: function () {
@@ -158,11 +200,13 @@ var JSX = Class.extend({
 			"\n" +
 			"Options:\n" +
 			"  --add-search-path path     add a path to library search paths\n" +
-			"  --executable (node|web)    add launcher to call _Main.main(:string[]):void\n" +
+			"  --executable RUNENV        add launcher to call _Main.main(:string[]):void\n" +
+			"                             supported RUNENV are node, commonjs and web\n" +
 			"  --run                      runs _Main.main(:string[]):void after compiling\n" +
 			"  --test                     runs _Test#test*():void after compiling\n" +
 			"  --output file              output file (default:stdout)\n" +
-			"  --mode (compile|parse)     compilation mode (default:compile)\n" +
+			"  --input-filename file      names input filename\n" +
+			"  --mode (compile|parse|doc) compilation mode (default:compile)\n" +
 			"  --target (javascript|c++)  target language (default:javascript)\n" +
 			"  --release                  omits the debugging features from the generated code (run-time type checking, logging, assertion)\n" +
 			"  --profile                  enables the profiler (experimental)\n" +
@@ -208,6 +252,7 @@ var JSX = Class.extend({
 		var completionRequest = null;
 		var emitter = null;
 		var outputFile = null;
+		var inputFilename = null;
 		var executable = null;
 		var run = null;
 		var runImmediately = false;
@@ -227,6 +272,11 @@ var JSX = Class.extend({
 					return 1;
 				}
 				break;
+			case "--input-filename":
+				if((inputFilename = getoptarg()) == null) {
+					return 1;
+				}
+				break;
 			case "--mode":
 				if ((optarg = getoptarg()) == null) {
 					return 1;
@@ -237,6 +287,9 @@ var JSX = Class.extend({
 					break;
 				case "parse":
 					compiler.setMode(Compiler.MODE_PARSE);
+					break;
+				case "doc":
+					compiler.setMode(Compiler.MODE_DOC);
 					break;
 				default:
 					console.error("unknown mode: " + optarg);
@@ -274,7 +327,7 @@ var JSX = Class.extend({
 					emitter.setEnableRunTimeTypeCheck(false);
 					optimizer.setEnableRunTimeTypeCheck(false);
 				});
-				optimizeCommands = [ "lto", "no-assert", "no-log", "fold-const", "return-if", "inline", "fold-const", "array-length" ];
+				optimizeCommands = [ "lto", "no-assert", "no-log", "fold-const", "return-if", "inline", "dce", "unbox", "fold-const", "lcse", "dce", "fold-const", "array-length", "unclassify" ];
 				break;
 			case "--optimize":
 				if ((optarg = getoptarg()) == null) {
@@ -317,13 +370,15 @@ var JSX = Class.extend({
 					return 1;
 				}
 				switch (optarg) {
-				case "web": // JavaScriptEmitter
+				case "web": // implies JavaScriptEmitter
 					break;
 				case "node": // implies JavaScriptEmitter
 					tasks.push(function () {
 						var shebang =  "#!" + process.execPath + "\n";
 						emitter.addHeader(shebang);
 					});
+					break;
+				case "commonjs": // implies JavaScriptEmitter
 					break;
 				default:
 					console.error("unknown executable type (node|web)");
@@ -334,12 +389,12 @@ var JSX = Class.extend({
 				break;
 			case "--run":
 				run = "_Main";
-				executable = "node";
+				executable = executable || "node";
 				runImmediately = true;
 				break;
 			case "--test":
 				run = "_Test";
-				executable = "node";
+				executable = executable || "node";
 				runImmediately = true;
 				break;
 			case "--profile":
@@ -388,20 +443,47 @@ var JSX = Class.extend({
 		}
 
 		var sourceFile = args[argIndex++];
+		if (inputFilename != null) {
+			platform.setFileContent(inputFilename, platform.load(sourceFile));
+			sourceFile = inputFilename;
+		}
 		compiler.addSourceFile(null, sourceFile, completionRequest);
 
-		if(compiler.getMode() === Compiler.MODE_PARSE) {
+		switch (compiler.getMode()) {
+		case Compiler.MODE_PARSE:
 			if (compiler.compile()) {
 				platform.save(outputFile, compiler.getAST());
 				return 0;
 			} else {
 				return 1;
 			}
+			break;
 		}
 
-		// MODE_COMPILE || MODE_COMPLETE
 		if (emitter == null)
 			emitter = new JavaScriptEmitter(platform);
+		compiler.setEmitter(emitter);
+
+		switch (compiler.getMode()) {
+		case Compiler.MODE_DOC:
+			if (outputFile == null) {
+				console.error("--output is mandatory for --mode doc");
+				return 1;
+			}
+			if (compiler.compile()) {
+				new DocumentGenerator(compiler)
+					.setOutputPath(outputFile)
+					.setPathFilter(function (sourcePath) {
+						return sourcePath.indexOf(platform.getRoot()) != 0;
+					})
+					.setTemplatePath(platform.getRoot() + "/src/doc/template.html")
+					.buildDoc();
+				return 0;
+			} else {
+				return 1;
+			}
+		}
+
 		var optimizer = new Optimizer();
 		var err = optimizer.setup(optimizeCommands);
 		if (err != null) {
@@ -413,13 +495,12 @@ var JSX = Class.extend({
 
 		emitter.setOutputFile(outputFile);
 
-		compiler.setEmitter(emitter);
 		compiler.setOptimizer(optimizer);
 
 		var result = compiler.compile();
 
 		if (completionRequest != null) {
-			console.log(JSON.stringify(completionRequest.getCandidates()));
+			process.stdout.write(JSON.stringify(completionRequest.getCandidates()));
 			return 0;
 		}
 

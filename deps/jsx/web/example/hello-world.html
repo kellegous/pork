@@ -21,22 +21,12 @@
     <![endif]-->
 
     <script src="../build/jsx-compiler.js"></script>
-    <script type="application/jsx" src="hello-world.jsx"></script>
-    <script>
-      window.addEventListener("load", function(e) {
-        document.getElementById("run").addEventListener("click", function(e) {
-          e.preventDefault();
-          e.stopPropagation();
-          JSX.require("hello-world.jsx").Hello.main$();
-        });
-      });
-    </script>
-
+    <script type="application/jsx" src="hello-world.jsx" data-arguments="[]"></script>
   </head>
 
   <body>
 
-    <div class="navbar navbar-fixed-top">
+    <div class="navbar navbar-inverse navbar-fixed-top">
       <div class="navbar-inner">
         <div class="container-fluid">
           <a class="btn btn-navbar" data-toggle="collapse" data-target=".nav-collapse">

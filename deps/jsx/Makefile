@@ -1,18 +1,23 @@
 
 JOBS:=4
 
-all:
+OPTIMIZE_FLAGS := lto,unclassify,fold-const,return-if,inline,dce,unbox,fold-const,dce,lcse,array-length,unclassify
 
-setup:
-	npm install
-	perl web/setup.pl
+all: src/doc.js
+
+setup: doc
+
+
+doc: src/doc.js
+	rm -rf doc
+	find lib -name '*.jsx' | xargs -n 1 -- bin/jsx --mode doc --output doc
 
 # e.g. make test JOBS=2
 test:
 	prove --jobs "$(JOBS)" t/*.t t/*/*.jsx
 
 test-optimized:
-		JSX_OPTS="--optimize lto,no-assert,fold-const,return-if,inline,fold-const" prove --jobs "$(JOBS)" t/*/*.jsx
+	JSX_OPTS="--optimize $(OPTIMIZE_FLAGS)" prove --jobs "$(JOBS)" t/*/*.jsx
 
 test-all: test test-optimized
 
@@ -21,10 +26,14 @@ optimize-bench:
 
 web:
 	perl web/build.pl --clean
-	jsx --executable web --profile --output web/profiler/fireworks.jsx.js web/profiler/fireworks.jsx
+	time bin/jsx --executable web --profile --output web/profiler/fireworks.jsx.js web/profiler/fireworks.jsx
+	time bin/jsx --executable web --release --output web/example/aobench/aobench.jsx.js web/example/aobench/aobench.jsx
 
 server:
 	node web/server.js
+
+src/doc.js: src/_doc.js
+	submodules/picotemplate/picotemplate.pl src/_doc.js
 
 # for authors
 web.jsx:
@@ -54,4 +63,4 @@ clean:
 	rm -rf CodeMirror-* codemirror.zip
 	rm -rf bootstrap*
 
-.PHONY: test web server
+.PHONY: test web server doc

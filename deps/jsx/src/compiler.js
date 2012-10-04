@@ -30,71 +30,12 @@ eval(Class.$import("./util"));
 
 "use strict";
 
-var CompletionRequest = exports.CompletionRequest = Class.extend({
-
-	constructor: function (lineNumber, columnOffset) {
-		this._lineNumber = lineNumber;
-		this._columnOffest = columnOffset;
-		this._candidates = [];
-	},
-
-	getLineNumber: function () {
-		return this._lineNumber;
-	},
-
-	getColumnOffset: function () {
-		return this._columnOffest;
-	},
-
-	isInRange: function (lineNumber, columnOffset, length) {
-		if (lineNumber != this._lineNumber)
-			return -1;
-		if (columnOffset <= this._columnOffest && this._columnOffest <= columnOffset + length) {
-			return this._columnOffest - columnOffset;
-		}
-		return -1;
-	},
-
-	pushCandidates: function (candidates) {
-		this._candidates.push(candidates);
-	},
-
-	getCandidates: function () {
-		var results = [];
-		// fetch the list
-		this._candidates.forEach(function (candidates) {
-			var rawCandidates = [];
-			candidates.getCandidates(rawCandidates);
-			var prefix = candidates.getPrefix();
-			rawCandidates.forEach(function (s) {
-				if (prefix == "" && s.substring(0, 2) == "__" && s != "__noconvert__") {
-					// skip hidden keywords
-				} else if (s.substring(0, prefix.length) == prefix) {
-					var left = s.substring(prefix.length);
-					if (left.length != 0) {
-						results.push(left);
-					}
-				}
-			});
-		});
-		// sort, and unique
-		results = results.sort();
-		for (var i = 1; i < results.length;) {
-			if (results[i - 1] == results[i])
-				results.splice(i - 1, 1);
-			else
-				++i;
-		}
-		return results;
-	}
-
-});
-
 var Compiler = exports.Compiler = Class.extend({
 
 	$MODE_COMPILE: 0,
 	$MODE_PARSE: 1,
 	$MODE_COMPLETE: 2,
+	$MODE_DOC: 3,
 
 	constructor: function (platform) {
 		this._platform = platform;
@@ -138,6 +79,10 @@ var Compiler = exports.Compiler = Class.extend({
 		return this._warningFilters;
 	},
 
+	getParsers: function () {
+		return this._parsers;
+	},
+
 	addSourceFile: function (token, path, completionRequest) {
 		var parser;
 		if ((parser = this.findParser(path)) == null) {
@@ -172,15 +117,11 @@ var Compiler = exports.Compiler = Class.extend({
 		if (! this._handleErrors(errors))
 			return false;
 		// register backing class for primitives
-		var builtins = this.findParser(this._platform.getRoot() + "/lib/built-in.jsx");
+		var builtins = this._builtinParsers[0];
 		BooleanType._classDef = builtins.lookup(errors, null, "Boolean");
 		NumberType._classDef = builtins.lookup(errors, null, "Number");
 		StringType._classDef = builtins.lookup(errors, null, "String");
 		FunctionType._classDef = builtins.lookup(errors, null, "Function");
-		if (! this._handleErrors(errors))
-			return false;
-		// template instantiation
-		this._instantiateTemplates(errors);
 		if (! this._handleErrors(errors))
 			return false;
 		// semantic analysis
@@ -190,12 +131,18 @@ var Compiler = exports.Compiler = Class.extend({
 		this._analyze(errors);
 		if (! this._handleErrors(errors))
 			return false;
-		if(this._mode == Compiler.MODE_COMPLETE)
+		switch (this._mode) {
+		case Compiler.MODE_COMPLETE:
 			return true;
+		case Compiler.MODE_DOC:
+			return true;
+		}
 		// optimization
 		this._optimize();
 		// TODO peep-hole and dead store optimizations, etc.
-		this._generateCode();
+		this._generateCode(errors);
+		if (! this._handleErrors(errors))
+			return false;
 		return true;
 	},
 
@@ -222,8 +169,12 @@ var Compiler = exports.Compiler = Class.extend({
 	parseFile: function (errors, parser) {
 		// read file
 		var content = this.getFileContent(errors, parser.getSourceToken(), parser.getPath());
-		if (content == null)
+		if (content == null) {
+			// call parse() to initialize parser's state
+			// because some compilation mode continues to run after errors.
+			parser.parse("", []);
 			return false;
+		}
 		// parse
 		parser.parse(content, errors);
 		// register imported files
@@ -301,59 +252,9 @@ var Compiler = exports.Compiler = Class.extend({
 		}
 	},
 
-	_instantiateTemplates: function (errors) {
-		for (var i = 0; i < this._parsers.length; ++i) {
-			var templateInstantiationRequests = this._parsers[i].getTemplateInstantiationRequests();
-			for (var j = 0; j < templateInstantiationRequests.length; ++j)
-				this._instantiateTemplate(errors, this._parsers[i], templateInstantiationRequests[j], false);
-		}
-	},
-
-	_instantiateTemplate: function (errors, parser, request, resolveImmmediately) {
-		var concreteClassName = Type.templateTypeToString(request.getClassName(), request.getTypeArguments());
-		// return immediately if instantiated already
-		var classDefs = parser.lookup(errors, request.getToken(), concreteClassName);
-		if (classDefs != null)
-			return classDefs;
-		// instantiate
-		var templateClass = parser.lookupTemplate(errors, request.getToken(), request.getClassName());
-		if (templateClass == null) {
-			errors.push(new CompileError(request.getToken(), "could not find template class definition for '" + request.getClassName() + "'"));
-			return null;
-		}
-		var classDef = templateClass.instantiate(errors, request);
-		if (classDef == null)
-			return null;
-		// register
-		parser.registerInstantiatedClass(classDef);
-		// resolve immediately if requested to
-		if (resolveImmmediately) {
-			classDef.resolveTypes(
-				new AnalysisContext(
-					errors,
-					parser,
-					(function (errors, request) {
-						return this._instantiateTemplate(errors, request, true);
-					}).bind(this)));
-		}
-		// nested instantiation
-		var requests = request.getInstantiationRequests();
-		for (var i = 0; i < requests.length; ++i) {
-			this._instantiateTemplate(errors, parser, requests[i], resolveImmmediately);
-		}
-		// return
-		return classDef;
-	},
-
 	_resolveTypes: function (errors) {
 		this.forEachClassDef(function (parser, classDef) {
-			classDef.resolveTypes(
-				new AnalysisContext(
-					errors,
-					parser,
-					(function (errors, request) {
-						return this._instantiateTemplate(errors, parser, request, false);
-					}).bind(this)));
+			classDef.resolveTypes(new AnalysisContext(errors, parser, null));
 			return true;
 		}.bind(this));
 	},
@@ -363,8 +264,10 @@ var Compiler = exports.Compiler = Class.extend({
 			return new AnalysisContext(
 				errors,
 				parser,
-				function (errors, request) {
-					return this._instantiateTemplate(errors, parser, request, true);
+				function (parser, classDef) {
+					classDef.setAnalysisContextOfVariables(createContext(parser));
+					classDef.analyze(createContext(parser));
+					return classDef;
 				}.bind(this));
 		}.bind(this);
 		// set analyzation context of every variable
@@ -389,7 +292,7 @@ var Compiler = exports.Compiler = Class.extend({
 			this._optimizer.setCompiler(this).performOptimization();
 	},
 
-	_generateCode: function () {
+	_generateCode: function (errors) {
 		// build list of all classDefs
 		var classDefs = [];
 		for (var i = 0; i < this._parsers.length; ++i)
@@ -423,14 +326,31 @@ var Compiler = exports.Compiler = Class.extend({
 			}
 		}
 		// rename the classes with conflicting names
+		var countByName = {};
 		for (var i = 0; i < classDefs.length; ++i) {
-			if (classDefs[i].getOutputClassName() == null) {
-				var className = classDefs[i].className();
-				var suffix = 0;
-				for (var j = i + 1; j < classDefs.length; ++j)
-					if (classDefs[j].className() == className)
-						classDefs[j].setOutputClassName(className + "$" + suffix++);
-				classDefs[i].setOutputClassName(className);
+			var classDef = classDefs[i];
+			if ((classDef.flags() & ClassDefinition.IS_NATIVE) != 0) {
+				// check that the names of native classes do not conflict, and register the ocurrences
+				var className = classDef.className();
+				if (countByName[className]) {
+					errors.push(new CompileError(classDef.getToken(), "found multiple definition for native class: " + className));
+					return;
+				}
+				classDef.setOutputClassName(className);
+				countByName[className] = 1;
+			}
+		}
+		for (var i = 0; i < classDefs.length; ++i) {
+			var classDef = classDefs[i];
+			if ((classDef.flags() & ClassDefinition.IS_NATIVE) == 0) {
+				var className = classDef.className();
+				if (countByName[className]) {
+					classDef.setOutputClassName(className + "$" + (countByName[className] - 1));
+					countByName[className]++;
+				} else {
+					classDef.setOutputClassName(className);
+					countByName[className] = 1;
+				}
 			}
 		}
 		// escape the instantiated class names

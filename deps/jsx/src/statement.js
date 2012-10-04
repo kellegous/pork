@@ -54,6 +54,10 @@ var Statement = exports.Statement = Class.extend({
 		return true;
 	},
 
+	handleStatements: function (cb) {
+		return true;
+	},
+
 	clone: null, // function clone() : Statement
 
 	forEachExpression: null, // function forEachExpression(cb : function (expr, replaceCb) : boolean) : boolean
@@ -103,6 +107,17 @@ var ConstructorInvocationStatement = exports.ConstructorInvocationStatement = St
 		return new ConstructorInvocationStatement(this._token, this._ctorClassType, Util.cloneArray(this._args), this._ctorFunctionType);
 	},
 
+	instantiate: function (instantiationContext) {
+		if (this._ctorFunctionType != null) {
+			throw new Error("instantiation after analysis?");
+		}
+		return new ConstructorInvocationStatement(
+			this._token,
+			this._ctorClassType.instantiate(instantiationContext),
+			Util.cloneArray(this._args),
+			null);
+	},
+
 	getToken: function () {
 		return this._token;
 	},
@@ -128,7 +143,7 @@ var ConstructorInvocationStatement = exports.ConstructorInvocationStatement = St
 	},
 
 	doAnalyze: function (context) {
-		var ctorType = this.getConstructingClassDef().getMemberTypeByName("constructor", false, ClassDefinition.GET_MEMBER_MODE_CLASS_ONLY);
+		var ctorType = this.getConstructingClassDef().getMemberTypeByName(context.errors, this._token, "constructor", false, [], ClassDefinition.GET_MEMBER_MODE_CLASS_ONLY);
 		if (ctorType == null) {
 			if (this._args.length != 0) {
 				context.errors.push(new CompileError(this.getToken().getToken(), "no function with matching arguments"));
@@ -178,6 +193,10 @@ var UnaryExpressionStatement = exports.UnaryExpressionStatement = Statement.exte
 
 	getExpr: function () {
 		return this._expr;
+	},
+
+	setExpr: function (expr) {
+		this._expr = expr;
 	},
 
 	doAnalyze: function (context) {
@@ -230,6 +249,10 @@ var ReturnStatement = exports.ReturnStatement = Statement.extend({
 
 	getExpr: function () {
 		return this._expr;
+	},
+
+	setExpr: function (expr) {
+		this._expr = expr;
 	},
 
 	serialize: function () {
@@ -496,6 +519,18 @@ var ContinuableStatement = exports.ContinuableStatement = LabellableStatement.ex
 		return this._statements;
 	},
 
+	forEachStatement: function (cb) {
+		if (! Util.forEachStatement(cb, this._statements))
+			return false;
+		return true;
+	},
+
+	handleStatements: function (cb) {
+		if (! cb(this._statements))
+			return false;
+		return true;
+	},
+
 	_prepareBlockAnalysis: function (context) {
 		LabellableStatement.prototype._prepareBlockAnalysis.call(this, context);
 		this._lvStatusesOnContinue = null;
@@ -577,12 +612,6 @@ var DoWhileStatement = exports.DoWhileStatement = ContinuableStatement.extend({
 		return true;
 	},
 
-	forEachStatement: function (cb) {
-		if (! Util.forEachStatement(cb, this._statements))
-			return false;
-		return true;
-	},
-
 	forEachExpression: function (cb) {
 		if (! cb(this._expr, function (expr) { this._expr = expr; }.bind(this)))
 			return false;
@@ -653,12 +682,6 @@ var ForInStatement = exports.ForInStatement = ContinuableStatement.extend({
 			this._abortBlockAnalysis(context);
 			throw e;
 		}
-		return true;
-	},
-
-	forEachStatement: function (cb) {
-		if (! Util.forEachStatement(cb, this._statements))
-			return false;
 		return true;
 	},
 
@@ -733,19 +756,13 @@ var ForStatement = exports.ForStatement = ContinuableStatement.extend({
 				if (! Statement.assertIsReachable(context, this._postExpr.getToken()))
 					return false;
 				this._analyzeExpr(context, this._postExpr);
-				this.registerVariableStatusesOnBreak(context.getTopBlock().localVariableStatuses);
 			}
+			this.registerVariableStatusesOnBreak(context.getTopBlock().localVariableStatuses);
 			this._finalizeBlockAnalysis(context);
 		} catch (e) {
 			this._abortBlockAnalysis(context);
 			throw e;
 		}
-		return true;
-	},
-
-	forEachStatement: function (cb) {
-		if (! Util.forEachStatement(cb, this._statements))
-			return false;
 		return true;
 	},
 
@@ -847,6 +864,14 @@ var IfStatement = exports.IfStatement = Statement.extend({
 		return true;
 	},
 
+	handleStatements: function (cb) {
+		if (! cb(this._onTrueStatements))
+			return false;
+		if (! cb(this._onFalseStatements))
+			return false;
+		return true;
+	},
+
 	forEachExpression: function (cb) {
 		if (! cb(this._expr, function (expr) { this._expr = expr; }.bind(this)))
 			return false;
@@ -869,6 +894,10 @@ var SwitchStatement = exports.SwitchStatement = LabellableStatement.extend({
 
 	getExpr: function () {
 		return this._expr;
+	},
+
+	setExpr: function (expr) {
+		this._expr = expr;
 	},
 
 	getStatements: function () {
@@ -914,6 +943,12 @@ var SwitchStatement = exports.SwitchStatement = LabellableStatement.extend({
 
 	forEachStatement: function (cb) {
 		if (! Util.forEachStatement(cb, this._statements))
+			return false;
+		return true;
+	},
+
+	handleStatements: function (cb) {
+		if (! cb(this._statements))
 			return false;
 		return true;
 	},
@@ -1071,12 +1106,6 @@ var WhileStatement = exports.WhileStatement = ContinuableStatement.extend({
 		return true;
 	},
 
-	forEachStatement: function (cb) {
-		if (! Util.forEachStatement(cb, this._statements))
-			return false;
-		return true;
-	},
-
 	forEachExpression: function (cb) {
 		if (! cb(this._expr, function (expr) { this._expr = expr; }.bind(this)))
 			return false;
@@ -1137,11 +1166,23 @@ var TryStatement = exports.TryStatement = Statement.extend({
 		} finally {
 			context.blockStack.pop();
 		}
-		context.getTopBlock().localVariableStatuses = context.getTopBlock().localVariableStatuses.merge(lvStatusesAfterTry);
+		context.getTopBlock().localVariableStatuses = lvStatusesAfterTry != null
+			? context.getTopBlock().localVariableStatuses.merge(lvStatusesAfterTry)
+			: context.getTopBlock().localVariableStatuses.clone();
 		// catch
 		for (var i = 0; i < this._catchStatements.length; ++i) {
 			if (! this._catchStatements[i].analyze(context))
 				return false;
+			var curCatchType = this._catchStatements[i].getLocal().getType();
+			for (var j = 0; j < i; ++j) {
+				var precCatchType = this._catchStatements[j].getLocal().getType();
+				if (curCatchType.isConvertibleTo(precCatchType)) {
+					context.errors.push(new CompileError(
+						this._catchStatements[i]._token,
+						"code is unreachable, a broader catch statement for type '" + precCatchType.toString() + "' already exists"));
+					return false;
+				}
+			}
 		}
 		// finally
 		for (var i = 0; i < this._finallyStatements.length; ++i)
@@ -1156,6 +1197,16 @@ var TryStatement = exports.TryStatement = Statement.extend({
 		if (! Util.forEachStatement(cb, this._catchStatements))
 			return false;
 		if (! Util.forEachStatement(cb, this._finallyStatements))
+			return false;
+		return true;
+	},
+
+	handleStatements: function (cb) {
+		if (! cb(this._tryStatements))
+			return false;
+		if (! cb(this._catchStatements))
+			return false;
+		if (! cb(this._finallyStatements))
 			return false;
 		return true;
 	},
@@ -1209,17 +1260,7 @@ var CatchStatement = exports.CatchStatement = Statement.extend({
 	doAnalyze: function (context) {
 		// check the catch type
 		var catchType = this.getLocal().getType();
-		if (catchType instanceof ObjectType || catchType.equals(Type.variantType)) {
-			for (var j = 0; j < i; ++j) {
-				var prevCatchType = this._catchStatements[j].getLocal().getType();
-				if (catchType.isConvertibleTo(prevCatchType)) {
-					context.errors.push(new CompileError(
-						this._token,
-						"code is unreachable, a broader catch statement for type '" + prevCatchType.toString() + "' already exists"));
-					break;
-				}
-			}
-		} else {
+		if (! (catchType instanceof ObjectType || catchType.equals(Type.variantType))) {
 			context.errors.push(new CompileError(this._token, "only objects or a variant may be caught"));
 		}
 		// analyze the statements
@@ -1240,6 +1281,10 @@ var CatchStatement = exports.CatchStatement = Statement.extend({
 
 	forEachStatement: function (cb) {
 		return Util.forEachStatement(cb, this._statements);
+	},
+
+	handleStatements: function (cb) {
+		return cb(this._statements);
 	},
 
 	forEachExpression: function (cb) {
@@ -1286,6 +1331,7 @@ var ThrowStatement = exports.ThrowStatement = Statement.extend({
 			context.errors.push(new CompileError(this._token, "cannot throw 'void'"));
 			return true;
 		}
+		context.getTopBlock().localVariableStatuses = null;
 		return true;
 	},
 

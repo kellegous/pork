@@ -20,52 +20,54 @@
  * IN THE SOFTWARE.
  */
 
- /**
-
-Unit Test Framework for JSX
-
-SYNPSIS:
-
-	import "test-case.jsx";
-	import "timer.jsx";
-
-	class _Test extends TestCase {
-
-		// synchrounous tests
-
-		function testClearTimeout() : void {
-			var id = Timer.setTimeout(function() : void {
-				this.fail("setTimeout called after clearTimeout");
-			}, 1);
-			Timer.clearTimeout(id);
-
-			this.expect(id, "clearTimeout").toBe(id);
-		}
-
-		// asynchronous tests
-
-		function testSetTimeout() : void {
-			this.async(function(async : AsyncContext) : void {
-				var to = 200;
-				var t0 = Date.now();
-				Timer.setTimeout(function() : void {
-					var t1 = Date.now();
-
-					this.expect(t1 - t0, "setTimeout 200 ms.").toBeGE(to - 50);
-
-					async.done();
-				}, to);
-			}, 1000);
-		}
-}
-
-See also t/lib/*.jsx
-
+/***
+ * <p>Unit Test Framework for JSX</p>
+ *
+ * @author DeNA., Co., Ltd.
+ * @version 1.0.0
  */
+
+/* SYNOPSIS
+import "test-case.jsx";
+import "timer.jsx";
+
+class _Test extends TestCase {
+
+	// synchrounous tests
+
+	function testClearTimeout() : void {
+		var id = Timer.setTimeout(function() : void {
+			this.fail("setTimeout called after clearTimeout");
+		}, 1);
+		Timer.clearTimeout(id);
+
+		this.expect(id, "clearTimeout").toBe(id);
+	}
+
+	// asynchronous tests
+
+	function testSetTimeout() : void {
+		this.async(function(async : AsyncContext) : void {
+			var to = 200;
+			var t0 = Date.now();
+			Timer.setTimeout(function() : void {
+				var t1 = Date.now();
+
+				this.expect(t1 - t0, "setTimeout 200 ms.").toBeGE(to - 50);
+
+				async.done();
+			}, to);
+		}, 1000);
+	}
+}
+*/
 
 import "timer.jsx";
 import "console.jsx";
 
+/**
+ * Base class for test cases
+ */
 class TestCase {
 	// TODO turn off when the process has no tty
 	static var verbose = true;
@@ -80,27 +82,18 @@ class TestCase {
 	var _currentName : Nullable.<string>;
 	var _tasks = [] : Array.<function():void>; // async tasks
 
+	/* overridable methods */
+
+	function setUp() : void { }
+	function tearDown() : void { }
+
 	/* hooks called by src/js/runtests.js */
 
 	function beforeClass(tests : string[]) : void {
 		this._tests = tests;
 		this._say("1.." + this._tests.length as string);
-	}
 
-	function run(name : string, testFunction : function():void) : void {
-		name = name.replace(/[$].*$/, "");
-		// FIXME: catch exception
-
-		var numAsyncTasks = this._tasks.length;
-		this._currentName = name;
-
-		testFunction();
-
-		if(numAsyncTasks == this._tasks.length) { // synchronous
-			this.after(name);
-		}
-		else { // asynchronous
-		}
+		this.setUp();
 	}
 
 	function afterClass() : void {
@@ -110,6 +103,28 @@ class TestCase {
 		else { // asynchronous
 			var next = this._tasks.shift() as function():void;
 			next();
+		}
+	}
+
+
+	function run(name : string, testFunction : function():void) : void {
+		name = name.replace(/[$].*$/, "");
+		// FIXME: catch exception
+
+		var numAsyncTasks = this._tasks.length;
+		this._currentName = name;
+
+		try {
+			testFunction();
+		}
+		catch (e : Error) {
+			this.fail(name + " failed with exception: " + e.toString());
+		}
+
+		if(numAsyncTasks == this._tasks.length) { // synchronous
+			this.after(name);
+		}
+		else { // asynchronous
 		}
 	}
 
@@ -138,10 +153,14 @@ class TestCase {
 				+ " of "
 				+ this._totalCount as string);
 		}
+		this.tearDown();
 	}
 
 	/* async test stuff */
 
+	/**
+	 * Prepares an asynchronous test a with timeout handler.
+	 */
 	function async(testBody : function(:AsyncContext):void, timeoutHandler : function(:AsyncContext):void, timeoutMS : int) : void {
 
 		var async = new AsyncContext(this, this._currentName, timeoutHandler, timeoutMS);
@@ -151,6 +170,9 @@ class TestCase {
 		});
 	}
 
+	/**
+	 * Prepares an asynchronous test. Automatically call <code>this.fail()</code> on timeout.
+	 */
 	function async(testBody : function(:AsyncContext):void, timeoutMS : int) : void {
 		this.async(testBody, function(async : AsyncContext) : void {
 			this.fail("TIMEOUT: " + async.name());
@@ -160,6 +182,10 @@ class TestCase {
 
 	/* matcher factory */
 
+	/**
+	 * <p>Creates a test matcher for a value.</p>
+	 * <p>Usage: <code>this.expect(testingValue).tobe(expectedValue)</code></p>
+	 */
 	function expect(value : variant) : _Matcher {
 		++this._count;
 		return new _Matcher(this, value);
@@ -191,6 +217,19 @@ class TestCase {
 		this._dump("expected: ", expected);
 	}
 
+	/**
+	 * Tells the test case that a test passes.
+	 */
+	function pass(reason : string) : void {
+		++this._count;
+		++this._pass;
+
+		this._say("\t" + "ok " + (this._count) as string + " - " + reason);
+	}
+
+	/**
+	 * Tells the test case that a test fails.
+	 */
 	function fail(reason : string) : void {
 		this._say("not ok - fail");
 		this.diag(reason);
@@ -210,10 +249,16 @@ class TestCase {
 		console.info(message);
 	}
 
+	/**
+	 * Shows diagnostic messages.
+	 */
 	function diag(message : string) : void {
 		this._say(message.replace(/^/mg, "# "));
 	}
 
+	/**
+	 * Shows notes.
+	 */
 	function note(message : string) : void {
 		if(TestCase.verbose) {
 			this._say(message.replace(/^/mg, "# "));
@@ -250,6 +295,9 @@ class AsyncContext {
 
 	function name() : string { return this._name; }
 
+	/*
+	 * Tells the test case that the asynchronous test is finished.
+	 */
 	function done() : void {
 		Timer.clearTimeout(this._timerId);
 
@@ -265,6 +313,9 @@ class AsyncContext {
 	}
 }
 
+/**
+ * Test Assertion Executor
+ */
 class _Matcher {
 
 	var _test : TestCase;
@@ -280,15 +331,6 @@ class _Matcher {
 		this._test = test;
 		this._got  = got;
 		this._name = name;
-	}
-
-	function _match(value : boolean, got : variant, expected : variant, op : string) : void {
-		if(value) {
-			this._test._ok(this._name);
-		}
-		else {
-			this._test._nok(this._name, op, got, expected);
-		}
 	}
 
 	function toBe(x :  variant) : void {
@@ -315,5 +357,24 @@ class _Matcher {
 		this._match(this._got as number >= x,
 			this._got, x, ">=");
 	}
+
+	function toMatch(x : RegExp) : void {
+		this._match(x.test(this._got as string),
+				this._got, x, "match");
+	}
+	function notToMatch(x : RegExp) : void {
+		this._match(! x.test(this._got as string),
+				this._got, x, "not match");
+	}
+
+	function _match(value : boolean, got : variant, expected : variant, op : string) : void {
+		if(value) {
+			this._test._ok(this._name);
+		}
+		else {
+			this._test._nok(this._name, op, got, expected);
+		}
+	}
+
 }
 

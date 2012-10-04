@@ -130,10 +130,31 @@ var Util = exports.Util = Class.extend({
 
 	$forEachExpression: function (cb, exprs) {
 		if (exprs != null)
-			for (var i = 0; i < exprs.length; ++i)
-				if (! cb(exprs[i], function (expr) { exprs[i] = expr; }.bind(this)))
+			for (var i = 0; i < exprs.length; ++i) {
+				if (! cb(exprs[i], function (exprs, index) {
+					return function (expr) {
+						exprs[index] = expr;
+					};
+				}(exprs, i))) {
 					return false;
+				}
+			}
 		return true;
+	},
+
+	$findFunctionInClass: function (classDef, funcName, argTypes, isStatic) {
+		var ClassDefinition = require("./classdef.js").ClassDefinition;
+		var found = null;
+		classDef.forEachMemberFunction(function (funcDef) {
+			if (isStatic == ((funcDef.flags() & ClassDefinition.IS_STATIC) != 0)
+				&& funcDef.name() == funcName
+				&& Util.typesAreEqual(funcDef.getArgumentTypes(), argTypes)) {
+				found = funcDef;
+				return false;
+			}
+			return true;
+		});
+		return found;
 	},
 
 	$encodeStringLiteral: function (str) {
@@ -218,13 +239,56 @@ var Util = exports.Util = Class.extend({
 
 });
 
+var TypedMap = exports.TypedMap = Class.extend({
+
+	constructor: function (equalsCallback) {
+		this._list = [];
+		this._equalsCallback = equalsCallback;
+	},
+
+	exists: function (key) {
+		return ! this.forEach(function (entryKey, entryValue) {
+			return ! this._equalsCallback(key, entryKey);
+		});
+	},
+
+	get: function (key) {
+		for (var i = 0; i < this._list.length; ++i) {
+			if (this._equalsCallback(this._list[i].key, key)) {
+				return this._list[i].value;
+			}
+		}
+		return null;
+	},
+
+	set: function (key, value) {
+		for (var i = 0; i < this._list.length; ++i) {
+			if (this._equalsCallback(this._list[i].key, key)) {
+				this._list[i].value = value;
+				return;
+			}
+		}
+		this._list.push({ key: key, value: value });
+	},
+
+	forEach: function (cb) {
+		for (var i = 0; i < this._list.length; ++i) {
+			var e = this._list[i];
+			if (! cb(e.key, e.value)) {
+				return false;
+			}
+		}
+		return true;
+	}
+
+});
+
 var TemplateInstantiationRequest = exports.TemplateInstantiationRequest = Class.extend({
 
 	constructor: function (token, className, typeArgs) {
 		this._token = token;
 		this._className = className;
 		this._typeArgs = typeArgs;
-		this._instantiationRequests = [];
 	},
 
 	getToken: function() {
@@ -237,10 +301,6 @@ var TemplateInstantiationRequest = exports.TemplateInstantiationRequest = Class.
 
 	getTypeArguments: function () {
 		return this._typeArgs;
-	},
-
-	getInstantiationRequests: function () {
-		return this._instantiationRequests;
 	}
 
 });
@@ -296,8 +356,8 @@ var CompileIssue = exports.CompileError = Class.extend({
 		sourceLine += Util.repeat(" ", col);
 		sourceLine += Util.repeat("^", this._size);
 
-		return Util.format("[%1:%2] %3%4\n%5\n",
-						   [this._filename, this._lineNumber, this.getPrefix(), this._message, sourceLine]);
+		return Util.format("[%1:%2:%3] %4%5\n%6\n",
+						   [this._filename, this._lineNumber, col, this.getPrefix(), this._message, sourceLine]);
 	}
 
 });

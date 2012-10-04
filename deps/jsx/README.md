@@ -1,12 +1,13 @@
 NAME [![Build Status](https://secure.travis-ci.org/jsx/JSX.png)](http://travis-ci.org/jsx/JSX)
 =======================
 
-JSX - Object-oriented, statically-typed programming language
+JSX - a faster, safer, easier JavaScript
 
 INSTALLATION
 =======================
 
-The JSX compiler requires `node.js` v0.6.19 or later.
+The JSX compiler requires `node.js` v0.6.19 or later, `npm`, and the SDK
+also requires Perl 5.10.0 or later.
 
 To setup JSX SDK , type the following command:
 
@@ -17,8 +18,6 @@ To setup JSX SDK , type the following command:
 To install jsx command, just make a link of `bin/jsx` to `~/bin`.
 
     ln -s "$PWD/bin/jsx" ~/bin
-
-If you use Windows, `npm install -g .` might be better, though.
 
 COMPILATION
 =======================
@@ -67,7 +66,18 @@ Type the following commands to use the web interface.
 EXAMPLES
 =======================
 
-There are examples in `example/` and `web/example/`.
+There are JSX source files in `example/` and `web/example/`, and the the test directory `t/`.
+
+WINDOWS SUPPORT
+=======================
+
+you can install `jsx` command via `npm install -g .`, and then can invoke `jsx`.
+For the web interface, you can run the server by the following commands:
+
+    perl web/build.pl
+    node web/server.js
+
+Note that Windows environment is not completely supported yet.
 
 RESOURCES
 =======================

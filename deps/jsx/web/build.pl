@@ -119,16 +119,18 @@ sub process_jsx {
     copy_r("$project_root/src", $dest_src);
     copy_r("$root/src", $dest_src);
 
-    local $ENV{PATH} = "$project_root/node_modules/browserbuild/bin"
-                       . ":" . $ENV{PATH};
+    my $browserbuild = "$project_root/node_modules/browserbuild/bin/browserbuild";
 
     my @files = glob("$src/*.js");
-    my $cmd = "browserbuild --main interface --global jsx --basepath '$src/' "
+	@files = grep { !m{ \Q/_doc.js\E $}xms } @files;
+    my $basepath = shell_quote($src . "/");
+    my $cmd = "node $browserbuild --main interface --global jsx --basepath $basepath "
         . join(' ', map { shell_quote($_) } @files)
         . " > "
         . shell_quote($dest);
 
-    system($cmd) == 0 or die "Failed to build jsx-web.js: $cmd\n";
+    system($cmd) == 0 or die "Failed to build jsx-compiler.js: $cmd\n";
+	system("$root/check-jsx-compiler.js") == 0 or die "Failed to build jsx-compiler.js";
 }
 
 sub process_tree {
@@ -182,7 +184,7 @@ sub process_source_map {
         next if not modified($jsx_file, "$dest/$jsx_file");
 
         my $t0 = [Time::HiRes::gettimeofday()];
-        system("$root/../bin/jsx",
+        system("node", "$root/../bin/jsx",
             "--executable", "web",
             "--enable-source-map",
             "--output", "$jsx_file.js",

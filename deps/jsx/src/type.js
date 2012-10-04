@@ -47,7 +47,7 @@ var Type = exports.Type = Class.extend({
 	getClassDef: null, // ClassDefinition getClassDef()
 
 	equals: function (x) {
-		return this == x || ((x instanceof Type) && this.toString() == x.toString());
+		return this == x;
 	},
 
 	resolveIfNullable: function () {
@@ -264,6 +264,10 @@ var NullableType = exports.NullableType = Type.extend({
 		return baseType.toNullableType();
 	},
 
+	equals: function (x) {
+		return x instanceof NullableType && this._baseType.equals(x._baseType);
+	},
+
 	isConvertibleTo: function (type) {
 		return this._baseType.isConvertibleTo(type instanceof NullableType ? type._baseType : type);
 	},
@@ -297,6 +301,10 @@ var VariableLengthArgumentType = exports.VariableLengthArgumentType = Type.exten
 	instantiate: function (instantiationContext) {
 		var baseType = this._baseType.instantiate(instantiationContext);
 		return new VariableLengthArgumentType(baseType);
+	},
+
+	equals: function (x) {
+		return x instanceof VariableLengthArgumentType && this._baseType.equals(x._baseType);
 	},
 
 	isConvertibleTo: function (type) {
@@ -333,6 +341,14 @@ var ObjectType = exports.ObjectType = Type.extend({
 		throw new Error("logic flaw; ObjectType is created during semantic analysis, after template instantiation");
 	},
 
+	equals: function (x) {
+		if (this instanceof ParsedObjectType && x instanceof ParsedObjectType
+			&& (this._classDef == null || x._classDef == null)) {
+			return this.toString() == x.toString();
+		}
+		return x instanceof ObjectType && this._classDef == x._classDef;
+	},
+
 	resolveType: function (context) {
 		if (this._classDef == null)
 			throw new Error("logic flaw");
@@ -343,8 +359,12 @@ var ObjectType = exports.ObjectType = Type.extend({
 		if (type instanceof VariantType)
 			return true;
 		// conversions from Number / String to number / string is handled in each operator (since the behavior differ bet. the operators)
-		if (! (type instanceof ObjectType))
+		if (! (type instanceof ObjectType)) {
 			return false;
+		}
+		if (this._classDef == null) { // occurs with completion mode
+			return false;
+		}
 		return this._classDef.isConvertibleTo(type._classDef);
 	},
 
@@ -372,6 +392,10 @@ var ParsedObjectType = exports.ParsedObjectType = ObjectType.extend({
 
 	getToken: function () {
 		return this._qualifiedName.getToken();
+	},
+
+	getQualifiedName: function () {
+		return this._qualifiedName;
 	},
 
 	getTypeArguments: function () {
@@ -403,8 +427,6 @@ var ParsedObjectType = exports.ParsedObjectType = ObjectType.extend({
 				}
 			}
 		}
-		instantiationContext.request.getInstantiationRequests().push(
-			new TemplateInstantiationRequest(this._qualifiedName.getToken(), this._qualifiedName.getToken().getValue(), typeArgs));
 		var objectType = new ParsedObjectType(this._qualifiedName, typeArgs);
 		instantiationContext.objectTypesUsed.push(objectType);
 		return objectType;
@@ -412,13 +434,7 @@ var ParsedObjectType = exports.ParsedObjectType = ObjectType.extend({
 
 	resolveType: function (context) {
 		if (this._classDef == null) {
-			if (this._typeArguments.length == 0) {
-				this._classDef = this._qualifiedName.getClass(context);
-			} else {
-				// get the already-instantiated class (FIXME refactor, or should we move QualifiedName#getClass to somewhere else?)
-				if ((this._classDef = context.parser.lookup(context.errors, this._qualifiedName.getToken(), this.toString())) == null)
-					context.errors.push(new CompileError(this._qualifiedName.getToken(), "'" + this.toString() + "' is not defined"));
-			}
+			this._classDef = this._qualifiedName.getClass(context, this._typeArguments);
 		}
 	},
 
@@ -471,7 +487,10 @@ var FunctionChoiceType = exports.FunctionChoiceType = FunctionType.extend({
 				matched.push(this._types[i]);
 		switch (matched.length) {
 		case 0:
-			context.errors.push(new CompileError(operatorToken, "no function with matching arguments"));
+			context.errors.push(
+				new CompileError(
+					operatorToken,
+					operatorToken.getValue() == "[" ? "operator [] of type " + argTypes[0].toString() + " is not applicable to " + this._objectType.toString() : "no function with matching arguments"));
 			break;
 		case 1:
 			return matched[0];
@@ -527,7 +546,10 @@ var ResolvedFunctionType = exports.ResolvedFunctionType = FunctionType.extend({
 
 	deduceByArgumentTypes: function (context, operatorToken, argTypes, isStatic) {
 		if (! this._deduceByArgumentTypes(argTypes, isStatic, false)) {
-			context.errors.push(new CompileError(operatorToken, "no function with matching arguments"));
+			context.errors.push(
+				new CompileError(
+					operatorToken,
+					operatorToken.getValue() == "[" ? "operator [] of type " + argTypes[0].toString() + " is not applicable to " + this._objectType.toString() : "no function with matching arguments"));
 			return null;
 		}
 		return this;
@@ -602,7 +624,7 @@ var ResolvedFunctionType = exports.ResolvedFunctionType = FunctionType.extend({
 			if (this._argTypes[i] instanceof VariableLengthArgumentType) {
 				args[i] = "... : " + this._argTypes[i].getBaseType().toString();
 			} else {
-				args[i] = " : " + this._argTypes[i].toString();
+				args[i] = ": " + this._argTypes[i].toString();
 			}
 		}
 		return this._toStringPrefix() + "function (" + args.join(", ") + ") : " + this._returnType.toString();
@@ -625,6 +647,12 @@ var StaticFunctionType = exports.StaticFunctionType = ResolvedFunctionType.exten
 			if ((argTypes[i] = this._argTypes[i].instantiate(instantiationContext)) == null)
 				return null;
 		return new StaticFunctionType(returnType, argTypes, this._isAssignable);
+	},
+
+	equals: function (x) {
+		return x instanceof StaticFunctionType
+			&& this._returnType.equals(x._returnType)
+			&& Util.typesAreEqual(this._argTypes, x._argTypes);
 	},
 
 	_clone: function () {
@@ -653,6 +681,13 @@ var MemberFunctionType = exports.MemberFunctionType = ResolvedFunctionType.exten
 	constructor: function (objectType, returnType, argTypes, isAssignable) {
 		ResolvedFunctionType.prototype.constructor.call(this, returnType, argTypes, isAssignable);
 		this._objectType = objectType;
+	},
+
+	equals: function (x) {
+		return x instanceof MemberFunctionType
+			&& this._objectType == x._objectType
+			&& this._returnType.equals(x._returnType)
+			&& Util.typesAreEqual(this._argTypes, x._argTypes);
 	},
 
 	_clone: function () {

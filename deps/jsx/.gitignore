@@ -1,9 +1,9 @@
 *~
 *.swp
 *.zip
-node_modules/
 _builtins.js
 try
+doc
 v8.log
 CodeMirror-*
 bootstrap/
