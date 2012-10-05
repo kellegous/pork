@@ -38,3 +38,10 @@ func TestScss(t *testing.T) {
     NewConfig(None),
     filepath.Join(Root(), "tests/scss/a.scss"))
 }
+
+func TestTsc(t *testing.T) {
+  test(t,
+    CompileTsc,
+    NewConfig(None),
+    filepath.Join(Root(), "tests/tsc/a.ts"))
+}

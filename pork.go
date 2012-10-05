@@ -28,9 +28,8 @@ type srcType int
 
 const (
   srcOfJsx srcType = iota
+  srcOfTsc
   srcOfScss
-  srcOfPjs
-  srcOfBarrel
   srcOfUnknown
 )
 
@@ -45,6 +44,7 @@ const (
 const (
   // src
   jsxFileExtension  = ".jsx"
+  tscFileExtension  = ".ts"
   scssFileExtension = ".scss"
 
   // dst
@@ -52,7 +52,6 @@ const (
   cssFileExtension        = ".css"
 )
 
-var PathToCpp = "/usr/bin/gcc"
 var PathToJava = "/usr/bin/java"
 var PathToRuby = "/usr/bin/ruby"
 var PathToNode = "/usr/local/bin/node"
@@ -146,22 +145,6 @@ func prepend(dst []string, args ...string) []string {
   copy(r, args)
   copy(r[len(args):], dst)
   return r
-}
-
-func cppCommand(filename string, includes []string) *command {
-  args := []string{
-    PathToCpp,
-    "-E",
-    "-P",
-    "-CC",
-    "-xc"}
-
-  for _, i := range includes {
-    args = append(args, fmt.Sprintf("-I%s", i))
-  }
-
-  args = append(args, filename)
-  return &command{args, "", nil}
 }
 
 func jscCommand(externs []string, jscPath string, level Optimization) *command {
@@ -430,6 +413,8 @@ func typeOfSrc(filename string) srcType {
   switch ext {
   case jsxFileExtension:
     return srcOfJsx
+  case tscFileExtension:
+    return srcOfTsc
   case scssFileExtension:
     return srcOfScss
   }
@@ -473,7 +458,15 @@ func ServeContent(c Context, w http.ResponseWriter, r *http.Request, cfg *Config
       return
     }
 
-    // TODO(knorton): Search for other src types.
+    tscSrc, found := findFile(d, changeTypeOfFile(path, javaScriptFileExtension, tscFileExtension))
+    if found == foundFile {
+      w.Header().Set("Content-Type", "text/javascript")
+      if err := CompileTsc(cfg, tscSrc, w); err != nil {
+        panic(err)
+      }
+      return
+    }
+
     c.ServeNotFound(w, r)
   case dstOfCss:
     cssSrc, found := findFile(d, changeTypeOfFile(path, cssFileExtension, scssFileExtension))
@@ -543,6 +536,16 @@ func (h *content) Productionize(d http.Dir) error {
         }
 
         if err := compileToFile(h.Config, path, target, CompileJsx); err != nil {
+          return err
+        }
+      case srcOfTsc:
+        target, err := rebasePath(src, dst,
+          changeTypeOfFile(path, tscFileExtension, javaScriptFileExtension))
+        if err != nil {
+          return err
+        }
+
+        if err := compileToFile(h.Config, path, target, CompileTsc); err != nil {
           return err
         }
       case srcOfScss:
