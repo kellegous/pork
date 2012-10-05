@@ -32,23 +32,9 @@ func TestJsx(t *testing.T) {
     filepath.Join(Root(), "tests/jsx/a.jsx"))
 }
 
-func TestPjs(t *testing.T) {
-  test(t,
-    CompilePjs,
-    NewConfig(None),
-    filepath.Join(Root(), "tests/pjs/a.pjs"))
-}
-
 func TestScss(t *testing.T) {
   test(t,
     CompileScss,
     NewConfig(None),
     filepath.Join(Root(), "tests/scss/a.scss"))
-}
-
-func TestBarrel(t *testing.T) {
-  test(t,
-    CompileBarrel,
-    NewConfig(None),
-    filepath.Join(Root(), "tests/barrel/a.barrel"))
 }

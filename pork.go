@@ -44,10 +44,8 @@ const (
 
 const (
   // src
-  barrelFileExtension = ".barrel"
-  jsxFileExtension    = ".jsx"
-  scssFileExtension   = ".scss"
-  pjsFileExtension    = ".pjs"
+  jsxFileExtension  = ".jsx"
+  scssFileExtension = ".scss"
 
   // dst
   javaScriptFileExtension = ".js"
@@ -371,8 +369,6 @@ func (h fileHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 type Config struct {
   Level        Optimization
-  PjsIncludes  []string
-  PjsExterns   []string
   JsxIncludes  []string
   JsxExterns   []string
   ScssIncludes []string
@@ -380,8 +376,7 @@ type Config struct {
 
 func NewConfig(level Optimization) *Config {
   return &Config{
-    Level:       level,
-    PjsIncludes: []string{filepath.Join(rootDir, "js")},
+    Level: level,
   }
 }
 
@@ -435,12 +430,8 @@ func typeOfSrc(filename string) srcType {
   switch ext {
   case jsxFileExtension:
     return srcOfJsx
-  case pjsFileExtension:
-    return srcOfPjs
   case scssFileExtension:
     return srcOfScss
-  case barrelFileExtension:
-    return srcOfBarrel
   }
   return srcOfUnknown
 }
@@ -482,25 +473,7 @@ func ServeContent(c Context, w http.ResponseWriter, r *http.Request, cfg *Config
       return
     }
 
-    // try to answer with pjs
-    pjsSrc, found := findFile(d, changeTypeOfFile(path, javaScriptFileExtension, pjsFileExtension))
-    if found == foundFile {
-      w.Header().Set("Content-Type", "text/javascript")
-      if err := CompilePjs(cfg, pjsSrc, w); err != nil {
-        panic(err)
-      }
-      return
-    }
-
-    // try to answer with a barrel
-    brlSrc, found := findFile(d, changeTypeOfFile(path, javaScriptFileExtension, barrelFileExtension))
-    if found == foundFile {
-      w.Header().Set("Content-Type", "text/javascript")
-      if err := CompileBarrel(cfg, brlSrc, w); err != nil {
-        panic(err)
-      }
-      return
-    }
+    // TODO(knorton): Search for other src types.
     c.ServeNotFound(w, r)
   case dstOfCss:
     cssSrc, found := findFile(d, changeTypeOfFile(path, cssFileExtension, scssFileExtension))
@@ -570,26 +543,6 @@ func (h *content) Productionize(d http.Dir) error {
         }
 
         if err := compileToFile(h.Config, path, target, CompileJsx); err != nil {
-          return err
-        }
-      case srcOfPjs:
-        target, err := rebasePath(src, dst,
-          changeTypeOfFile(path, pjsFileExtension, javaScriptFileExtension))
-        if err != nil {
-          return err
-        }
-
-        if err := compileToFile(h.Config, path, target, CompilePjs); err != nil {
-          return err
-        }
-      case srcOfBarrel:
-        target, err := rebasePath(src, dst,
-          changeTypeOfFile(path, barrelFileExtension, javaScriptFileExtension))
-        if err != nil {
-          return err
-        }
-
-        if err := compileToFile(h.Config, path, target, CompileBarrel); err != nil {
           return err
         }
       case srcOfScss:
