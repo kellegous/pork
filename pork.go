@@ -172,6 +172,7 @@ type Router interface {
 
 type Context interface {
   ServeNotFound(http.ResponseWriter, *http.Request)
+  ServedFromPrefix() string
 }
 
 type emptyContext struct{}
@@ -180,10 +181,14 @@ func (c *emptyContext) ServeNotFound(w http.ResponseWriter, r *http.Request) {
   http.NotFound(w, r)
 }
 
+func (c *emptyContext) ServedFromPrefix() string {
+  return ""
+}
+
 func ContextFor(w http.ResponseWriter, r *http.Request) Context {
   switch t := w.(type) {
   case *response:
-    return t.router
+    return t
   }
   return &emptyContext{}
 }
@@ -209,6 +214,7 @@ type response struct {
   res    http.ResponseWriter
   router *router
   status int
+  prefix string
 }
 
 func (r *response) WriteHeader(code int) {
@@ -228,12 +234,34 @@ func (r *response) Hijack() (net.Conn, *bufio.ReadWriter, error) {
   return r.res.(http.Hijacker).Hijack()
 }
 
+func (c *response) ServeNotFound(w http.ResponseWriter, r *http.Request) {
+  c.router.notFound.ServeHTTP(w, r)
+}
+
+func (c *response) ServedFromPrefix() string {
+  return c.prefix
+}
+
 // todo: remove embedded ServerMux and use my trie dispatcher
 type router struct {
   logger   func(status int, r *http.Request)
   notFound http.Handler
   headers  map[string]string
   *http.ServeMux
+}
+
+func (d *router) Handle(path string, h http.Handler) {
+  d.ServeMux.Handle(path, &reg{
+    p: path,
+    h: h,
+  })
+}
+
+func (d *router) HandleFunc(path string, h func(w http.ResponseWriter, r *http.Request)) {
+  d.ServeMux.Handle(path, &reg{
+    p: path,
+    h: http.HandlerFunc(h),
+  })
 }
 
 func (d *router) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -259,13 +287,23 @@ func (d *router) ServeHTTP(w http.ResponseWriter, r *http.Request) {
   d.logger(res.status, r)
 }
 
-func (d *router) ServeNotFound(w http.ResponseWriter, r *http.Request) {
-  d.notFound.ServeHTTP(w, r)
-}
-
 type Handler interface {
   ServeHTTP(w http.ResponseWriter, r *http.Request)
   Productionize(d http.Dir) error
+}
+
+// this simply keeps the registration prefix.
+// todo: there is a much better way to do this by having a ServerMux that
+// reports the prefix for which the request matched.
+type reg struct {
+  p string
+  h http.Handler
+}
+
+func (g *reg) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+  n := w.(*response)
+  n.prefix = g.p
+  g.h.ServeHTTP(w, r)
 }
 
 type content struct {
@@ -432,23 +470,27 @@ func typeOfDst(filename string) dstType {
 }
 
 func ServeContent(c Context, w http.ResponseWriter, r *http.Request, cfg *Config, d ...http.Dir) {
-  path := r.URL.Path
+  pth := r.URL.Path
+  rel, err := filepath.Rel(c.ServedFromPrefix(), r.URL.Path)
+  if err != nil {
+    panic(err)
+  }
 
   // if the file exists, just serve it.
-  if target, found := findFile(d, path); found != foundNothing {
+  if target, found := findFile(d, rel); found != foundNothing {
     // if this is a directory without a trailing /, we need to normalize.
-    if found == foundDirectory && path[len(path)-1] != '/' {
-      http.Redirect(w, r, path+"/", http.StatusMovedPermanently)
+    if found == foundDirectory && pth[len(pth)-1] != '/' {
+      http.Redirect(w, r, pth+"/", http.StatusMovedPermanently)
       return
     }
     http.ServeFile(w, r, target)
     return
   }
 
-  switch typeOfDst(path) {
+  switch typeOfDst(rel) {
   case dstOfJs:
     // try to answer with jsx
-    jsxSrc, found := findFile(d, changeTypeOfFile(path, javaScriptFileExtension, jsxFileExtension))
+    jsxSrc, found := findFile(d, changeTypeOfFile(rel, javaScriptFileExtension, jsxFileExtension))
     if found == foundFile {
       // serve jsx
       w.Header().Set("Content-Type", "text/javascript")
@@ -469,7 +511,7 @@ func ServeContent(c Context, w http.ResponseWriter, r *http.Request, cfg *Config
 
     c.ServeNotFound(w, r)
   case dstOfCss:
-    cssSrc, found := findFile(d, changeTypeOfFile(path, cssFileExtension, scssFileExtension))
+    cssSrc, found := findFile(d, changeTypeOfFile(rel, cssFileExtension, scssFileExtension))
     if found == foundFile {
       w.Header().Set("Content-Type", "text/css")
       if err := CompileScss(cfg, cssSrc, w); err != nil {
