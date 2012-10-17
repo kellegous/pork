@@ -13,6 +13,7 @@ import (
   "path/filepath"
   "runtime"
   "strings"
+  "sync"
   "time"
 )
 
@@ -289,7 +290,7 @@ func (d *router) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 type Handler interface {
   ServeHTTP(w http.ResponseWriter, r *http.Request)
-  Productionize(d http.Dir) error
+  Productionize(d http.Dir) (func() error, error)
 }
 
 // this simply keeps the registration prefix.
@@ -308,7 +309,8 @@ func (g *reg) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 type content struct {
   root []http.Dir
-  *Config
+  conf *Config
+  lock sync.RWMutex
 }
 
 func pathToThisFile() string {
@@ -402,7 +404,7 @@ func NewConfig(level Optimization) *Config {
 }
 
 func Content(c *Config, d ...http.Dir) Handler {
-  return &content{d, c}
+  return &content{root: d, conf: c}
 }
 
 func expandPath(fs http.Dir, name string) string {
@@ -525,7 +527,9 @@ func ServeContent(c Context, w http.ResponseWriter, r *http.Request, cfg *Config
 }
 
 func (h *content) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-  ServeContent(ContextFor(w, r), w, r, h.Config, h.root...)
+  h.lock.RLock()
+  defer h.lock.RUnlock()
+  ServeContent(ContextFor(w, r), w, r, h.conf, h.root...)
 }
 
 func rebasePath(src, dst, filename string) (string, error) {
@@ -558,48 +562,48 @@ func compileToFile(c *Config, src, dst string, fn func(*Config, string, io.Write
   return nil
 }
 
-func (h *content) Productionize(d http.Dir) error {
-  dst := string(d)
-  if _, err := os.Stat(dst); err != nil {
-    if err := os.MkdirAll(dst, 0777); err != nil {
+func productionize(cfg *Config, roots []http.Dir, dest http.Dir) error {
+  d := string(dest)
+  if _, err := os.Stat(d); err != nil {
+    if err := os.MkdirAll(d, 0777); err != nil {
       return err
     }
   }
 
-  for _, root := range h.root {
+  for _, root := range roots {
     src := string(root)
     filepath.Walk(src, func(path string, info os.FileInfo, err error) error {
       switch typeOfSrc(path) {
       case srcOfJsx:
-        target, err := rebasePath(src, dst,
+        target, err := rebasePath(src, d,
           changeTypeOfFile(path, jsxFileExtension, javaScriptFileExtension))
         if err != nil {
           return err
         }
 
-        if err := compileToFile(h.Config, path, target, CompileJsx); err != nil {
+        if err := compileToFile(cfg, path, target, CompileJsx); err != nil {
           return err
         }
       case srcOfTsc:
-        target, err := rebasePath(src, dst,
+        target, err := rebasePath(src, d,
           changeTypeOfFile(path, tscFileExtension, javaScriptFileExtension))
         if err != nil {
           return err
         }
 
-        if err := compileToFile(h.Config, path, target, CompileTsc); err != nil {
+        if err := compileToFile(cfg, path, target, CompileTsc); err != nil {
           return err
         }
       case srcOfScss:
         // todo: there is an issue here in that I will compile things
         // that are only intended to be included.
-        target, err := rebasePath(src, dst,
+        target, err := rebasePath(src, d,
           changeTypeOfFile(path, scssFileExtension, cssFileExtension))
         if err != nil {
           return err
         }
 
-        if err := compileToFile(h.Config, path, target, CompileScss); err != nil {
+        if err := compileToFile(cfg, path, target, CompileScss); err != nil {
           return err
         }
       }
@@ -607,7 +611,26 @@ func (h *content) Productionize(d http.Dir) error {
     })
   }
 
-  // todo: should be first
-  h.root = append(h.root, d)
   return nil
+}
+
+func (h *content) Productionize(d http.Dir) (func() error, error) {
+  h.lock.Lock()
+  defer h.lock.Unlock()
+
+  if err := productionize(h.conf, h.root, d); err != nil {
+    return nil, err
+  }
+
+  // prepend the dest dir to the roots
+  root := make([]http.Dir, len(h.root)+1)
+  root[0] = d
+  copy(root[1:], h.root)
+  h.root = root
+
+  return func() error {
+    h.lock.Lock()
+    defer h.lock.Unlock()
+    return productionize(h.conf, h.root, d)
+  }, nil
 }
