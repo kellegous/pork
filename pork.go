@@ -500,7 +500,7 @@ func ServeContent(c Context, w http.ResponseWriter, r *http.Request, cfg *Config
       return
     }
 
-    tscSrc, found := findFile(d, changeTypeOfFile(path, javaScriptFileExtension, tscFileExtension))
+    tscSrc, found := findFile(d, changeTypeOfFile(rel, javaScriptFileExtension, tscFileExtension))
     if found == foundFile {
       w.Header().Set("Content-Type", "text/javascript")
       if err := CompileTsc(cfg, tscSrc, w); err != nil {
