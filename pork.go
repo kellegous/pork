@@ -565,7 +565,10 @@ func compileToFile(c *Config, src, dst string, fn func(*Config, string, io.Write
 func productionize(cfg *Config, roots []http.Dir, dest http.Dir) error {
   d := string(dest)
   if _, err := os.Stat(d); err != nil {
-    if err := os.MkdirAll(d, 0777); err != nil {
+    if !os.IsNotExist(err) {
+      return err
+    }
+    if err := os.MkdirAll(d, os.ModePerm); err != nil {
       return err
     }
   }
