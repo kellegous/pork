@@ -44,9 +44,9 @@ const (
 
 const (
   // src
-  jsxFileExtension  = ".jsx"
-  tscFileExtension  = ".ts"
-  scssFileExtension = ".scss"
+  jsxFileExtension  = ".main.jsx"
+  tscFileExtension  = ".main.ts"
+  scssFileExtension = ".main.scss"
 
   // dst
   javaScriptFileExtension = ".js"
@@ -449,13 +449,13 @@ func changeTypeOfFile(path, from, to string) string {
 }
 
 func typeOfSrc(filename string) srcType {
-  ext := filepath.Ext(filename)
-  switch ext {
-  case jsxFileExtension:
+  if strings.HasSuffix(filename, jsxFileExtension) {
     return srcOfJsx
-  case tscFileExtension:
+  }
+  if strings.HasSuffix(filename, tscFileExtension) {
     return srcOfTsc
-  case scssFileExtension:
+  }
+  if strings.HasSuffix(filename, scssFileExtension) {
     return srcOfScss
   }
   return srcOfUnknown
