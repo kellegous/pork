@@ -47,7 +47,7 @@ func CompileJsx(c *Config, filename string, w io.Writer) error {
   case Basic, Advanced:
     r, p, err = pipe(
       jsxCommand(filename, pathToJsx(), c.JsxIncludes, c.Level),
-      jscCommand(c.JsxExterns, pathToJsc(), c.Level))
+      jscCommand(c.JsxExterns, pathToJsc(), "", c.Level))
     if err != nil {
       return err
     }

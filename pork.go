@@ -31,6 +31,7 @@ const (
   srcOfJsx srcType = iota
   srcOfTsc
   srcOfScss
+  srcOfPjs
   srcOfUnknown
 )
 
@@ -47,6 +48,7 @@ const (
   jsxFileExtension  = ".main.jsx"
   tscFileExtension  = ".main.ts"
   scssFileExtension = ".main.scss"
+  pjsFileExtension  = ".main.js"
 
   // dst
   javaScriptFileExtension = ".js"
@@ -148,7 +150,7 @@ func prepend(dst []string, args ...string) []string {
   return r
 }
 
-func jscCommand(externs []string, jscPath string, level Optimization) *command {
+func jscCommand(externs []string, jscPath, filename string, level Optimization) *command {
   args := []string{PathToJava, "-jar", jscPath}
 
   switch level {
@@ -162,7 +164,42 @@ func jscCommand(externs []string, jscPath string, level Optimization) *command {
     args = append(args, "--externs", e)
   }
 
+  if filename != "" {
+    args = append(args, filename)
+  }
+
   return &command{args, "", nil}
+}
+
+func CompilePjs(c *Config, filename string, w io.Writer) error {
+  // if the level is none, just emit the file
+  if c.Level == None {
+    f, err := os.Open(filename)
+    if err != nil {
+      return err
+    }
+    defer f.Close()
+    if _, err := io.Copy(w, f); err != nil {
+      return err
+    }
+    return nil
+  }
+
+  r, p, err := pipe(jscCommand([]string{}, pathToJsc(), filename, c.Level))
+  if err != nil {
+    return err
+  }
+  defer r.Close()
+
+  if _, err := io.Copy(w, r); err != nil {
+    return err
+  }
+
+  if err := waitFor(p); err != nil {
+    return err
+  }
+
+  return nil
 }
 
 type Router interface {
@@ -458,6 +495,9 @@ func typeOfSrc(filename string) srcType {
   if strings.HasSuffix(filename, scssFileExtension) {
     return srcOfScss
   }
+  if strings.HasSuffix(filename, pjsFileExtension) {
+    return srcOfPjs
+  }
   return srcOfUnknown
 }
 
@@ -506,6 +546,15 @@ func ServeContent(c Context, w http.ResponseWriter, r *http.Request, cfg *Config
     if found == foundFile {
       w.Header().Set("Content-Type", "text/javascript")
       if err := CompileTsc(cfg, tscSrc, w); err != nil {
+        panic(err)
+      }
+      return
+    }
+
+    pjsSrc, found := findFile(d, changeTypeOfFile(rel, javaScriptFileExtension, pjsFileExtension))
+    if found == foundFile {
+      w.Header().Set("Content-Type", "text/javascript")
+      if err := CompilePjs(cfg, pjsSrc, w); err != nil {
         panic(err)
       }
       return
@@ -607,6 +656,16 @@ func productionize(cfg *Config, roots []http.Dir, dest http.Dir) error {
         }
 
         if err := compileToFile(cfg, path, target, CompileScss); err != nil {
+          return err
+        }
+      case srcOfPjs:
+        target, err := rebasePath(src, d,
+          changeTypeOfFile(path, pjsFileExtension, javaScriptFileExtension))
+        if err != nil {
+          return err
+        }
+
+        if err := compileToFile(cfg, path, target, CompilePjs); err != nil {
           return err
         }
       }
