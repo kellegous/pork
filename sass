@@ -1,27 +1,35 @@
 #!/usr/bin/env ruby
-# The command line Sass parser.
 
+# This is an alternate entry point to the sass command line tool that allows
+# us, Monetology, to inject our own functions.
+
+# The command line Sass parser.
 require File.dirname(__FILE__) + '/deps/sass/lib/sass'
 require 'sass/exec'
 require 'base64'
 
 class Scope
-  @stack = []
-  def self.push(filename)
-    @stack.push(filename)
+  @options = []
+  def self.add(options)
+    @options << options
   end
-  def self.pop
-    @stack.pop
-  end
-  def self.peek
-    @stack.last
-  end
-
   def self.find(name)
-    File.expand_path(File.join(
-      File.dirname(@stack.first),
-      @stack.length == 1 ? "." : File.dirname(@stack.last),
-      name))
+    # first lets check relative to all the files. this is wrong
+    # and i need to fix it.
+
+    @options.each { |opt|
+      f = File.join(File.dirname(opt[:filename]), name)
+      return f if File.exists?(f)
+    }
+
+    # next let's look in all the load_paths
+    @options.first[:load_paths].each { |p|
+      f = File.join(p.root, name)
+      return f if File.exists?(f)
+    }
+    
+    #nothing, just return a path that isn't going to work
+    return name
   end
 end
 
@@ -35,27 +43,13 @@ class Url <Sass::Script::Literal
   end
 end
 
-class Sass::Tree::Visitors::Perform
-  alias_method :_visit_import, :visit_import
-  def visit_import(node)
-    Scope.push(node.imported_filename)
-    begin
-      return _visit_import(node)
-    ensure
-      Scope.pop
-    end
-  end
-end
-
+# monkey-patch the _to_tree method in Engine so that we can capture
+# the execution context
 class Sass::Engine
-  alias_method :_orig_render, :render
-  def render
-    Scope.push(@options[:filename])
-    begin
-      return _orig_render
-    ensure
-      Scope.pop
-    end
+  alias_method :__to_tree, :_to_tree
+  def _to_tree
+    Scope.add(@options)
+    __to_tree
   end
 end
 
@@ -82,6 +76,5 @@ module Sass::Script::Functions
   declare :datauri, [:string]
 end
 
-# todo: this is a giant steaming pile of crap.
 opts = Sass::Exec::Sass.new(ARGV)
 opts.parse!
