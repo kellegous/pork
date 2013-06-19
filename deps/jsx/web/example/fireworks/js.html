@@ -1,0 +1,23 @@
+<html>
+  <head>
+    <title>Fireworks in JavaScript</title>
+    <meta name="viewport" content="width=device-width,user-scalable=no" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="robots" content="noindex,nofollow" />
+    <link rel="stylesheet" href="./style.css" />
+    <script src="fireworks.js"></script>
+    <script>
+      window.addEventListener("load", function(e) {
+        FireworkApplication.main("night-sky", "fps", 1000);
+      });
+    </script>
+  </head>
+  <body>
+  <div>
+    <canvas id="night-sky" width="400" height="400"></canvas>
+    <p id="fps">not running</p>
+    <p id="link-to-another"><a href="./">JSX version</a> / JavaScript version</p>
+  </div>
+  </body>
+</html>

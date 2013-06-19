@@ -70,7 +70,8 @@ import "console.jsx";
  */
 class TestCase {
 	// TODO turn off when the process has no tty
-	static var verbose = true;
+	var verbose = true;
+	var showStackTrace = true; // turn off on test this class
 
 	var _totalCount = 0;
 	var _totalPass  = 0;
@@ -82,21 +83,25 @@ class TestCase {
 	var _currentName : Nullable.<string>;
 	var _tasks = [] : Array.<function():void>; // async tasks
 
-	/* overridable methods */
-
+	/**
+	 * Set up for each test method.
+	 */
 	function setUp() : void { }
+
+	/**
+	 * Tear down for each test method.
+	 */
 	function tearDown() : void { }
 
-	/* hooks called by src/js/runtests.js */
 
-	function beforeClass(tests : string[]) : void {
+	/* low-level hooks called by src/js/runtests.js */
+
+	__export__ function beforeClass(tests : string[]) : void {
 		this._tests = tests;
 		this._say("1.." + this._tests.length as string);
-
-		this.setUp();
 	}
 
-	function afterClass() : void {
+	__export__ function afterClass() : void {
 		if(this._tasks.length == 0) { // synchronous
 			this.finish();
 		}
@@ -106,19 +111,32 @@ class TestCase {
 		}
 	}
 
-
-	function run(name : string, testFunction : function():void) : void {
+	__export__ function run(name : string, testFunction : function():void) : void {
 		name = name.replace(/[$].*$/, "");
-		// FIXME: catch exception
 
 		var numAsyncTasks = this._tasks.length;
 		this._currentName = name;
+
+		this.setUp();
 
 		try {
 			testFunction();
 		}
 		catch (e : Error) {
-			this.fail(name + " failed with exception: " + e.toString());
+			var msg;
+			if (e instanceof TestCase.Failure) { // normal failure
+				msg = e.message ? " - " + e.message : "";
+			}
+			else {
+				msg = " - failed with exception";
+				if (e.message) {
+					msg += ": " + e.message;
+				}
+			}
+			this._say("\t" + "not ok " + (++this._count) as string + msg);
+			if (e.stack && this.showStackTrace) {
+				this.diag(e.stack);
+			}
 		}
 
 		if(numAsyncTasks == this._tasks.length) { // synchronous
@@ -131,6 +149,8 @@ class TestCase {
 	/* implementation */
 
 	function after(name : string) : void {
+		this.tearDown();
+
 		++this._totalCount;
 		this._say("\t" + "1.." + this._count as string);
 
@@ -153,13 +173,12 @@ class TestCase {
 				+ " of "
 				+ this._totalCount as string);
 		}
-		this.tearDown();
 	}
 
 	/* async test stuff */
 
 	/**
-	 * Prepares an asynchronous test a with timeout handler.
+	 * Prepares an asynchronous test with timeout handler.
 	 */
 	function async(testBody : function(:AsyncContext):void, timeoutHandler : function(:AsyncContext):void, timeoutMS : int) : void {
 
@@ -171,7 +190,8 @@ class TestCase {
 	}
 
 	/**
-	 * Prepares an asynchronous test. Automatically call <code>this.fail()</code> on timeout.
+	 * Prepares an asynchronous test.
+	 * Automatically call <code>this.fail()</code> on timeout.
 	 */
 	function async(testBody : function(:AsyncContext):void, timeoutMS : int) : void {
 		this.async(testBody, function(async : AsyncContext) : void {
@@ -182,17 +202,18 @@ class TestCase {
 
 	/* matcher factory */
 
+	// want to delcare expect.<T>(value : T) : TestCase.Matcher.<T>
 	/**
 	 * <p>Creates a test matcher for a value.</p>
-	 * <p>Usage: <code>this.expect(testingValue).tobe(expectedValue)</code></p>
+	 * <p>Usage: <code>this.expect(testingValue).toBe(expectedValue)</code></p>
 	 */
-	function expect(value : variant) : _Matcher {
+	function expect(value : variant) : TestCase.Matcher {
 		++this._count;
-		return new _Matcher(this, value);
+		return new TestCase.Matcher(this, value);
 	}
-	function expect(value : variant, message : string) : _Matcher {
+	function expect(value : variant, message : string) : TestCase.Matcher {
 		++this._count;
-		return new _Matcher(this, value, message);
+		return new TestCase.Matcher(this, value, message);
 	}
 
 	function _ok(name : Nullable.<string>) : void {
@@ -202,23 +223,30 @@ class TestCase {
 		this._say("\t" + "ok " + (this._count) as string + s);
 	}
 
+	function _nok(name : Nullable.<string>) : void {
+		this._nok(name, null, null, null);
+	}
+
 	function _nok(
 		name : Nullable.<string>,
-		op : string,
+		op : Nullable.<string>,
 		got : variant,
 		expected : variant
 	) : void {
 
 		var s = name != null ? " - " + name :  "";
-		this._say("\t" + "not ok " + (this._count) as string + s);
+		this._say("\t" + "not ok " + this._count as string + s);
 
-		this.diag("comparing with " + op + s.replace(" - ", " for "));
-		this._dump("got:      ", got);
-		this._dump("expected: ", expected);
+		if (op != null) {
+			this.diag("comparing with " + op + s.replace(" - ", " for "));
+			this._dump("got:      ", got);
+			this._dump("expected: ", expected);
+		}
+		throw new TestCase.Failure(name != null ? name : "");
 	}
 
 	/**
-	 * Tells the test case that a test passes.
+	 * Tells a test passes.
 	 */
 	function pass(reason : string) : void {
 		++this._count;
@@ -228,15 +256,15 @@ class TestCase {
 	}
 
 	/**
-	 * Tells the test case that a test fails.
+	 * Tells a test fails.
 	 */
 	function fail(reason : string) : void {
-		this._say("not ok - fail");
-		this.diag(reason);
+		++this._count;
+		throw new TestCase.Failure(reason);
 	}
 
 	function _dump(tag : string, value : variant) : void {
-		if(typeof value == "object" && value as Object != null) {
+		if(typeof value == "object") {
 			this.diag(tag);
 			console.dir(value);
 		}
@@ -247,6 +275,112 @@ class TestCase {
 
 	function _say(message : string) : void {
 		console.info(message);
+	}
+
+	function equals(a : variant, b : variant) : boolean {
+		return this._equals(a, b, 0);
+	}
+
+	function _equals(a : variant, b : variant, recursion : int) : boolean {
+		if (++recursion > 1000) {
+			throw new RangeError("Deep recursion in equals()");
+		}
+		if (a == b || (a == null && b == null)) {
+			return true;
+		}
+
+		// both are Array.<T>
+		if (a instanceof Array.<variant>) {
+			if (! (b instanceof Array.<variant>)) {
+				return false;
+			}
+			var aryA = a as Array.<variant>;
+			var aryB = b as Array.<variant>;
+			if (aryA.length != aryB.length) {
+				return false;
+			}
+			for (var i = 0; i < aryA.length; ++i) {
+				if (! this._equals(aryA[i], aryB[i], recursion)) {
+					return false;
+				}
+			}
+			return true;
+		}
+
+		// both are Map.<T>
+		if (a instanceof Map.<variant>) {
+			if (! (b instanceof Map.<variant>)) {
+				return false;
+			}
+			var mapA = a as Map.<variant>;
+			var mapB = b as Map.<variant>;
+
+			var mapAkeys = mapA.keys().sort();
+			var mapBkeys = mapB.keys().sort();
+
+			if (mapAkeys.length != mapBkeys.length) {
+				return false;
+			}
+
+			for (var i = 0; i < mapAkeys.length; ++i) {
+				var key = mapAkeys[i];
+				if (key != mapBkeys[i]) {
+					return false;
+				}
+				if (! this._equals(mapA[key], mapB[key], recursion)) {
+					return false;
+				}
+			}
+			return true;
+		}
+
+		// both are Date
+		if (a instanceof Date) {
+			if (! (b instanceof Date)) {
+				return false;
+			}
+			var dateA = a as Date;
+			var dateB = b as Date;
+			if (dateA && dateB) {
+				return dateA.getTime() == dateB.getTime();
+			}
+		}
+
+		// XXX: consider serialize():variant
+		return false;
+	}
+
+	function difflet(a : Array.<variant>, b : Array.<variant>) : string {
+		assert a != null;
+		assert b != null;
+
+		var s = "[\n";
+
+		for (var i = 0, l = Math.max(a.length, b.length); i < l; ++i) {
+			var ai = a[i];
+			var bi = b[i];
+
+			var aIsOver = (i   >= a.length);
+			var aIsLast = (i+1 >= a.length);
+
+			if (! aIsOver) {
+				s += "  " + JSON.stringify(ai);
+				if (! aIsLast) {
+					s += ",";
+				}
+
+				if (ai != bi) {
+					// put pretty diff
+					s += " // != " + JSON.stringify(bi);
+				}
+			}
+			else {
+				s += "  // != " + JSON.stringify(bi);
+			}
+			s += "\n";
+		}
+
+		return s + "]";
 	}
 
 	/**
@@ -260,7 +394,7 @@ class TestCase {
 	 * Shows notes.
 	 */
 	function note(message : string) : void {
-		if(TestCase.verbose) {
+		if(this.verbose) {
 			this._say(message.replace(/^/mg, "# "));
 		}
 	}
@@ -272,6 +406,111 @@ class TestCase {
 		}
 		else { // before boforeClass()
 			return "TestCase";
+		}
+	}
+
+	/**
+	 * Test Assertion Executor
+	 */
+	class Matcher {
+
+		var _test : TestCase;
+		var _got  : variant;
+		var _name : Nullable.<string>;
+
+		function constructor(test : TestCase, got : variant) {
+			this._test = test;
+			this._got  = got;
+		}
+
+		function constructor(test : TestCase, got : variant, name : string) {
+			this._test = test;
+			this._got  = got;
+			this._name = name;
+		}
+
+		function toBe(x :  variant) : void {
+			this._match(this._got == x,
+				this._got, x, "==");
+		}
+		function notToBe(x :  variant) : void {
+			this._match(this._got != x,
+				this._got, x, "!=");
+		}
+		function toBeLT(x :  number) : void {
+			this._match(this._got as number < x,
+				this._got, x, "<");
+		}
+		function toBeLE(x :  number) : void {
+			this._match(this._got as number <= x,
+				this._got, x, "<=");
+		}
+		function toBeGT(x :  number) : void {
+			this._match(this._got as number > x,
+				this._got, x, ">");
+		}
+		function toBeGE(x :  number) : void {
+			this._match(this._got as number >= x,
+				this._got, x, ">=");
+		}
+
+		function toMatch(x : RegExp) : void {
+			this._match(x.test(this._got as string),
+					this._got, x, "match");
+		}
+		function notToMatch(x : RegExp) : void {
+			this._match(! x.test(this._got as string),
+					this._got, x, "not match");
+		}
+
+		/**
+		 * Tests whether the given array equals to the expected.
+		 */
+		function toEqual(x : Array.<variant>) : void {
+			assert x != null;
+
+			if (! (this._got instanceof Array.<variant>)) {
+				this._test._nok(this._name, "equals", this._got, x);
+				return;
+			}
+
+			var got = this._got as Array.<variant>;
+			if (this._test.equals(got, x)) {
+				this._test._ok(this._name);
+			}
+			else {
+				this._test._nok(this._name, "equals", got, x);
+				this._test.note(this._test.difflet(got, x));
+			}
+		}
+
+		function toEqual(x : Array.<string>) : void {
+			this.toEqual(x as __noconvert__ Array.<variant>);
+		}
+		function toEqual(x : Array.<number>) : void {
+			this.toEqual(x as __noconvert__ Array.<variant>);
+		}
+		function toEqual(x : Array.<int>) : void {
+			this.toEqual(x as __noconvert__ Array.<variant>);
+		}
+		function toEqual(x : Array.<boolean>) : void {
+			this.toEqual(x as __noconvert__ Array.<variant>);
+		}
+
+		function _match(value : boolean, got : variant, expected : variant, op : string) : void {
+			if(value) {
+				this._test._ok(this._name);
+			}
+			else {
+				this._test._nok(this._name, op, got, expected);
+			}
+		}
+
+	}
+
+	class Failure extends Error {
+		function constructor(reason : string) {
+			super(reason);
 		}
 	}
 }
@@ -313,68 +552,4 @@ class AsyncContext {
 	}
 }
 
-/**
- * Test Assertion Executor
- */
-class _Matcher {
-
-	var _test : TestCase;
-	var _got  : variant;
-	var _name : Nullable.<string>;
-
-	function constructor(test : TestCase, got : variant) {
-		this._test = test;
-		this._got  = got;
-	}
-
-	function constructor(test : TestCase, got : variant, name : string) {
-		this._test = test;
-		this._got  = got;
-		this._name = name;
-	}
-
-	function toBe(x :  variant) : void {
-		this._match(this._got == x,
-			this._got, x, "==");
-	}
-	function notToBe(x :  variant) : void {
-		this._match(this._got != x,
-			this._got, x, "!=");
-	}
-	function toBeLT(x :  number) : void {
-		this._match(this._got as number < x,
-			this._got, x, "<");
-	}
-	function toBeLE(x :  number) : void {
-		this._match(this._got as number <= x,
-			this._got, x, "<=");
-	}
-	function toBeGT(x :  number) : void {
-		this._match(this._got as number > x,
-			this._got, x, ">");
-	}
-	function toBeGE(x :  number) : void {
-		this._match(this._got as number >= x,
-			this._got, x, ">=");
-	}
-
-	function toMatch(x : RegExp) : void {
-		this._match(x.test(this._got as string),
-				this._got, x, "match");
-	}
-	function notToMatch(x : RegExp) : void {
-		this._match(! x.test(this._got as string),
-				this._got, x, "not match");
-	}
-
-	function _match(value : boolean, got : variant, expected : variant, op : string) : void {
-		if(value) {
-			this._test._ok(this._name);
-		}
-		else {
-			this._test._nok(this._name, op, got, expected);
-		}
-	}
-
-}
 

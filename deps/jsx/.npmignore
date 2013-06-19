@@ -1,0 +1,32 @@
+# temporary files
+
+*~
+*.swp
+*.zip
+_builtins.js
+v8.log
+CodeMirror-*
+bootstrap/
+
+# products
+
+try/
+doc/
+
+# npm-related files
+
+npm-debug.log
+package/
+jsx-*.tgz
+
+# no need to include node modules
+
+node_modules/
+
+# extlib stuff
+
+.packlist
+.meta
+darwin-*
+linux-*
+*:*

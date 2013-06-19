@@ -1,4 +1,11 @@
+/***
+ * JSX development server started by `make server`
+ * includes JSX compiler for web (try/build/jsx-compiler.js).
+ *
+ */
+
 "use strict";
+
 var http = require("http"),
 	url = require("url"),
 	path = require("path"),
@@ -46,7 +53,7 @@ function finish(response, uri, status, content_type, content) {
 		headers["Content-Type"] = "text/html";
 	}
 
-	console.log("%s %s %s %s (%s bytes)", (new Date()), status, headers["Content-Type"] || "(unknown type)", uri, len);
+	console.log("%s %s %s %s (%s bytes)", (new Date()).toISOString(), status, headers["Content-Type"] || "(unknown type)", uri, len);
 
 	response.writeHead(status, headers);
 	response.write(content, "binary");
@@ -54,7 +61,7 @@ function finish(response, uri, status, content_type, content) {
 }
 
 function serveFile(response, uri, filename) {
-	path.exists(filename, function(exists) {
+	fs.exists(filename, function(exists) {
 		if(!exists) {
 			finish(response, uri, 404, "text/plain", "404 Not Found\n");
 			return;
@@ -79,9 +86,9 @@ function saveProfile(request, response) {
 	var profileDir = "web/.profile";
 
 	response.setHeader("Access-Control-Allow-Origin", "*");
-	response.setHeader("Access-Control-Allow-Methods", "POST,GET,OPTIONS");
+	response.setHeader("Access-Control-Allow-Methods", "POST,PUT,GET,OPTIONS");
 	response.setHeader("Access-Control-Allow-Headers", "Content-Type,*");
-	if (request.method != "POST") {
+	if (request.method != "POST" || request.method == "PUT") {
 		response.end();
 		return;
 	}
@@ -128,10 +135,10 @@ function saveProfile(request, response) {
 		}
 		var id = YYYYmmddHHMMSS();
 
-		fs.writeFileSync(profileDir + "/" + id + ".txt",
-				JSON.stringify(json));
+		fs.writeFileSync(profileDir + "/" + id + ".txt", JSON.stringify(json));
 		// send response
 		response.writeHead(200, "OK", {
+			"Location" : "http://" + request.headers.host + "/web/profiler.html?" + id,
 			"Content-Type": "text/plain"
 		});
 		response.write("saved profile at http://" + request.headers.host + "/web/profiler.html?" + id);

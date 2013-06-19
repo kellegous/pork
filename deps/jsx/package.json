@@ -1,34 +1,51 @@
 {
   "name":        "jsx",
-  "version":     "0.0.2",
-  "description": "a faster, safer, easier alternative to JavaScript",
-  "homepage": "http://jsx.github.com/",
+  "version":     "0.9.42",
+  "description": "a faster, safer, easier JavaScript",
+  "license" : "MIT",
+  "keywords": ["jsx", "compiler", "altjs"],
+  "homepage": "http://jsx.github.io/",
   "repository" : "git://github.com/jsx/JSX.git",
-  "author": [
-      {
-        "name":  "Kazuho Oku",
-        "email": "oku.kazuho@dena.jp"
-      },
+  "bugs" : { "url" : "https://github.com/jsx/JSX/issues" },
+  "preferGlobal" : true,
+  "author": {
+    "name":  "Kazuho Oku",
+    "email": "oku.kazuho@dena.jp"
+  },
+  "contributors" : [
       {
         "name":  "Goro Fuji (gfx)",
-        "email": "fuji.goro@dena.jp"
+        "email": "gfuji@cpan.org"
+      },
+      {
+        "name":  "Yuichi Nishiwaki (wasabiz)",
+        "email": "nishiwaki.yuichi@dena.jp"
       }
   ],
   "bin" : {
-      "jsx" : "./bin/jsx"
+      "jsx" : "./bin/jsx",
+      "jsx-with-server" : "./bin/jsx-with-server"
   },
   "directories": {
     "bin": "./bin",
-    "lib": "./lib"
+    "tool": "./tool",
+    "extlib" : "./extlib",
+    "web": "./web",
+    "lib": "./lib",
+    "src": "./src"
   },
-  "devDependencies": {
-      "browserbuild": "*",
-      "source-map": "0.1.1"
+  "dependencies": {
+      "source-map": "~ 0.1.22",
+      "esprima": "~ 1.0.2",
+      "escodegen": "~ 0.0.20",
+      "esmangle": "~ 0.0.14"
   },
   "engines": {
-    "node": ">= 0.6.19"
+    "node": ">= 0.8.0"
   },
+
   "scripts" : {
-      "test" : "make test-all JOBS=1"
+	  "postpublish" : "node tool/bootstrap-compiler.js --run tool/postpublish.jsx",
+	  "preinstall" :  "node tool/bootstrap-compiler.js --run tool/preinstall.jsx"
   }
 }

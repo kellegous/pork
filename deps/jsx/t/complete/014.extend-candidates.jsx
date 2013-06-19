@@ -26,6 +26,18 @@ class B extends
    },
    {
       "word" : "TypeError"
+   },
+   {
+      "word" : "g_StopIteration"
+   },
+   {
+      "word" : "Transferable"
+   },
+   {
+      "word" : "ArrayBufferView"
+   },
+   {
+      "word" : "Uint8Array"
    }
 ]
 */

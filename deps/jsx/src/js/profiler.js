@@ -1,25 +1,32 @@
 (function () {
-
 	var Profiler = $__jsx_profiler;
+
+	var getTime;
+	if (typeof(performance) != "undefined" && typeof(performance.now) == "function") {
+		getTime  = function () { return performance.now() };
+	}
+	else {
+		getTime  = function () { return Date.now() };
+	}
 
 	var stack = [ {
 		$name: "<<root>>",
-		$cur_exclusive: Date.now()
+		$cur_exclusive: getTime()
 	} ];
 
 	Profiler.enter = function (name) {
-		var now = Date.now();
+		var t = getTime();
 		var caller = stack[stack.length - 1];
-		caller.$cur_exclusive -= now;
+		caller.$cur_exclusive -= t;
 		var callee = caller[name];
 		if (callee) {
-			callee.$cur_inclusive = now;
-			callee.$cur_exclusive = now;
+			callee.$cur_inclusive = t;
+			callee.$cur_exclusive = t;
 		} else {
 			callee = caller[name] = {
 				$name: name,
-				$cur_inclusive: now,
-				$cur_exclusive: now,
+				$cur_inclusive: t,
+				$cur_exclusive: t,
 				$inclusive: 0,
 				$exclusive: 0,
 				$count: 0
@@ -30,13 +37,13 @@
 	};
 
 	Profiler.exit = function (retval) {
-		var now = Date.now();
+		var t = getTime();
 		var callee = stack.pop();
 		++callee.$count;
-		callee.$exclusive += now - callee.$cur_exclusive;
-		callee.$inclusive += now - callee.$cur_inclusive;
+		callee.$exclusive += t - callee.$cur_exclusive;
+		callee.$inclusive += t - callee.$cur_inclusive;
 		var caller = stack[stack.length - 1];
-		caller.$cur_exclusive += now;
+		caller.$cur_exclusive += t;
 		return retval;
 	};
 
@@ -50,30 +57,50 @@
 		return stack[0];
 	};
 
-	Profiler.postResults = function (url) {
+	Profiler.postResults = function (url, cb) {
+		if (! cb) {
+			cb = function (error, message) {
+				if (error) {
+					console.error("Profiler: " + error.toString());
+				}
+				else {
+					console.log("Profiler: " + message);
+				}
+			}
+		}
+		if (typeof(XMLHttpRequest) == "undefined") {
+			cb(new ReferenceError("XMLHttpRequest is not defined"), null);
+			return;
+		}
+
 		// post target should support gist-style API
 		var xhr = new XMLHttpRequest();
 		xhr.onreadystatechange = function () {
 			if (xhr.readyState == 4) {
-				if (xhr.status == 200) {
-					console.log(xhr.responseText);
+				if (xhr.status == 200 || xhr.status == 201 || xhr.status == 0) {
+					cb(null, xhr.getResponseHeader("Location") || xhr.responseText);
 				} else {
-					console.log("failed to upload profiler results, received " + xhr.status + " response from server");
+					cb(new Error("failed to post profiler results, received " + xhr.status + " " + xhr.statusText + " response from server"), null);
 				}
 			}
 		};
-		xhr.open("POST", url, true);
+		xhr.onerror = function (event) {
+			cb(new Error("failed to post profiler results"), null);
+		};
+		xhr.open("POST", url, /* async: */true);
 		xhr.setRequestHeader("Content-Type", "application/json");
-		xhr.send(JSON.stringify(Profiler.getResults()));
+		xhr.send(JSON.stringify(Profiler.getResults(), function (k, v) {
+			return typeof(v) === "number" ? Math.round(v) : v;
+		}));
 	};
 
 	Profiler.resetResults = function () {
-		var now = Date.now();
+		var t = getTime();
 		for (var stackIndex = 0; stackIndex < stack.length; ++stackIndex) {
 			var isLeaf = stackIndex == stack.length - 1;
 			// reset the counters
-			stack[stackIndex].$cur_inclusive = now;
-			stack[stackIndex].$cur_exclusive = isLeaf ? now : 0;
+			stack[stackIndex].$cur_inclusive = t;
+			stack[stackIndex].$cur_exclusive = isLeaf ? t : 0;
 			stack[stackIndex].$inclusive = 0;
 			stack[stackIndex].$exclusive = 0;
 			stack[stackIndex].$count = 0;

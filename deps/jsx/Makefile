@@ -1,39 +1,84 @@
-
+PROVE:=perl extlib/bin/prove
 JOBS:=4
 
-OPTIMIZE_FLAGS := lto,unclassify,fold-const,return-if,inline,dce,unbox,fold-const,dce,lcse,array-length,unclassify
+BOOTSTRAP_COMPILER:=tool/bootstrap-compiler.js
+COMPILER_TARGET:=bin/jsx
+COMPILER_COMPILE_OPTS:=--executable node
 
-all: src/doc.js
+PORT:=2012
 
-setup: doc
+all: deps compiler doc web
+
+## compiler stuff
+
+deps:
+	git submodule update --init
+	npm install .
+
+compiler: meta src/doc.jsx
+	rm -f $(TARGET_COMPILER)
+	$(MAKE) compiler-core
+	cp -f "$$PWD/tool/jsx.pl" bin/jsx-with-server
 
 
-doc: src/doc.js
+compiler-core:
+	node $(BOOTSTRAP_COMPILER) $(COMPILER_COMPILE_OPTS) --output $(COMPILER_TARGET) src/jsx-node-front.jsx
+
+compiler-release:
+	$(MAKE) compiler-core COMPILER_COMPILE_OPTS="--release $(COMPILER_COMPILE_OPTS)"
+
+src/doc.jsx: src/_doc.jsx
+	submodules/picotemplate/picotemplate.pl $<
+
+meta:
+	if [ -e .git ] ; then \
+		tool/make-meta package.json src/meta.jsx ; \
+	fi
+
+doc: compiler
 	rm -rf doc
 	find lib -name '*.jsx' | xargs -n 1 -- bin/jsx --mode doc --output doc
 
+bootstrap-compiler: compiler
+	$(MAKE) compiler-core BOOTSTRAP_COMPILER=bin/jsx COMPILER_TARGET=$(BOOTSTRAP_COMPILER) COMPILER_COMPILE_OPTS="--disable-type-check --optimize no-assert --executable node" # again
+
+## test stuff
+
 # e.g. make test JOBS=2
-test:
-	prove --jobs "$(JOBS)" t/*.t t/*/*.jsx
+
+test: all test-debug test-optimized
+
+test-all: test test-optimized-minified
+
+test-debug:
+	$(MAKE) test-core
+	$(MAKE) test-misc-core
 
 test-optimized:
-	JSX_OPTS="--optimize $(OPTIMIZE_FLAGS)" prove --jobs "$(JOBS)" t/*/*.jsx
+	JSX_OPTS="--optimize release --disable-optimize no-log,no-assert" $(MAKE) test-core
 
-test-all: test test-optimized
+test-optimized-minified:
+	JSX_OPTS="--optimize release --disable-optimize no-log,no-assert --minify" $(MAKE) test-core
+
+test-core:
+	$(PROVE) --jobs "$(JOBS)" t/run/*.jsx t/compile_error/*.jsx t/lib/*.jsx t/src/*.jsx t/web/*.jsx t/optimize/*.jsx t/complete/*.jsx
+
+test-misc-core:
+	$(PROVE) --jobs "$(JOBS)" t/*.t
+
+v8bench: compiler
+	cd submodules/v8bench && make
 
 optimize-bench:
-	prove xt/optimize-bench/*.jsx
+	$(PROVE) -v xt/optimize-bench/*.jsx
 
-web:
-	perl web/build.pl --clean
-	time bin/jsx --executable web --profile --output web/profiler/fireworks.jsx.js web/profiler/fireworks.jsx
-	time bin/jsx --executable web --release --output web/example/aobench/aobench.jsx.js web/example/aobench/aobench.jsx
+## web stuff
 
-server:
-	node web/server.js
+web: compiler
+	perl web/build.pl
 
-src/doc.js: src/_doc.js
-	submodules/picotemplate/picotemplate.pl src/_doc.js
+server: web
+	node web/server.js $(PORT)
 
 # for authors
 web.jsx:
@@ -41,15 +86,26 @@ web.jsx:
 	idl2jsx/maketest.pl > t/lib/010.web.jsx
 	bin/jsx --test t/lib/010.web.jsx
 
+
+show-todo:
+	find t -name '*.todo.*' | grep -v '~'
+
+publish: test-all
+	$(MAKE) compiler-release
+	npm publish
+
 update-assets: update-bootstrap update-codemirror
 
 update-codemirror:
+	rm -rf codemirror*
 	curl -LO http://codemirror.net/codemirror.zip
 	unzip -o codemirror.zip
-	cp CodeMirror-*/lib/codemirror.css            web/assets/css
-	cp CodeMirror-*/lib/codemirror.js             web/assets/js
-	cp CodeMirror-*/mode/javascript/javascript.js web/assets/js/mode
-	cp CodeMirror-*/mode/clike/clike.js           web/assets/js/mode
+	cp codemirror-*/lib/codemirror.css            web/assets/css
+	cp codemirror-*/lib/codemirror.js             web/assets/js
+	cp codemirror-*/addon/hint/show-hint.css    web/assets/css
+	cp codemirror-*/addon/hint/show-hint.js     web/assets/js
+	cp codemirror-*/mode/javascript/javascript.js web/assets/js/mode
+	cp codemirror-*/mode/clike/clike.js           web/assets/js/mode
 
 update-bootstrap:
 	curl -LO http://twitter.github.com/bootstrap/assets/bootstrap.zip
@@ -58,9 +114,12 @@ update-bootstrap:
 	cp bootstrap/img/*.* web/assets/img
 	cp bootstrap/js/*.*  web/assets/js
 
+## cleanup
 
 clean:
 	rm -rf CodeMirror-* codemirror.zip
 	rm -rf bootstrap*
+	rm -rf bin/*
+	rm -rf jsx-*.tgz
 
-.PHONY: test web server doc
+.PHONY: setup test test-debug test-release test-core test-misc-core web server doc meta instal-deps

@@ -1,8 +1,264 @@
 Revision history for the JSX software development kit
 
-NEXT
-    [FEATURE]
+0.9.42 2013-06-16 23:18:31-0700
+    [BUG FIX]
+    - Fix #194: "dce" broke assign statements in logical/conditional exprs
+
+0.9.41 2013-06-16 14:49:35-0700
+    [BUG FIXES]
+    - Fix a bug that int type parameters did not work correctly (#196)
+
+    [CHANGES]
+    - Changed sourceMappingURL syntax
+      (see http://updates.html5rocks.com/2013/06/sourceMappingURL-and-sourceURL-syntax-changed for details)
+    - Support sourcesContent in source-map to handle multiple source files
+      easier
+    - Improve "fold-const" to expand type casts in compile time as much as
+      possible (resolve #182 again)
+
+0.9.40 2013-06-11 03:42:00+0900
+    [CHANGES]
+    - accept Uint8Array as the argument to the ctor of Buffer of node.js
+
+0.9.39 2013-06-10 18:00:00+0900
+    [BUG FIXES]
+    - use of "super.meth()" was causing compile errors if meth() is native
+    - fix runtime error when extending a native class using the experimental "native(...)" annotation
+
+0.9.38 2013-06-09 00:19:03-0700
+    [BUG FIXES]
+    - Fix a problem in QtScript that `object["word"]` caused compilation errors
+      if the "word" was reserved (#187)
+    - Fix a problem that static const member variables in native class
+      was replaced to `null` by `--optimize fold-const` (#191)
+
+0.9.37 2013-06-07 14:40:00
+    [CHANGES]
+    - typed-arrays are defined in built-in.jsx (#189)
+
+0.9.36 2013-06-04 16:31:00
+    [CHANGES]
+    - accept numbers as 3rd argument of JSON.stringify (#188)
+
+0.9.35 2013-06-02 21:13:23
+    [BUG FIXES]
+    - Fix #182 again
+    - Fix types of Array#reduce() and Array#reduceRight() to take the type of
+      a return value
+
+0.9.34 2013-05-29 23:20:27
+    [BUG FIXES]
+    - Fix legacy AudioContext methods in web.jsx
+
+0.9.33 2013-05-29 18:58:00
+    [CHANGES]
+    - improve dce optimizer (#182)
+
+    [BUG FIXES]
+    - Partial fix for #173
+
+0.9.32 2013-05-28 09:22:05
+    [BUG FIXES]
+    - Fix bugs (#171, #174)
+
+0.9.31 2013-05-20 10:04:05
+    [CHANGES]
+    - Installed jsx compiler is now built with --release flag to
+      improve compilation speed
+
+    [BUG FIXES]
+    - Fix a typo in a function at js/nodejs.jsx (#168)
+
+0.9.30 2013-05-17 23:51:39
+    [BUG FIXES]
+    * Fix bugs (#150, #151, #166)
+    * Optimize command "staticize" is enabled again
+
+0.9.29 2013-05-07 14:45:00
+    [FEATURES]
+    - Introduce "native('<<javascript expression>>')" attribute to load native classes (EXPERIMENTAL)
+    - The minifier strips unused functions / classes.
+
+0.9.28 2013-05-02 00:13:33
+    [BUG FIXES]
+    - Fix a regression that --disable-type-check was ignored,
+      introduced at 0.9.27
+
+0.9.27 2013-04-30 17:06:00
+    [FEATURES]
+    - Support for minification (#143)
+
+    [BUG FIXES]
+    - Fix #139
+
+0.9.26 2013-04-19 10:21:08
+    [BUG FIXES]
+    - Fix #85, #123, #128, #132, #137, #141, and #142
+
+0.9.25 2013-04-09 19:12:55
+    [ANNOUNCE]
+    - The JSX web site is now http://jsx.github.io/
+
+    [FEATURES]
+    - Add Window#closed in js/web.jsx
+
+0.9.24 2013-04-05 13:43:49
+    [CHANGES]
+    - Disable "staticize" optimization for now, which changed the ABI
+
+0.9.23 2013-04-05 11:49:56
+    [CHANGES]
+    - Disable JSX compilation server mode, which was introduced at 0.9.6,
+      because it looks unstable.
+
+    [BUG FIXES]
+    - Fix bugs introduced by compilation server mode
+    - Fix a bug that function statements inside a function named "constructor"
+      caused runtime errors
+
+0.9.22 2013-04-03 11:27:37
+    [FEATURES]
+    - Add the return-value type deduction for function expression;
+      `(a : number, b : number) -> a + b` will be deduced to return a number,
+      for example
+
+0.9.21 2013-03-29 00:38:50
+    [BUG FIXES]
+    - Fix a bug that using `instanceof` operator to type parameters
+      caused compiler crashes
+    - Fix a bug that output of stdout and stderr in the compiler might be
+      mixed by stream buffering
+
+0.9.20 2013-03-23 16:01:49
+    [BUG FIXES]
+    - Fix generating source-map
+
+0.9.19 2013-03-21 22:04:28
+    [BUG FIXES]
+    - Fix installation issues for Windows
+
+0.9.18 2013-03-19 17:36:00
+    [BUG FIXES]
+    - Re-fix for #125
+
+0.9.17 2013-03-19 00:47:00
+    [BUG FIXES]
+    - Fix a bug that nullable vararg (e.g. Array#push()) did now accept
+      null value of a result of expressions (#125)
+
+0.9.16 2013-03-13 10:08:50
+    [BUG FIXES]
+    - Fix "wide character in print" warnings
+
+    [FEATURES]
+    - Add "staticize" optimization command
+    - Add `JSX.postProfilerResults(url, cb)` to know the request is finished
+
+0.9.15 2013-03-12 11:08:35
+    - Fixed only a packaging issue
+
+0.9.14 2013-03-12 10:51:24
+    [BUG FIXES]
+    - Fix a compiler crash if non-existing static methods were called,
+      which was introduced at 0.9.11
+
+0.9.13 2013-03-12 10:04:24
+    [BUG FIXES]
+    - Suppress deprecation warnings about `path.existsSync()`
+
+0.9.12 2013-03-09 18:34:56
+    [BUG FIXES]
+    - Fix an optimization issues found in shibukawa:Oktavia
+
+0.9.11 2013-03-08 14:25:22
+    [CHANGES]
+    - Forbade calling instance methods after operator new without parens,
+      i.e. `new Class.instanceMethod()`, because it was conflict with inner
+      classes
+
+    [FEATURES]
+    - Added inner classes (nested classes)
+
+0.9.10 2013-02-22 10:18:13
+    [BUG FIXES]
+    - Fixed a bug that jsx(1) crashes when spaces were passed to JSX programs on --run
+
+0.9.9 2013-02-20 10:34:21
+    [BUG FIXES]
+    - Fixed a bug that jsx(1) did not work when it was installed by npm
+
+0.9.8 2013-02-18 18:38:16
+    [BUG FIXES]
+    - Fixed a packaging issue
+
+0.9.7 2013-02-15 16:45:13
+    [BUG FIXES]
+    - Fixed a path issue on Windows
+
+0.9.6 2013-02-14 08:56:57
+    [CHANGES]
+    - TestCase will stop executing the current test on failure
+    - Test failure will show stack trace if possible
+    - Messages of assertion failure will include the related source code line
+
+    [FEATURES]
+    - Replaced jsx(1) with a wrapper to JSX compilation server
+      The previous jsx(1) will be installed as jsx-compiler.js(1).
+      This change will boost the compilation speed.
+
+0.9.5 2013-02-07 01:53:14
+    [CHANGES]
+    - Removed web-intents from web.jsx; it has been removed even from Chrome.
+    - The scope of named function expression are now ECMA-262 compatible (#108)
+
+    [FEATURES]
+    - Uses high resolution time in profiler if available
+    - Added webrtc to web.jsx (see web/example/webrtc/ for example)
+    - Added type deduction on common element type for array and map literal (#107)
+    - Added type deduction on empty array / map literals (#50, #106)
+    - Added Map.<T>#keys() (#102, #105)
+
+    [BUG FIXES]
+    - Fixed confusing messages on argument mismatch errors (#104)
+    - Fixed an issue that associativity of equality expressions might be ignored (#88)
+    - Fixed several compiler crashes
+
+0.9.4 2013-01-31 19:31:16
+    [BUG FIXES]
+    - Fixed a packaging issue
+
+0.9.3 2013-01-31 12:24:27
+    [CHANGES]
+    - Installed jsx(1) is now compiled with --release
+
+    [FEATURES]
+    - The "dce" optimization command can remove "if" statements
+      when they has static conditions (#95)
+    - Compile errors shows notes when no function with matching arguments
+      are found (#96).
+    - Added JSX.DEBUG and "no-debug" optimization command to control
+      debugging statements.
+
+    [BUG FIXES]
+    - "unclassify" optimization might have broken generated code
+      (671312aaaed22b38e59d20f6eb5b977d32d79d4b)
+    - named function exprs outside of function caused compiler crash
+      (823d4e5142feee92e95e2d0913c5b6c22be27665)
+    - /*/ was parsed as a comment start + comment end (#91)
+
+
+0.9.0 2013-01-26 00:13:42
+    [CHANGES]
+    - Ported JSX compiler from JavaScript to JSX (i.e. self-hosting)
+    - Invalid cast throws error, instead of returning null
     - Invalid @param in jsxdoc produces compile errors
+    - Added _Matcher#toEqual() in test-case.jsx to compare objects deeply
+    - Added `--executable commonjs` for CommonJS-compliant engine
+      like PhantomJS
+    - Array#push() and Array#unshift() takes Nullable.<T>, not T (issue #82)
+    - Enhanced type inference of conditional expression (issue #86)
+    - Map literals can be declared as variant (like `{} : variant`)
+    - Fixed a lot of bug
 
 0.0.2 2012-09-23
     [ANNOUNCE]
@@ -12,3 +268,4 @@ NEXT
     [ANNOUNCE]
     - The initial version of the JSX SDK
 
+# vim: set expandtab spell:

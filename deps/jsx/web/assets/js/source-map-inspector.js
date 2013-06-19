@@ -100,16 +100,17 @@ window.addEventListener('load', function (e) {
 
 	if(gen[gen.length-1].type === "space") {
 		var m = gen[gen.length-1].token.
-			match(/\@ *sourceMappingURL=([^ \t\r\n]+)/);
+			match(/\# *sourceMappingURL=([^ \t\r\n]+)/);
 		if(!m) {
-			alert("sourceMappingURL is not found");
 			return;
 		}
 		mappingURL = m[1];
 	}
+	console.assert(mappingURL, "sourceMappingURL");
 	var mapping = JSON.parse(load(mappingURL));
 
-	var orig = Lexer.tokenize(mapping.sources[0], load(mapping.sources[0]));
+	var mainFile = mapping.sourceRoot != null ? mapping.sourceRoot + "/" + mapping.sources[1] : mapping.sources[1];
+	var orig = Lexer.tokenize(mainFile, mapping.sourcesContent[1] || load(mainFile));
 
 	element(ORIG).innerHTML = asHTML(ORIG, orig);
 	element(GEN).innerHTML  = asHTML(GEN,  gen);

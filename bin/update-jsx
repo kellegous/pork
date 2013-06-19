@@ -3,8 +3,9 @@
 import os
 import shutil
 import subprocess
+import sys
 
-def Main():
+def main():
   root = os.path.abspath(
     os.path.join(
       os.path.dirname(__file__),
@@ -15,11 +16,17 @@ def Main():
   if os.path.exists(jsx):
     shutil.rmtree(jsx)
 
-  subprocess.call(
-    ['git', 'clone', 'https://github.com/jsx/JSX.git', 'jsx'],
-    cwd = deps)
+  if subprocess.call([
+      'git', 'clone', 'https://github.com/jsx/JSX.git', 'jsx'],
+      cwd = deps) != 0:
+    return 1
+
+  if subprocess.call(['make'], cwd = jsx) != 0:
+    return 1
 
   shutil.rmtree(os.path.join(jsx, '.git'))
 
+  return 0
+
 if __name__ == '__main__':
-  Main()
+  sys.exit(main())
