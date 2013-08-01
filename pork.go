@@ -151,7 +151,7 @@ func prepend(dst []string, args ...string) []string {
 }
 
 func jscCommand(externs []string, jscPath, filename string, level Optimization) *command {
-  args := []string{PathToJava, "-jar", jscPath}
+  args := []string{PathToJava, "-jar", jscPath, "--language_in", "ECMASCRIPT5"}
 
   switch level {
   case Basic:
