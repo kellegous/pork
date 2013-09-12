@@ -1,9 +1,0 @@
-
-partial interface Location {
-	void reload(boolean ignoreCache);
-};
-
-partial interface Window {
-    readonly boolean closed;
-};
-

@@ -1,3 +1,0 @@
-// 0.ts  line 1 col 17: Expected '{'
-// 0.ts  line 2 col 9: Expected ';'
-// 0.ts  line 2 col 15: Expected ';'

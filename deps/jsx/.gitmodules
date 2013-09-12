@@ -1,6 +1,0 @@
-[submodule "submodules/picotemplate"]
-	path = submodules/picotemplate
-	url = git://github.com/kazuho/picotemplate.git
-[submodule "submodules/v8bench"]
-	path = submodules/v8bench
-	url = git://github.com/jsx/jsx-v8bench.git
