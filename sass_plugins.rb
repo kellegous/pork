@@ -3,9 +3,6 @@
 # This is an alternate entry point to the sass command line tool that allows
 # us, Monetology, to inject our own functions.
 
-# The command line Sass parser.
-require File.dirname(__FILE__) + '/deps/sass/lib/sass'
-require 'sass/exec'
 require 'base64'
 
 class Scope
@@ -75,6 +72,3 @@ module Sass::Script::Functions
   end
   declare :datauri, [:string]
 end
-
-opts = Sass::Exec::Sass.new(ARGV)
-opts.parse!

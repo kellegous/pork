@@ -2,11 +2,17 @@ package pork
 
 import (
   "io"
+  "path/filepath"
 )
+
+func pathToPluginsFile() string {
+  return filepath.Join(rootDir, "sass_plugins.rb")
+}
 
 func sassCommand(filename string, level Optimization) (*command, error) {
   args := []string{
     PathToSass,
+    "--require", pathToPluginsFile(),
     "--no-cache",
     "--trace"}
 
