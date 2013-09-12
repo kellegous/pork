@@ -2,17 +2,11 @@ package pork
 
 import (
   "io"
-  "path/filepath"
 )
 
-func pathToSass() string {
-  return filepath.Join(rootDir, "sass")
-}
-
-func sassCommand(filename string, sassPath string, level Optimization) *command {
+func sassCommand(filename string, level Optimization) (*command, error) {
   args := []string{
-    PathToRuby,
-    sassPath,
+    PathToSass,
     "--no-cache",
     "--trace"}
 
@@ -24,12 +18,17 @@ func sassCommand(filename string, sassPath string, level Optimization) *command 
   }
 
   args = append(args, filename)
-  return &command{args, "", nil}
+  return newCommand(args, "", nil)
 }
 
 // todo: add cpp to the frontend of this
 func CompileScss(c *Config, filename string, w io.Writer) error {
-  r, p, err := pipe(sassCommand(filename, pathToSass(), c.Level))
+  cs, err := sassCommand(filename, c.Level)
+  if err != nil {
+    return err
+  }
+
+  r, p, err := pipe(cs)
   if err != nil {
     return err
   }

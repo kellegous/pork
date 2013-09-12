@@ -7,12 +7,8 @@ import (
   "path/filepath"
 )
 
-func pathToJsx() string {
-  return filepath.Join(rootDir, "deps/jsx/bin/jsx")
-}
-
-func jsxCommand(filename, jsxPath string, includes []string, level Optimization) *command {
-  args := []string{PathToNode, jsxPath}
+func jsxCommand(filename string, includes []string, level Optimization) (*command, error) {
+  args := []string{PathToJsx}
   for _, i := range includes {
     args = append(args, "--add-search-path", i)
   }
@@ -28,7 +24,7 @@ func jsxCommand(filename, jsxPath string, includes []string, level Optimization)
   // For jsx, we execute with a difference cwd to avoid having
   // absolute paths in the class map.
   args = append(args, filepath.Base(filename))
-  return &command{args, filepath.Dir(filename), nil}
+  return newCommand(args, filepath.Dir(filename), nil)
 }
 
 // todo: add cpp to the front-end of this.
@@ -37,17 +33,25 @@ func CompileJsx(c *Config, filename string, w io.Writer) error {
   var r io.ReadCloser
   var err error
 
+  ca, err := jsxCommand(filename, c.JsxIncludes, c.Level)
+  if err != nil {
+    return err
+  }
+
   switch c.Level {
   case None:
-    r, p, err = pipe(jsxCommand(filename, pathToJsx(), c.JsxIncludes, c.Level))
+    r, p, err = pipe(ca)
     if err != nil {
       return err
     }
     defer r.Close()
   case Basic, Advanced:
-    r, p, err = pipe(
-      jsxCommand(filename, pathToJsx(), c.JsxIncludes, c.Level),
-      jscCommand(c.JsxExterns, pathToJsc(), "", c.Level))
+    cb, err := jscCommand(c.JsxExterns, pathToJsc(), "", c.Level)
+    if err != nil {
+      return err
+    }
+
+    r, p, err = pipe(ca, cb)
     if err != nil {
       return err
     }

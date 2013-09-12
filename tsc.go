@@ -3,25 +3,11 @@ package pork
 import (
   "io"
   "io/ioutil"
-  "path/filepath"
   "os"
 )
 
-func pathToTsc() string {
-  return filepath.Join(rootDir, "deps/tsc/bin/tsc")
-}
-
-func tscCommand(filename, tscPath, tmpFile string, level Optimization) *command {
-  return &command{
-    []string{
-      PathToNode,
-      tscPath,
-      "--out", tmpFile,
-      filename,
-    },
-    "",
-    nil,
-  }
+func tscCommand(filename, tmpFile string, level Optimization) (*command, error) {
+  return newCommand([]string{PathToTsc, "--out", tmpFile, filename}, "", nil)
 }
 
 func CompileTsc(c *Config, filename string, w io.Writer) error {
@@ -33,7 +19,12 @@ func CompileTsc(c *Config, filename string, w io.Writer) error {
   defer t.Close()
   defer os.Remove(t.Name())
 
-  r, p, err := pipe(tscCommand(filename, pathToTsc(), t.Name(), c.Level))
+  cmd, err := tscCommand(filename, t.Name(), c.Level)
+  if err != nil {
+    return err
+  }
+
+  r, p, err := pipe(cmd)
   if err != nil {
     return err
   }

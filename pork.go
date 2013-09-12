@@ -9,6 +9,7 @@ import (
   "net"
   "net/http"
   "os"
+  "os/exec"
   "path"
   "path/filepath"
   "runtime"
@@ -55,9 +56,10 @@ const (
   cssFileExtension        = ".css"
 )
 
-var PathToJava = "/usr/bin/java"
-var PathToRuby = "/usr/bin/ruby"
-var PathToNode = "/usr/local/bin/node"
+var PathToSass = "sass"
+var PathToJsx = "jsx"
+var PathToTsc = "tsc"
+var PathToJava = "java"
 
 var rootDir string
 
@@ -69,6 +71,20 @@ type command struct {
   args []string
   cwd  string
   env  []string
+}
+
+func newCommand(args []string, cwd string, env []string) (*command, error) {
+  path, err := exec.LookPath(args[0])
+  if err != nil {
+    return nil, err
+  }
+
+  args[0] = path
+  return &command{
+    args: args,
+    cwd:  cwd,
+    env:  env,
+  }, nil
 }
 
 func waitFor(procs []*os.Process) error {
@@ -150,7 +166,7 @@ func prepend(dst []string, args ...string) []string {
   return r
 }
 
-func jscCommand(externs []string, jscPath, filename string, level Optimization) *command {
+func jscCommand(externs []string, jscPath, filename string, level Optimization) (*command, error) {
   args := []string{PathToJava, "-jar", jscPath, "--language_in", "ECMASCRIPT5"}
 
   switch level {
@@ -168,7 +184,7 @@ func jscCommand(externs []string, jscPath, filename string, level Optimization) 
     args = append(args, filename)
   }
 
-  return &command{args, "", nil}
+  return newCommand(args, "", nil)
 }
 
 func CompilePjs(c *Config, filename string, w io.Writer) error {
@@ -185,7 +201,12 @@ func CompilePjs(c *Config, filename string, w io.Writer) error {
     return nil
   }
 
-  r, p, err := pipe(jscCommand([]string{}, pathToJsc(), filename, c.Level))
+  cjsc, err := jscCommand([]string{}, pathToJsc(), filename, c.Level)
+  if err != nil {
+    return err
+  }
+
+  r, p, err := pipe(cjsc)
   if err != nil {
     return err
   }
