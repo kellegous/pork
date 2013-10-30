@@ -645,7 +645,7 @@ func productionize(cfg *Config, roots []http.Dir, dest http.Dir) error {
 
   for _, root := range roots {
     src := string(root)
-    filepath.Walk(src, func(path string, info os.FileInfo, err error) error {
+    if err := filepath.Walk(src, func(path string, info os.FileInfo, err error) error {
       switch typeOfSrc(path) {
       case srcOfJsx:
         target, err := rebasePath(src, d,
@@ -691,7 +691,9 @@ func productionize(cfg *Config, roots []http.Dir, dest http.Dir) error {
         }
       }
       return nil
-    })
+    }); err != nil {
+      return err
+    }
   }
 
   return nil
