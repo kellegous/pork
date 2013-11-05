@@ -246,7 +246,7 @@ func (c *emptyContext) ServedFromPrefix() string {
 
 func ContextFor(w http.ResponseWriter, r *http.Request) Context {
   switch t := w.(type) {
-  case *response:
+  case Context:
     return t
   }
   return &emptyContext{}
