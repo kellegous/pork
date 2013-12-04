@@ -570,7 +570,6 @@ func typeOfDst(filename string) dstType {
 }
 
 func ServeContent(w ResponseWriter, r *http.Request, cfg *Config, d ...http.Dir) {
-  w.EnableCompression()
   pth := r.URL.Path
   rel, err := filepath.Rel(w.ServedFromPrefix(), r.URL.Path)
   if err != nil {
@@ -584,6 +583,7 @@ func ServeContent(w ResponseWriter, r *http.Request, cfg *Config, d ...http.Dir)
       http.Redirect(w, r, pth+"/", http.StatusMovedPermanently)
       return
     }
+    w.EnableCompression()
     http.ServeFile(w, r, target)
     return
   }
@@ -594,6 +594,7 @@ func ServeContent(w ResponseWriter, r *http.Request, cfg *Config, d ...http.Dir)
     jsxSrc, found := findFile(d, changeTypeOfFile(rel, javaScriptFileExtension, jsxFileExtension))
     if found == foundFile {
       // serve jsx
+      w.EnableCompression()
       w.Header().Set("Content-Type", "text/javascript")
       if err := CompileJsx(cfg, jsxSrc, w); err != nil {
         panic(err)
@@ -603,6 +604,7 @@ func ServeContent(w ResponseWriter, r *http.Request, cfg *Config, d ...http.Dir)
 
     tscSrc, found := findFile(d, changeTypeOfFile(rel, javaScriptFileExtension, tscFileExtension))
     if found == foundFile {
+      w.EnableCompression()
       w.Header().Set("Content-Type", "text/javascript")
       if err := CompileTsc(cfg, tscSrc, w); err != nil {
         panic(err)
@@ -612,6 +614,7 @@ func ServeContent(w ResponseWriter, r *http.Request, cfg *Config, d ...http.Dir)
 
     pjsSrc, found := findFile(d, changeTypeOfFile(rel, javaScriptFileExtension, pjsFileExtension))
     if found == foundFile {
+      w.EnableCompression()
       w.Header().Set("Content-Type", "text/javascript")
       if err := CompilePjs(cfg, pjsSrc, w); err != nil {
         panic(err)
@@ -623,6 +626,7 @@ func ServeContent(w ResponseWriter, r *http.Request, cfg *Config, d ...http.Dir)
   case dstOfCss:
     cssSrc, found := findFile(d, changeTypeOfFile(rel, cssFileExtension, scssFileExtension))
     if found == foundFile {
+      w.EnableCompression()
       w.Header().Set("Content-Type", "text/css")
       if err := CompileScss(cfg, cssSrc, w); err != nil {
         panic(err)
