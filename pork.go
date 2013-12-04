@@ -303,6 +303,12 @@ func (c *response) ServedFromPrefix() string {
 }
 
 func (r *response) EnableCompression() {
+  // avoid double compressing
+  if r.closer != nil {
+    return
+  }
+
+  // avoid compressing if the client doesn't allow it
   if !strings.Contains(r.req.Header.Get("Accept-Encoding"), "gzip") {
     return
   }
