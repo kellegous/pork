@@ -237,9 +237,21 @@ type ResponseWriter interface {
   EnableCompression()
 }
 
-func NewRouter(logger func(int, *http.Request), notFound http.Handler, headers map[string]string) Router {
+type httpHandler struct {
+  h http.Handler
+}
+
+func (h *httpHandler) ServePork(w ResponseWriter, r *http.Request) {
+  h.h.ServeHTTP(w, r)
+}
+
+func ResponderFor(h http.Handler) Responder {
+  return &httpHandler{h: h}
+}
+
+func NewRouter(logger func(int, *http.Request), notFound Responder, headers map[string]string) Router {
   if notFound == nil {
-    notFound = http.NotFoundHandler()
+    notFound = ResponderFor(http.NotFoundHandler())
   }
 
   if logger == nil {
@@ -265,16 +277,6 @@ type response struct {
   closer io.Closer
 }
 
-func PorkResponseFor(w http.ResponseWriter, r *http.Request) ResponseWriter {
-  return &response{
-    ResponseWriter: w,
-    req:            r,
-    writer:         w,
-    status:         200,
-    prefix:         "",
-  }
-}
-
 func (r *response) WriteHeader(code int) {
   r.status = code
   r.ResponseWriter.WriteHeader(code)
@@ -290,7 +292,7 @@ func (r *response) Hijack() (net.Conn, *bufio.ReadWriter, error) {
 
 func (c *response) ServeNotFound() {
   if c.router != nil {
-    c.router.notFound.ServeHTTP(c, c.req)
+    c.router.notFound.ServePork(c, c.req)
   } else {
     http.NotFound(c, c.req)
   }
@@ -321,7 +323,7 @@ func (r *response) close() error {
 
 type router struct {
   logger   func(status int, r *http.Request)
-  notFound http.Handler
+  notFound Responder
   headers  map[string]string
   *http.ServeMux
 }
