@@ -229,9 +229,11 @@ type Router interface {
   ServeHTTP(http.ResponseWriter, *http.Request)
 }
 
+// TODO(knorton): Remove this interface entirely and provide access staticly.
 type Context interface {
   ServeNotFound(http.ResponseWriter, *http.Request)
   ServedFromPrefix() string
+  EnableCompression(http.ResponseWriter, *http.Request)
 }
 
 type emptyContext struct{}
@@ -242,6 +244,9 @@ func (c *emptyContext) ServeNotFound(w http.ResponseWriter, r *http.Request) {
 
 func (c *emptyContext) ServedFromPrefix() string {
   return ""
+}
+
+func (c *emptyContext) EnableCompression(w http.ResponseWriter, r *http.Request) {
 }
 
 func ContextFor(w http.ResponseWriter, r *http.Request) Context {
@@ -274,6 +279,7 @@ type response struct {
   router *router
   status int
   prefix string
+  closer io.Closer
 }
 
 func (r *response) WriteHeader(code int) {
@@ -299,6 +305,17 @@ func (c *response) ServeNotFound(w http.ResponseWriter, r *http.Request) {
 
 func (c *response) ServedFromPrefix() string {
   return c.prefix
+}
+
+func (c *response) EnableCompression(w http.ResponseWriter, r *http.Request) {
+  if !strings.Contains(r.Header.Get("Accept-Encoding"), "gzip") {
+    return
+  }
+
+  g := gzip.NewWriter(c.writer)
+  c.writer = g
+  c.closer = g
+  c.Header().Set("Content-Encoding", "gzip")
 }
 
 // todo: remove embedded ServerMux and use my trie dispatcher
@@ -331,13 +348,11 @@ func (d *router) ServeHTTP(w http.ResponseWriter, r *http.Request) {
   }
 
   res := &response{writer: w, res: w, router: d, status: 200}
-  // attempt to interpose a gzip io.Writer
-  if strings.Contains(r.Header.Get("Accept-Encoding"), "gzip") {
-    g := gzip.NewWriter(w)
-    defer g.Close()
-    w.Header().Set("Content-Encoding", "gzip")
-    res.writer = g
-  }
+  defer func() {
+    if res.closer != nil {
+      res.closer.Close()
+    }
+  }()
 
   // dispatch to serving infrastructure
   d.ServeMux.ServeHTTP(res, r)
@@ -533,6 +548,7 @@ func typeOfDst(filename string) dstType {
 }
 
 func ServeContent(c Context, w http.ResponseWriter, r *http.Request, cfg *Config, d ...http.Dir) {
+  c.EnableCompression(w, r)
   pth := r.URL.Path
   rel, err := filepath.Rel(c.ServedFromPrefix(), r.URL.Path)
   if err != nil {
