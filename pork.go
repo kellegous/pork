@@ -485,11 +485,19 @@ func FileResponder(path string) Responder {
   return fileResponder(path)
 }
 
+type TomatoConfig struct {
+  TomatoRoot    string
+  TomatoDst     string
+  QImport       string
+  ForceDebugIds bool
+}
+
 type Config struct {
   Level        Optimization
   JsxIncludes  []string
   JsxExterns   []string
   ScssIncludes []string
+  TomatoConfig *TomatoConfig
 }
 
 func NewConfig(level Optimization) *Config {
