@@ -9,18 +9,22 @@ func pathToPluginsFile() string {
   return filepath.Join(rootDir, "sass_plugins.rb")
 }
 
-func sassCommand(filename string, level Optimization) (*command, error) {
+func sassCommand(c *Config, filename string) (*command, error) {
   args := []string{
     PathToSass,
     "--require", pathToPluginsFile(),
     "--no-cache",
     "--trace"}
 
-  switch level {
+  switch c.Level {
   case Basic:
     args = append(args, "--style", "compact")
   case Advanced:
     args = append(args, "--style", "compressed")
+  }
+
+  for _, v := range c.ScssIncludes {
+    args = append(args, "-I", v)
   }
 
   args = append(args, filename)
@@ -29,7 +33,7 @@ func sassCommand(filename string, level Optimization) (*command, error) {
 
 // todo: add cpp to the frontend of this
 func CompileScss(c *Config, filename string, w io.Writer) error {
-  cs, err := sassCommand(filename, c.Level)
+  cs, err := sassCommand(c, filename)
   if err != nil {
     return err
   }
