@@ -224,37 +224,17 @@ func CompilePjs(c *Config, filename string, w io.Writer) error {
 }
 
 type Router interface {
-  Handle(string, http.Handler)
-  HandleFunc(string, func(http.ResponseWriter, *http.Request))
+  RespondWith(string, Responder)
+  RespondWithFunc(string, func(ResponseWriter, *http.Request))
+
   ServeHTTP(http.ResponseWriter, *http.Request)
 }
 
-// TODO(knorton): Remove this interface entirely and provide access staticly.
-type Context interface {
-  ServeNotFound(http.ResponseWriter, *http.Request)
+type ResponseWriter interface {
+  http.ResponseWriter
+  ServeNotFound()
   ServedFromPrefix() string
-  EnableCompression(http.ResponseWriter, *http.Request)
-}
-
-type emptyContext struct{}
-
-func (c *emptyContext) ServeNotFound(w http.ResponseWriter, r *http.Request) {
-  http.NotFound(w, r)
-}
-
-func (c *emptyContext) ServedFromPrefix() string {
-  return ""
-}
-
-func (c *emptyContext) EnableCompression(w http.ResponseWriter, r *http.Request) {
-}
-
-func ContextFor(w http.ResponseWriter, r *http.Request) Context {
-  switch t := w.(type) {
-  case Context:
-    return t
-  }
-  return &emptyContext{}
+  EnableCompression()
 }
 
 func NewRouter(logger func(int, *http.Request), notFound http.Handler, headers map[string]string) Router {
@@ -263,32 +243,41 @@ func NewRouter(logger func(int, *http.Request), notFound http.Handler, headers m
   }
 
   if logger == nil {
-    logger = func(status int, r *http.Request) {
-    }
+    logger = func(status int, r *http.Request) {}
   }
 
-  return &router{logger, notFound, headers, http.NewServeMux()}
+  return &router{
+    logger:   logger,
+    notFound: notFound,
+    headers:  headers,
+    ServeMux: http.NewServeMux(),
+  }
 }
 
-// a response wrapper that provides a couple of additional features:
-// (1) a wrapping writer can be interposed (for gzip)
-// (2) the status code can be capture for logging
+// The concrete implementation of pork's ResponseWriter
 type response struct {
+  http.ResponseWriter
+  req    *http.Request
   writer io.Writer
-  res    http.ResponseWriter
   router *router
   status int
   prefix string
   closer io.Closer
 }
 
-func (r *response) WriteHeader(code int) {
-  r.status = code
-  r.res.WriteHeader(code)
+func PorkResponseFor(w http.ResponseWriter, r *http.Request) ResponseWriter {
+  return &response{
+    ResponseWriter: w,
+    req:            r,
+    writer:         w,
+    status:         200,
+    prefix:         "",
+  }
 }
 
-func (r *response) Header() http.Header {
-  return r.res.Header()
+func (r *response) WriteHeader(code int) {
+  r.status = code
+  r.ResponseWriter.WriteHeader(code)
 }
 
 func (r *response) Write(b []byte) (int, error) {
@@ -296,29 +285,40 @@ func (r *response) Write(b []byte) (int, error) {
 }
 
 func (r *response) Hijack() (net.Conn, *bufio.ReadWriter, error) {
-  return r.res.(http.Hijacker).Hijack()
+  return r.ResponseWriter.(http.Hijacker).Hijack()
 }
 
-func (c *response) ServeNotFound(w http.ResponseWriter, r *http.Request) {
-  c.router.notFound.ServeHTTP(w, r)
+func (c *response) ServeNotFound() {
+  if c.router != nil {
+    c.router.notFound.ServeHTTP(c, c.req)
+  } else {
+    http.NotFound(c, c.req)
+  }
 }
 
 func (c *response) ServedFromPrefix() string {
   return c.prefix
 }
 
-func (c *response) EnableCompression(w http.ResponseWriter, r *http.Request) {
-  if !strings.Contains(r.Header.Get("Accept-Encoding"), "gzip") {
+func (r *response) EnableCompression() {
+  if !strings.Contains(r.req.Header.Get("Accept-Encoding"), "gzip") {
     return
   }
 
-  g := gzip.NewWriter(c.writer)
-  c.writer = g
-  c.closer = g
-  c.Header().Set("Content-Encoding", "gzip")
+  // insert an intermediate gzip writer
+  g := gzip.NewWriter(r.writer)
+  r.writer = g
+  r.closer = g
+  r.Header().Set("Content-Encoding", "gzip")
 }
 
-// todo: remove embedded ServerMux and use my trie dispatcher
+func (r *response) close() error {
+  if r.closer == nil {
+    return nil
+  }
+  return r.closer.Close()
+}
+
 type router struct {
   logger   func(status int, r *http.Request)
   notFound http.Handler
@@ -326,58 +326,72 @@ type router struct {
   *http.ServeMux
 }
 
-func (d *router) Handle(path string, h http.Handler) {
-  d.ServeMux.Handle(path, &reg{
-    p: path,
-    h: h,
+func (d *router) RespondWith(path string, r Responder) {
+  d.ServeMux.Handle(path, &route{
+    prefix:    path,
+    responder: r,
+    router:    d,
   })
 }
 
-func (d *router) HandleFunc(path string, h func(w http.ResponseWriter, r *http.Request)) {
-  d.ServeMux.Handle(path, &reg{
-    p: path,
-    h: http.HandlerFunc(h),
+func (d *router) RespondWithFunc(path string, f func(ResponseWriter, *http.Request)) {
+  d.ServeMux.Handle(path, &route{
+    prefix:    path,
+    responder: ResponderFunc(f),
+    router:    d,
   })
-}
-
-func (d *router) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-  // add any global headers
-  h := w.Header()
-  for k, v := range d.headers {
-    h.Set(k, v)
-  }
-
-  res := &response{writer: w, res: w, router: d, status: 200}
-  defer func() {
-    if res.closer != nil {
-      res.closer.Close()
-    }
-  }()
-
-  // dispatch to serving infrastructure
-  d.ServeMux.ServeHTTP(res, r)
-
-  // log the request
-  d.logger(res.status, r)
 }
 
 type Handler interface {
-  ServeHTTP(w http.ResponseWriter, r *http.Request)
+  Responder
   Productionize(d http.Dir) (func() error, error)
 }
 
-// this simply keeps the registration prefix.
-// todo: there is a much better way to do this by having a ServerMux that
-// reports the prefix for which the request matched.
-type reg struct {
-  p string
-  h http.Handler
+type Responder interface {
+  ServePork(ResponseWriter, *http.Request)
 }
 
-func (g *reg) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-  n := w.(*response)
-  n.prefix = g.p
-  g.h.ServeHTTP(w, r)
+type responderFunc func(ResponseWriter, *http.Request)
+
+func (f responderFunc) ServePork(w ResponseWriter, r *http.Request) {
+  f(w, r)
+}
+
+func ResponderFunc(f func(ResponseWriter, *http.Request)) Responder {
+  return responderFunc(f)
+}
+
+type route struct {
+  prefix    string
+  responder Responder
+  router    *router
+}
+
+func (g *route) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+  // add any global headers
+  h := w.Header()
+  for k, v := range g.router.headers {
+    h.Set(k, v)
+  }
+
+  // create a response object for the dispatch
+  res := response{
+    writer:         w,
+    ResponseWriter: w,
+    req:            r,
+    router:         g.router,
+    status:         200,
+    prefix:         g.prefix,
+  }
+
+  // ensure that the response is flushed at the end
+  defer res.close()
+
+  // dispatch the request
+  g.responder.ServePork(&res, r)
+
+  // log the request
+  g.router.logger(res.status, r)
 }
 
 type content struct {
@@ -399,30 +413,24 @@ func init() {
   rootDir = filepath.Dir(pathToThisFile())
 }
 
-type HostRedirectHandler string
+type HostRedirectResponder string
 
-func (h HostRedirectHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+func (h HostRedirectResponder) ServePork(w ResponseWriter, r *http.Request) {
   http.Redirect(w, r,
     fmt.Sprintf("http://%s%s", string(h), r.RequestURI),
     http.StatusMovedPermanently)
 }
 
-func ErrorFileHandler(path string, code int) http.Handler {
-  if _, err := os.Stat(path); err != nil {
-    panic(err)
-  }
-  return &errorFileHandler{path, code}
+type errorFileResponder struct {
+  path   string
+  status int
 }
 
-type errorFileHandler struct {
-  path string
-  code int
-}
-
-func (h *errorFileHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+func (c *errorFileResponder) ServePork(w ResponseWriter, r *http.Request) {
+  w.EnableCompression()
   w.Header().Set("Content-Type", "text/html; charset=utf-8")
-  w.WriteHeader(h.code)
-  f, err := os.Open(h.path)
+  w.WriteHeader(c.status)
+  f, err := os.Open(c.path)
   if err != nil {
     panic(err)
   }
@@ -431,6 +439,16 @@ func (h *errorFileHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
   _, err = io.Copy(w, f)
   if err != nil {
     panic(err)
+  }
+}
+
+func ErrorFileResponder(path string, status int) Responder {
+  if _, err := os.Stat(path); err != nil {
+    panic(err)
+  }
+  return &errorFileResponder{
+    path:   path,
+    status: status,
   }
 }
 
@@ -450,17 +468,19 @@ func ServeContentModificationTime(w http.ResponseWriter, r *http.Request, t time
   return true
 }
 
-func FileHandler(path string) http.Handler {
+type fileResponder string
+
+func (c fileResponder) ServePork(w ResponseWriter, r *http.Request) {
+  w.EnableCompression()
+  http.ServeFile(w, r, string(c))
+}
+
+func FileResponder(path string) Responder {
   if _, err := os.Stat(path); err != nil {
     panic(err)
   }
-  return fileHandler(path)
-}
 
-type fileHandler string
-
-func (h fileHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-  http.ServeFile(w, r, string(h))
+  return fileResponder(path)
 }
 
 type Config struct {
@@ -547,10 +567,10 @@ func typeOfDst(filename string) dstType {
   return dstOfUnknown
 }
 
-func ServeContent(c Context, w http.ResponseWriter, r *http.Request, cfg *Config, d ...http.Dir) {
-  c.EnableCompression(w, r)
+func ServeContent(w ResponseWriter, r *http.Request, cfg *Config, d ...http.Dir) {
+  w.EnableCompression()
   pth := r.URL.Path
-  rel, err := filepath.Rel(c.ServedFromPrefix(), r.URL.Path)
+  rel, err := filepath.Rel(w.ServedFromPrefix(), r.URL.Path)
   if err != nil {
     panic(err)
   }
@@ -597,7 +617,7 @@ func ServeContent(c Context, w http.ResponseWriter, r *http.Request, cfg *Config
       return
     }
 
-    c.ServeNotFound(w, r)
+    w.ServeNotFound()
   case dstOfCss:
     cssSrc, found := findFile(d, changeTypeOfFile(rel, cssFileExtension, scssFileExtension))
     if found == foundFile {
@@ -608,14 +628,14 @@ func ServeContent(c Context, w http.ResponseWriter, r *http.Request, cfg *Config
       return
     }
   default:
-    c.ServeNotFound(w, r)
+    w.ServeNotFound()
   }
 }
 
-func (h *content) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+func (h *content) ServePork(w ResponseWriter, r *http.Request) {
   h.lock.RLock()
   defer h.lock.RUnlock()
-  ServeContent(ContextFor(w, r), w, r, h.conf, h.root...)
+  ServeContent(w, r, h.conf, h.root...)
 }
 
 func rebasePath(src, dst, filename string) (string, error) {
