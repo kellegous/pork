@@ -11,6 +11,15 @@ func tscCommand(filename, tmpFile string, level Optimization) (*command, error) 
 }
 
 func CompileTsc(c *Config, filename string, w io.Writer) error {
+
+  // Run tomato if we have set a configuration for it.
+  if c.TomatoConfig != nil {
+    tConf := c.TomatoConfig
+    if err := GenerateTomatoes(tConf.TomatoRoot, tConf.TomatoDst, TypeScript, tConf.QImport, tConf.ForceDebugIds); err != nil {
+      return err
+    }
+  }
+
   // TODO(knorton): For now only, let's just do basic.
   t, err := ioutil.TempFile(os.TempDir(), "tsc-")
   if err != nil {
