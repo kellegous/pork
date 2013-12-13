@@ -575,23 +575,67 @@ func typeOfDst(filename string) dstType {
   return dstOfUnknown
 }
 
-func ServeContent(w ResponseWriter, r *http.Request, cfg *Config, d ...http.Dir) {
-  pth := r.URL.Path
-  rel, err := filepath.Rel(w.ServedFromPrefix(), r.URL.Path)
-  if err != nil {
-    panic(err)
-  }
+type Response struct {
+  found   typeFound
+  srcType srcType
+  srcFile string
+  req     *http.Request
+}
 
-  // if the file exists, just serve it.
-  if target, found := findFile(d, rel); found != foundNothing {
-    // if this is a directory without a trailing /, we need to normalize.
-    if found == foundDirectory && pth[len(pth)-1] != '/' {
-      http.Redirect(w, r, pth+"/", http.StatusMovedPermanently)
+func (r *Response) Deliver(cfg *Config, w ResponseWriter) {
+  path := r.req.URL.Path
+  switch r.srcType {
+  case srcOfUnknown:
+    if r.found == foundDirectory && path[len(path)-1] != '/' {
+      http.Redirect(w, r.req, path+"/", http.StatusMovedPermanently)
       return
     }
     w.EnableCompression()
-    http.ServeFile(w, r, target)
-    return
+    http.ServeFile(w, r.req, r.srcFile)
+  case srcOfJsx:
+    w.EnableCompression()
+    w.Header().Set("Content-Type", "text/javascript")
+    if err := CompileJsx(cfg, r.srcFile, w); err != nil {
+      panic(err)
+    }
+  case srcOfTsc:
+    w.EnableCompression()
+    w.Header().Set("Content-Type", "text/javascript")
+    if err := CompileTsc(cfg, r.srcFile, w); err != nil {
+      panic(err)
+    }
+  case srcOfPjs:
+    w.EnableCompression()
+    w.Header().Set("Content-Type", "text/javascript")
+    if err := CompilePjs(cfg, r.srcFile, w); err != nil {
+      panic(err)
+    }
+  case srcOfScss:
+    w.EnableCompression()
+    w.Header().Set("Content-Type", "text/css")
+    if err := CompileScss(cfg, r.srcFile, w); err != nil {
+      panic(err)
+    }
+  default:
+    panic("unknown src type")
+  }
+}
+
+func FindContent(prefix string, r *http.Request, d ...http.Dir) (*Response, error) {
+  pth := r.URL.Path
+  rel, err := filepath.Rel(prefix, pth)
+  if err != nil {
+    return nil, err
+  }
+
+  // if the file exists, create a direct response
+  if target, found := findFile(d, rel); found != foundNothing {
+    return &Response{
+      found:   found,
+      srcType: srcOfUnknown,
+      srcFile: target,
+      req:     r,
+    }, nil
   }
 
   switch typeOfDst(rel) {
@@ -599,49 +643,59 @@ func ServeContent(w ResponseWriter, r *http.Request, cfg *Config, d ...http.Dir)
     // try to answer with jsx
     jsxSrc, found := findFile(d, changeTypeOfFile(rel, javaScriptFileExtension, jsxFileExtension))
     if found == foundFile {
-      // serve jsx
-      w.EnableCompression()
-      w.Header().Set("Content-Type", "text/javascript")
-      if err := CompileJsx(cfg, jsxSrc, w); err != nil {
-        panic(err)
-      }
-      return
+      return &Response{
+        found:   found,
+        srcType: srcOfJsx,
+        srcFile: jsxSrc,
+        req:     r,
+      }, nil
     }
 
     tscSrc, found := findFile(d, changeTypeOfFile(rel, javaScriptFileExtension, tscFileExtension))
     if found == foundFile {
-      w.EnableCompression()
-      w.Header().Set("Content-Type", "text/javascript")
-      if err := CompileTsc(cfg, tscSrc, w); err != nil {
-        panic(err)
-      }
-      return
+      return &Response{
+        found:   found,
+        srcType: srcOfTsc,
+        srcFile: tscSrc,
+        req:     r,
+      }, nil
     }
 
     pjsSrc, found := findFile(d, changeTypeOfFile(rel, javaScriptFileExtension, pjsFileExtension))
     if found == foundFile {
-      w.EnableCompression()
-      w.Header().Set("Content-Type", "text/javascript")
-      if err := CompilePjs(cfg, pjsSrc, w); err != nil {
-        panic(err)
-      }
-      return
+      return &Response{
+        found:   found,
+        srcType: srcOfPjs,
+        srcFile: pjsSrc,
+        req:     r,
+      }, nil
     }
-
-    w.ServeNotFound()
   case dstOfCss:
     cssSrc, found := findFile(d, changeTypeOfFile(rel, cssFileExtension, scssFileExtension))
     if found == foundFile {
-      w.EnableCompression()
-      w.Header().Set("Content-Type", "text/css")
-      if err := CompileScss(cfg, cssSrc, w); err != nil {
-        panic(err)
-      }
-      return
+      return &Response{
+        found:   found,
+        srcType: srcOfScss,
+        srcFile: cssSrc,
+        req:     r,
+      }, nil
     }
-  default:
-    w.ServeNotFound()
   }
+  return nil, nil
+}
+
+func ServeContent(w ResponseWriter, r *http.Request, cfg *Config, d ...http.Dir) {
+  res, err := FindContent(w.ServedFromPrefix(), r, d...)
+  if err != nil {
+    panic(err)
+  }
+
+  if res != nil {
+    res.Deliver(cfg, w)
+    return
+  }
+
+  w.ServeNotFound()
 }
 
 func (h *content) ServePork(w ResponseWriter, r *http.Request) {
