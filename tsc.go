@@ -11,7 +11,6 @@ func tscCommand(filename, tmpFile string, level Optimization) (*command, error) 
 }
 
 func CompileTsc(c *Config, filename string, w io.Writer) error {
-  // TODO(knorton): For now only, let's just do basic.
   t, err := ioutil.TempFile(os.TempDir(), "tsc-")
   if err != nil {
     return err
@@ -19,12 +18,12 @@ func CompileTsc(c *Config, filename string, w io.Writer) error {
   defer t.Close()
   defer os.Remove(t.Name())
 
-  cmd, err := tscCommand(filename, t.Name(), c.Level)
+  ca, err := tscCommand(filename, t.Name(), c.Level)
   if err != nil {
     return err
   }
 
-  r, p, err := pipe(cmd)
+  r, p, err := pipe(ca)
   if err != nil {
     return err
   }
@@ -35,8 +34,29 @@ func CompileTsc(c *Config, filename string, w io.Writer) error {
     return err
   }
 
-  if _, err := io.Copy(w, t); err != nil {
-    return err
+  switch c.Level {
+  case None:
+    if _, err := io.Copy(w, t); err != nil {
+      return err
+    }
+  case Basic, Advanced:
+    cb, err := jscCommand(nil, pathToJsc(), t.Name(), c.Level)
+    if err != nil {
+      return err
+    }
+
+    r, p, err := pipe(cb)
+    if err != nil {
+      return err
+    }
+
+    if _, err := io.Copy(w, r); err != nil {
+      return err
+    }
+
+    if err := waitFor(p); err != nil {
+      return err
+    }
   }
 
   return nil
