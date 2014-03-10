@@ -3,13 +3,12 @@ package pork
 import (
   "bufio"
   "compress/gzip"
-  "errors"
   "fmt"
   "io"
+  "io/ioutil"
   "net"
   "net/http"
   "os"
-  "os/exec"
   "path"
   "path/filepath"
   "runtime"
@@ -63,126 +62,6 @@ var rootDir string
 
 func pathToJsc() string {
   return filepath.Join(rootDir, "deps/closure/compiler.jar")
-}
-
-type command struct {
-  args []string
-  cwd  string
-  env  []string
-}
-
-func newCommand(args []string, cwd string, env []string) (*command, error) {
-  path, err := exec.LookPath(args[0])
-  if err != nil {
-    return nil, err
-  }
-
-  args[0] = path
-  return &command{
-    args: args,
-    cwd:  cwd,
-    env:  env,
-  }, nil
-}
-
-func waitFor(procs []*os.Process) error {
-  for _, proc := range procs {
-    if proc == nil {
-      continue
-    }
-
-    s, err := proc.Wait()
-    if err != nil {
-      return err
-    }
-
-    if !s.Success() {
-      return errors.New(fmt.Sprintf("exit code: %s", s.Sys()))
-    }
-  }
-
-  return nil
-}
-
-func pipe(c ...*command) (io.ReadCloser, []*os.Process, error) {
-  if len(c) == 0 {
-    return nil, nil, errors.New("Need commands")
-  }
-
-  procs := make([]*os.Process, len(c))
-  var r *os.File
-  for i, n := 0, len(c); i < n; i++ {
-    nr, nw, err := os.Pipe()
-    if err != nil {
-      if r != nil {
-        r.Close()
-      }
-      return nil, nil, err
-    }
-
-    cmd := c[i]
-    env := cmd.env
-    if cmd.env == nil {
-      env = os.Environ()
-    }
-
-    p, err := os.StartProcess(
-      cmd.args[0],
-      cmd.args,
-      &os.ProcAttr{
-        cmd.cwd,
-        env,
-        []*os.File{r, nw, os.Stderr},
-        nil,
-      })
-    if err != nil {
-      if r != nil {
-        r.Close()
-      }
-      nr.Close()
-      nw.Close()
-      return nil, nil, err
-    }
-
-    // close handles we gave to other processes
-    if r != nil {
-      r.Close()
-    }
-    nw.Close()
-
-    procs = append(procs, p)
-    r = nr
-  }
-
-  return r, procs, nil
-}
-
-func prepend(dst []string, args ...string) []string {
-  r := make([]string, len(dst)+len(args))
-  copy(r, args)
-  copy(r[len(args):], dst)
-  return r
-}
-
-func jscCommand(externs []string, jscPath, filename string, level Optimization) (*command, error) {
-  args := []string{PathToJava, "-jar", jscPath, "--language_in", "ECMASCRIPT5"}
-
-  switch level {
-  case Basic:
-    args = append(args, "--compilation_level", "SIMPLE_OPTIMIZATIONS")
-  case Advanced:
-    args = append(args, "--compilation_level", "ADVANCED_OPTIMIZATIONS")
-  }
-
-  for _, e := range externs {
-    args = append(args, "--externs", e)
-  }
-
-  if filename != "" {
-    args = append(args, filename)
-  }
-
-  return newCommand(args, "", nil)
 }
 
 type Router interface {
@@ -554,19 +433,19 @@ func (r *Response) Deliver(cfg *Config, w ResponseWriter) {
   case srcOfJsx:
     w.EnableCompression()
     w.Header().Set("Content-Type", "text/javascript")
-    if err := CompileJsx(cfg, r.srcFile, w); err != nil {
+    if err := compile(cfg, r.srcFile, w, CompileJsx, optimizeJs); err != nil {
       panic(err)
     }
   case srcOfTsc:
     w.EnableCompression()
     w.Header().Set("Content-Type", "text/javascript")
-    if err := CompileTsc(cfg, r.srcFile, w); err != nil {
+    if err := compile(cfg, r.srcFile, w, CompileTsc, optimizeJs); err != nil {
       panic(err)
     }
   case srcOfScss:
     w.EnableCompression()
     w.Header().Set("Content-Type", "text/css")
-    if err := CompileScss(cfg, r.srcFile, w); err != nil {
+    if err := compile(cfg, r.srcFile, w, CompileScss, optimizeCss); err != nil {
       panic(err)
     }
   default:
@@ -656,7 +535,48 @@ func rebasePath(src, dst, filename string) (string, error) {
   return filepath.Join(dst, target), nil
 }
 
-func compileToFile(c *Config, src, dst string, fn func(*Config, string, io.Writer) error) error {
+func catFile(w io.Writer, filename string) error {
+  r, err := os.Open(filename)
+  if err != nil {
+    return err
+  }
+  defer r.Close()
+
+  if _, err := io.Copy(w, r); err != nil {
+    return err
+  }
+
+  return nil
+}
+
+func compile(c *Config, src string, w io.Writer,
+  cmp func(*Config, string, string) error,
+  opt func(*Config, io.Writer) (io.WriteCloser, error)) error {
+
+  wo, err := opt(c, w)
+  if err != nil {
+    return err
+  }
+  defer wo.Close()
+
+  t, err := ioutil.TempFile(os.TempDir(), "cmp-")
+  if err != nil {
+    return err
+  }
+  defer t.Close()
+  defer os.Remove(t.Name())
+
+  if err := cmp(c, src, t.Name()); err != nil {
+    return err
+  }
+
+  // TODO(knorton): Expand directives
+  return catFile(wo, t.Name())
+}
+
+func compileToFile(c *Config, src, dst string,
+  cmp func(*Config, string, string) error,
+  opt func(*Config, io.Writer) (io.WriteCloser, error)) error {
   // ensure we have all the directories we need
   dir := filepath.Dir(dst)
   if _, err := os.Stat(dir); err != nil {
@@ -671,11 +591,7 @@ func compileToFile(c *Config, src, dst string, fn func(*Config, string, io.Write
   }
   defer file.Close()
 
-  if err := fn(c, src, file); err != nil {
-    return err
-  }
-
-  return nil
+  return compile(c, src, file, cmp, opt)
 }
 
 func productionize(cfg *Config, roots []http.Dir, dest http.Dir) error {
@@ -700,7 +616,7 @@ func productionize(cfg *Config, roots []http.Dir, dest http.Dir) error {
           return err
         }
 
-        if err := compileToFile(cfg, path, target, CompileJsx); err != nil {
+        if err := compileToFile(cfg, path, target, CompileJsx, optimizeJs); err != nil {
           return err
         }
       case srcOfTsc:
@@ -710,7 +626,7 @@ func productionize(cfg *Config, roots []http.Dir, dest http.Dir) error {
           return err
         }
 
-        if err := compileToFile(cfg, path, target, CompileTsc); err != nil {
+        if err := compileToFile(cfg, path, target, CompileTsc, optimizeJs); err != nil {
           return err
         }
       case srcOfScss:
@@ -722,7 +638,7 @@ func productionize(cfg *Config, roots []http.Dir, dest http.Dir) error {
           return err
         }
 
-        if err := compileToFile(cfg, path, target, CompileScss); err != nil {
+        if err := compileToFile(cfg, path, target, CompileScss, optimizeCss); err != nil {
           return err
         }
       }

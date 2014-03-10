@@ -1,9 +1,9 @@
 package pork
 
 import (
-  "bytes"
   "errors"
-  "io"
+  "io/ioutil"
+  "os"
   "path/filepath"
   "strings"
   "testing"
@@ -14,17 +14,29 @@ func levels() []Optimization {
 }
 
 func test(t *testing.T,
-  fn func(*Config, string, io.Writer) error,
+  fn func(*Config, string, string) error,
   c *Config, path string,
   check func([]byte) error) {
   for _, level := range levels() {
     c.Level = level
-    var b bytes.Buffer
-    if err := fn(c, path, &b); err != nil {
+
+    f, err := ioutil.TempFile(os.TempDir(), "pork-test")
+    if err != nil {
+      t.Error(err)
+    }
+    defer f.Close()
+    defer os.Remove(f.Name())
+
+    if err := fn(c, path, f.Name()); err != nil {
       t.Error(err)
     }
 
-    if len(b.String()) == 0 {
+    b, err := ioutil.ReadFile(f.Name())
+    if err != nil {
+      t.Error(err)
+    }
+
+    if len(b) == 0 {
       t.Errorf("Empty output for level %d", level)
     }
 
@@ -32,7 +44,7 @@ func test(t *testing.T,
       continue
     }
 
-    if err := check(b.Bytes()); err != nil {
+    if err := check(b); err != nil {
       t.Error(err)
     }
   }
