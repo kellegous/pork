@@ -553,12 +553,14 @@ func compile(c *Config, src string, w io.Writer,
   cmp func(*Config, string, string) error,
   opt func(*Config, io.Writer) (io.WriteCloser, error)) error {
 
+  // create an optimization pipe
   wo, err := opt(c, w)
   if err != nil {
     return err
   }
   defer wo.Close()
 
+  // open a temp file for the base compilation
   t, err := ioutil.TempFile(os.TempDir(), "cmp-")
   if err != nil {
     return err
@@ -566,11 +568,19 @@ func compile(c *Config, src string, w io.Writer,
   defer t.Close()
   defer os.Remove(t.Name())
 
+  // TODO(knorton): This can be executed in parallel with
+  // directive expansion. It just needs to return the underlying
+  // os.Process which allows for Wait.
   if err := cmp(c, src, t.Name()); err != nil {
     return err
   }
 
-  // TODO(knorton): Expand directives
+  // expand source directives
+  if err := expandDirectives(src, wo); err != nil {
+    return err
+  }
+
+  // copy the compile output into the writer
   return catFile(wo, t.Name())
 }
 
