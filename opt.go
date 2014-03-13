@@ -2,6 +2,7 @@ package pork
 
 import (
   "io"
+  "os"
   "os/exec"
 )
 
@@ -43,17 +44,25 @@ func jscCommand(externs []string, jscPath string, level Optimization) *exec.Cmd 
   return exec.Command(PathToJava, args...)
 }
 
+// Creates an optimization pipe for JavaScript streams
 func optimizeJs(c *Config, w io.Writer) (io.WriteCloser, error) {
   switch c.Level {
   case Basic, Advanced:
     cm := jscCommand(c.JsxExterns, pathToJsc(), c.Level)
 
+    // connect the output of the command to the writer
     cm.Stdout = w
+
+    // send all error spew to the orginal stderr stream
+    cm.Stderr = os.Stderr
+
+    // open a pipe into stdin
     wc, err := cm.StdinPipe()
     if err != nil {
       return nil, err
     }
 
+    // fire that off in the background
     if err := cm.Start(); err != nil {
       return nil, err
     }
@@ -66,6 +75,7 @@ func optimizeJs(c *Config, w io.Writer) (io.WriteCloser, error) {
   return &noOpt{Writer: w}, nil
 }
 
+// Creates an optimization pipe for JavaScript streams
 func optimizeCss(c *Config, w io.Writer) (io.WriteCloser, error) {
   return &noOpt{Writer: w}, nil
 }
