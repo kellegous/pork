@@ -6,13 +6,12 @@ import (
 )
 
 type jsOpt struct {
-  io.Writer
+  io.WriteCloser
   cm *exec.Cmd
-  wc io.Closer
 }
 
 func (o *jsOpt) Close() error {
-  if err := o.wc.Close(); err != nil {
+  if err := o.WriteCloser.Close(); err != nil {
     return err
   }
 
@@ -49,15 +48,19 @@ func optimizeJs(c *Config, w io.Writer) (io.WriteCloser, error) {
   case Basic, Advanced:
     cm := jscCommand(c.JsxExterns, pathToJsc(), c.Level)
 
+    cm.Stdout = w
     wc, err := cm.StdinPipe()
     if err != nil {
       return nil, err
     }
 
+    if err := cm.Start(); err != nil {
+      return nil, err
+    }
+
     return &jsOpt{
-      Writer: w,
-      cm:     cm,
-      wc:     wc,
+      WriteCloser: wc,
+      cm:          cm,
     }, nil
   }
   return &noOpt{Writer: w}, nil
