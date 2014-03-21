@@ -31,6 +31,7 @@ const (
   srcOfJsx srcType = iota
   srcOfTsc
   srcOfScss
+  srcOfJs
   srcOfUnknown
 )
 
@@ -47,6 +48,7 @@ const (
   jsxFileExtension  = ".main.jsx"
   tscFileExtension  = ".main.ts"
   scssFileExtension = ".main.scss"
+  jsFileExtension   = ".main.js"
 
   // dst
   javaScriptFileExtension = ".js"
@@ -397,6 +399,9 @@ func typeOfSrc(filename string) srcType {
   if strings.HasSuffix(filename, tscFileExtension) {
     return srcOfTsc
   }
+  if strings.HasSuffix(filename, jsFileExtension) {
+    return srcOfJs
+  }
   if strings.HasSuffix(filename, scssFileExtension) {
     return srcOfScss
   }
@@ -440,6 +445,12 @@ func (r *Response) Deliver(cfg *Config, w ResponseWriter) {
     w.EnableCompression()
     w.Header().Set("Content-Type", "text/javascript")
     if err := compile(cfg, r.srcFile, w, CompileTsc, optimizeJs); err != nil {
+      panic(err)
+    }
+  case srcOfJs:
+    w.EnableCompression()
+    w.Header().Set("Content-Type", "text/javascript")
+    if err := compile(cfg, r.srcFile, w, CompileJs, optimizeJs); err != nil {
       panic(err)
     }
   case srcOfScss:
@@ -489,6 +500,16 @@ func FindContent(prefix string, r *http.Request, d ...http.Dir) (*Response, erro
         found:   found,
         srcType: srcOfTsc,
         srcFile: tscSrc,
+        req:     r,
+      }, nil
+    }
+
+    jsSrc, found := findFile(d, changeTypeOfFile(rel, javaScriptFileExtension, jsFileExtension))
+    if found == foundFile {
+      return &Response{
+        found:   found,
+        srcType: srcOfJs,
+        srcFile: jsSrc,
         req:     r,
       }, nil
     }
@@ -639,9 +660,17 @@ func productionize(cfg *Config, roots []http.Dir, dest http.Dir) error {
         if err := compileToFile(cfg, path, target, CompileTsc, optimizeJs); err != nil {
           return err
         }
+      case srcOfJs:
+        target, err := rebasePath(src, d,
+          changeTypeOfFile(path, jsFileExtension, javaScriptFileExtension))
+        if err != nil {
+          return err
+        }
+
+        if err := compileToFile(cfg, path, target, CompileJs, optimizeJs); err != nil {
+          return err
+        }
       case srcOfScss:
-        // todo: there is an issue here in that I will compile things
-        // that are only intended to be included.
         target, err := rebasePath(src, d,
           changeTypeOfFile(path, scssFileExtension, cssFileExtension))
         if err != nil {

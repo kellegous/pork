@@ -84,3 +84,11 @@ func TestTsc(t *testing.T) {
     filepath.Join(Root(), "tests/tsc/a.ts"),
     nil)
 }
+
+func TestJs(t *testing.T) {
+  test(t,
+    CompileJs,
+    NewConfig(None),
+    filepath.Join(Root(), "tests/js/a.js"),
+    nil)
+}
