@@ -55,6 +55,7 @@ module Sass::Script::Functions
     assert_type string, :String
     name = string.value.downcase
     mime = "application/octet-stream"
+    mime = "image/svg+xml" if name.end_with?(".svg")
     mime = "image/png" if name.end_with?(".png")
     mime = "image/gif" if name.end_with?(".gif")
     mime = "image/jpg" if name.end_with?(".jpg") || name.end_with?(".jpeg")
