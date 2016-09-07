@@ -60,7 +60,6 @@ func expandDirective(base, dir string, w io.Writer) error {
   default:
     return fmt.Errorf("undefined directive: %s", name)
   }
-  return nil
 }
 
 // Expand all source directives into the given writer

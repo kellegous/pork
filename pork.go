@@ -58,7 +58,7 @@ const (
 var PathToSass = "sass"
 var PathToJsx = "jsx"
 var PathToTsc = "tsc"
-var PathToJava = "java"
+var PathToClosureCompiler = "closure-compiler"
 
 var rootDir string
 

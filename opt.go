@@ -28,7 +28,7 @@ func (o *noOpt) Close() error {
 }
 
 func jscCommand(externs []string, jscPath string, level Optimization) *exec.Cmd {
-  args := []string{"-jar", jscPath, "--language_in", "ECMASCRIPT5"}
+  args := []string{"--language_in", "ECMASCRIPT5"}
 
   switch level {
   case Basic:
@@ -41,7 +41,7 @@ func jscCommand(externs []string, jscPath string, level Optimization) *exec.Cmd 
     args = append(args, "--externs", e)
   }
 
-  return exec.Command(PathToJava, args...)
+  return exec.Command(PathToClosureCompiler, args...)
 }
 
 // Creates an optimization pipe for JavaScript streams

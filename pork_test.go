@@ -50,14 +50,6 @@ func test(t *testing.T,
   }
 }
 
-func TestJsx(t *testing.T) {
-  test(t,
-    CompileJsx,
-    NewConfig(None),
-    filepath.Join(Root(), "tests/jsx/a.jsx"),
-    nil)
-}
-
 func TestScss(t *testing.T) {
   test(t,
     CompileScss,
