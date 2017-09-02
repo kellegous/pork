@@ -665,7 +665,7 @@ func compileToFile(c *Config, src, dst string,
 }
 
 func copyFile(dst, src string) error {
-	if err := ensureDir(filepath.Base(dst)); err != nil {
+	if err := ensureDir(filepath.Dir(dst)); err != nil {
 		return err
 	}
 
