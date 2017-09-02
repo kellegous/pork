@@ -3,12 +3,13 @@ package main
 import (
 	"flag"
 	"fmt"
-	"github.com/kellegous/pork"
 	"io"
 	"log"
 	"net/http"
 	"os"
 	"strings"
+
+	"github.com/kellegous/pork"
 )
 
 func print(w io.Writer, lines []string) {
