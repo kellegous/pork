@@ -61,6 +61,12 @@ const (
 	cssFileExtension        = ".css"
 )
 
+var excludedSrcExtensions = []string{
+	".ts",
+	".jsx",
+	".scss",
+}
+
 // PathToSass ...
 var PathToSass = "sass"
 
@@ -692,6 +698,15 @@ func copyFile(dst, src string) error {
 	return nil
 }
 
+func isExcludedSrc(path string) bool {
+	for _, suf := range excludedSrcExtensions {
+		if strings.HasSuffix(path, suf) {
+			return true
+		}
+	}
+	return false
+}
+
 func productionize(cfg *Config, roots []http.Dir, dest http.Dir) error {
 	d := string(dest)
 	if _, err := os.Stat(d); err != nil {
@@ -748,7 +763,7 @@ func productionize(cfg *Config, roots []http.Dir, dest http.Dir) error {
 					return err
 				}
 			default:
-				if !info.IsDir() {
+				if !info.IsDir() && !isExcludedSrc(path) {
 					target, err := rebasePath(src, d, path)
 					if err != nil {
 						return err
