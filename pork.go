@@ -675,10 +675,6 @@ func copyFile(dst, src string) error {
 		return err
 	}
 
-	if err := os.Link(src, dst); err == nil {
-		return err
-	}
-
 	r, err := os.Open(src)
 	if err != nil {
 		return err
